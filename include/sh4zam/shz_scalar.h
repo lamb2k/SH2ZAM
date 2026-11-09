@@ -64,6 +64,23 @@ SHZ_INLINE bool shz_equalf_abs(float a, float b) SHZ_NOEXCEPT;
 //! Checks for equality based on the relative tolerance using SHZ_FLT_EPSILON.
 SHZ_INLINE bool shz_equalf_rel(float a, float b) SHZ_NOEXCEPT;
 
+/*! Checks whether an IEEE-754 binary32 encoding represents a finite value.
+
+    Returns true for both signed zeros, subnormals and normal numbers, and false
+    for infinities and all NaNs, including signaling NaN encodings.
+
+    Unlike a float-valued classification routine, this integer-only check is
+    valid with `-ffast-math` and `-ffinite-math-only`. Use it to validate words
+    decoded from files or network packets before converting them to `float`.
+    Decode the byte order first: \p bits is the numerical binary32 encoding,
+    not a pointer to wire bytes. Do not first pass untrusted storage through a
+    float argument or floating-point operation under finite-math assumptions.
+
+    \param bits IEEE-754 binary32 encoding, with the sign in bit 31.
+    \return Whether the encoding represents a finite value.
+*/
+SHZ_INLINE bool shz_isfinitef_bits(uint32_t bits) SHZ_NOEXCEPT;
+
 //! @}
 
 /*! \name  Rounding

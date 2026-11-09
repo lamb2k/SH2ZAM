@@ -55,6 +55,10 @@ SHZ_FORCE_INLINE bool shz_equalf_rel(float a, float b) SHZ_NOEXCEPT {
     return shz_fabsf(a - b) < (SHZ_FLT_EPSILON * shz_fmaxf(shz_fabsf(a), shz_fabsf(b)));
 }
 
+SHZ_FORCE_INLINE bool shz_isfinitef_bits(uint32_t bits) SHZ_NOEXCEPT {
+    return (bits & UINT32_C(0x7f800000)) != UINT32_C(0x7f800000);
+}
+
 SHZ_FORCE_INLINE float shz_floorf(float x) SHZ_NOEXCEPT {
 #ifdef SHZ_GNUC
     if(__builtin_constant_p(x))

@@ -24,6 +24,28 @@ GBL_TEST_CASE(max)
     GBL_TEST_VERIFY(shz::fmaxf(8, 8) == 8);
 GBL_TEST_CASE_END
 
+GBL_TEST_CASE(isfinitef_bits)
+    struct Encoding { uint32_t bits; bool finite; };
+    constexpr std::array encodings = {
+        Encoding{0x00000000u, true},  Encoding{0x80000000u, true},  // signed zero
+        Encoding{0x00000001u, true},  Encoding{0x80000001u, true},  // least subnormal
+        Encoding{0x007fffffu, true},  Encoding{0x807fffffu, true},  // greatest subnormal
+        Encoding{0x00800000u, true},  Encoding{0x80800000u, true},  // least normal
+        Encoding{0x3f800000u, true},  Encoding{0xbf800000u, true},  // signed one
+        Encoding{0x7f7fffffu, true},  Encoding{0xff7fffffu, true},  // greatest finite
+        Encoding{0x7f800000u, false}, Encoding{0xff800000u, false}, // infinity
+        Encoding{0x7f800001u, false}, Encoding{0xff800001u, false}, // signaling NaN
+        Encoding{0x7fc00000u, false}, Encoding{0xffc00000u, false}, // quiet NaN
+        Encoding{0x7fffffffu, false}, Encoding{0xffffffffu, false}  // NaN payload
+    };
+    for(const auto& encoding : encodings) {
+        // Keep runtime coverage under finite-math assumptions; no float input.
+        volatile uint32_t bits = encoding.bits;
+        GBL_TEST_VERIFY(shz_isfinitef_bits(bits) == encoding.finite);
+        GBL_TEST_VERIFY(shz::isfinitef_bits(bits) == encoding.finite);
+    }
+GBL_TEST_CASE_END
+
 GBL_TEST_CASE(clamp)
     GBL_TEST_VERIFY(shz::clampf(-3.0f, 0.0f, 1.0f) == 0.0f);
     GBL_TEST_VERIFY(shz::clampf(12, -13, 33) == 12);
@@ -669,6 +691,7 @@ GBL_TEST_CASE_END
 
 GBL_TEST_REGISTER(min,
                   max,
+                  isfinitef_bits,
                   clamp,
                   norm,
                   floorf,

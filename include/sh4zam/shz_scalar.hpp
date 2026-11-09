@@ -36,6 +36,8 @@ namespace shz {
     constexpr auto equalf_abs  = shz_equalf_abs;
     //! C++ alias for shz_equalf_rel()
     constexpr auto equalf_rel  = shz_equalf_rel;
+    //! C++ alias for shz_isfinitef_bits().
+    constexpr auto isfinitef_bits = shz_isfinitef_bits;
     //! @}
 
     /*! \name  Rounding
