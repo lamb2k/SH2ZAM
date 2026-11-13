@@ -13,13 +13,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: Pull the Yaul project's documented toolchain image
         run: |
-          docker pull ijacquez/yaul:latest
-          docker image inspect ijacquez/yaul:latest --format '{{index .RepoDigests 0}}' | tee sh2-toolchain-image.txt
+          docker pull ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6
+          docker image inspect ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 --format '{{index .RepoDigests 0}}' | tee sh2-toolchain-image.txt
       - name: Compile and audit actual big-endian SH-2 objects and link Saturn demo
         shell: bash
         run: |
           set -euo pipefail
-          docker run --rm -v "$PWD:/work" -w /work ijacquez/yaul:latest /bin/bash -c '
+          docker run --rm -v "$PWD:/work" -w /work ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 /bin/bash -c '
             set -euo pipefail
             export PATH="$YAUL_INSTALL_ROOT/bin:$PATH"
             CC="${YAUL_ARCH_SH_PREFIX}-gcc"

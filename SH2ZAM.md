@@ -1,10 +1,5 @@
 # SH2ZAM
 
-The project overview, credits, build instructions, and status are now in the
-[root README](README.md).
+SH2ZAM now has its own repository and default Saturn build. Start with [README.md](README.md), then [examples](saturn/examples/README.md) and [hardware qualification](saturn/HARDWARE.md).
 
-See [Saturn implementation notes](saturn/README.md) for the native math core and
-[numerical contract](saturn/README.md#numeric-contract), and the
-[porting plan](saturn/PORTING_PLAN.md) for remaining parity and hardware checks.
-
-The original SH4ZAM README is preserved as [README.SH4ZAM.md](README.SH4ZAM.md).
+The original SH4ZAM source/history and MIT notice are preserved. SH2ZAM is an independent adaptation, not an official upstream release.
