@@ -50,6 +50,8 @@ for c,expected in zip(raw['cases'],manifest['cases']):
         assert p['paths']['mac']['macInstructions']==9*c['vertices']
         assert p['paths']['dmuls']['dmulsInstructions']==9*c['vertices']
         assert p['paths']['prepared']['dmulsInstructions']==9*c['vertices']
+        assert p['paths']['plain']['dmulsInstructions']==9*c['vertices']
+        assert p['paths']['plain']['macInstructions']==0
     cycles={k:[p['paths'][v]['cycles'] for p in poses] for k,v in mapping.items()}
     instructions={k:[p['paths'][v]['instructions'] for p in poses] for k,v in mapping.items()}
     setup=[p['plan']['cycles'] for p in poses]; setup_i=[p['plan']['instructions'] for p in poses]

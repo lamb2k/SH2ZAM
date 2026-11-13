@@ -15,6 +15,11 @@ endif
 SH_CFLAGS += -O2 -std=c11 -I../../include -I.. -DSH2Z_REQUIRE_SH2=1 \
   -DSH2Z_EXHIBIT_CAPACITY=4096 -fno-fast-math -ffp-contract=off -fno-lto \
   -DBENCH_COMMIT=\"$(BENCH_COMMIT)\"
+# The CPU-model harness invokes these entry points directly from the ELF.
+# Yaul enables --gc-sections; retain them as linker roots even though the
+# console's timing/reporting program does not call the independent baseline.
+SH_LDFLAGS += -Wl,--undefined=_plain_prepare,--undefined=_plain_available \
+  -Wl,--undefined=_plain_range
 IP_VERSION := V0.200
 IP_RELEASE_DATE := 20261113
 IP_AREAS := JTUBKAEL

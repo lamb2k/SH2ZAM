@@ -98,7 +98,7 @@ int main(int argc,char**argv) {
    struct cost setup=invoke("_plan_prepare",0,0,0,0);if(setup.result!=1)fail("Plan failed",pi);u32 mask=invoke("_candidate_available",0,0,0,0).result;if(mask!=7)fail("Candidate not active",mask);
    struct cost plain_setup=invoke("_plain_prepare",0,0,0,0);if(plain_setup.result!=1||invoke("_plain_available",0,0,0,0).result!=1)fail("Plain fixed baseline not bounded",pi);
    if(pi)putchar(',');printf("{\"ax\":%u,\"ay\":%u,\"availability\":%u,\"plan\":",ax,ay,mask);print_cost(setup);printf(",\"plainAvailable\":true,\"plainPlan\":");print_cost(plain_setup);printf(",\"paths\":{");
-   for(unsigned k=0;k<6;k++){struct cost cost=invoke(kernels[k],0,n,0,0);if(k==5&&cost.result!=1)fail("Plain fixed execution failed",pi);if(k)putchar(',');printf("\"%s\":",names[k]);print_cost(cost);}
+   for(unsigned k=0;k<6;k++){struct cost cost=invoke(kernels[k],0,n,0,0);if(k==5&&(cost.result!=1||cost.dmuls_ops!=9u*n||cost.mac_ops))fail("Plain fixed native multiplication audit",pi);if(k)putchar(',');printf("\"%s\":",names[k]);print_cost(cost);}
    printf("},\"checksums\":[");u32 sums[6]={0};double pose_error=0;unsigned bad=0;
    for(unsigned i=0;i<n;i++)for(unsigned r=0;r<3;r++){
     int32_t expected=oracle(in+12*i,matrix,r);for(unsigned k=0;k<6;k++){u32 raw=rl(&cpu,sym(outputs[k])+12*i+4*r);sums[k]=sums[k]*33+raw;if(k){int32_t v;memcpy(&v,&raw,4);if(v!=expected)bad++;}else{float f;memcpy(&f,&raw,4);double err=fabs((double)f-(double)expected/65536);if(!isfinite(err)||err>2.0/65536)fail("Float precision",i);if(err>pose_error)pose_error=err;}}
