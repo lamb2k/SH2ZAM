@@ -161,20 +161,29 @@ static void spatial_build_node(sh2z_aabb_node_t *nodes,size_t node,
     const uint32_t y=(uint32_t)bounds.max.y-(uint32_t)bounds.min.y;
     const uint32_t z=(uint32_t)bounds.max.z-(uint32_t)bounds.min.z;
     const unsigned axis=y>x?(z>y?2u:1u):(z>x?2u:0u);
+    if(count==2) {
+        /* For two IDs the generic median is always the second key. Its
+         * partition swaps exactly when the first key is greater, preserving
+         * equal-key order. Avoid computing the duplicate pivot and entering
+         * the three-way selection loop for every bottom-level leaf pair. */
+        const size_t offset=axis==0?offsetof(sh2z_vec3_t,x):
+                            axis==1?offsetof(sh2z_vec3_t,y):offsetof(sh2z_vec3_t,z);
+        const unsigned char *base=(const unsigned char *)(const void *)boxes+offset;
+        if(spatial_center(base,ids[0])>spatial_center(base,ids[1])) spatial_swap(&ids[0],&ids[1]);
+        const uint32_t left=ids[0],right=ids[1];
+        nodes[node+1]=(sh2z_aabb_node_t){boxes[left],(uint32_t)(node+2),left};
+        nodes[node+2]=(sh2z_aabb_node_t){boxes[right],(uint32_t)(node+3),right};
+        return;
+    }
     const size_t middle=count/2;
     spatial_select(ids,count,middle,boxes,axis);
     /* Selection has already fixed each child's IDs. A singleton needs only
      * its source bounds, original ID and escape index; avoid entering the
-     * builder's large recursive frame for that eight-word write. The right
-     * child can be a singleton only when count==2. */
+     * builder's large recursive frame for that eight-word write. count==2
+     * was handled above, so the remaining right child has at least two IDs. */
     if(middle==1) {
         const uint32_t left=ids[0];
         nodes[node+1]=(sh2z_aabb_node_t){boxes[left],(uint32_t)(node+2),left};
-        if(count==2) {
-            const uint32_t right=ids[1];
-            nodes[node+2]=(sh2z_aabb_node_t){boxes[right],(uint32_t)(node+3),right};
-            return;
-        }
     } else spatial_build_node(nodes,node+1,ids,middle,boxes);
     spatial_build_node(nodes,node+middle+middle,ids+middle,count-middle,boxes);
 }
