@@ -1,5 +1,56 @@
 # Validation record — 2026-11-13
 
+## Coordinate reuse beats the browser float reference on the cube field
+
+Implementation:
+[`43f98abaacd074150efc04c64cb4087723ddf5f4`](https://github.com/lamb2k/SH2ZAM/commit/43f98abaacd074150efc04c64cb4087723ddf5f4).
+[Chromium CI 43495362538](https://github.com/lamb2k/SH2ZAM/actions/runs/43495362538)
+captured the actual browser application, with the unchanged float reference and
+the three paths compiled together using the same flags. Each path retained 21
+adaptive samples lasting at least 5 ms, with rotating measurement order.
+
+The following medians are **microseconds per complete batch**, including one
+matrix qualification and all contribution-table rebuilding for the optimized
+path. Immutable mesh indexing, workspace binding and float input conversion
+are one-time preparation outside the measured calls. Every output write and
+the JS-to-WASM call remain included.
+
+| Detail 4 workload | Vertices | Float | Prior safe batch | Optimized | Float / optimized |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Ring world | 1,584 | 4.167 µs | 7.227 µs | 5.469 µs | 0.76× |
+| Cube field | 1,728 | 4.557 µs | 7.910 µs | **2.686 µs** | **1.70×** |
+| Twisted orbit | 2,016 | 5.273 µs | 9.277 µs | 6.934 µs | 0.76× |
+
+The cube capture reports `optimizedStrategy=coordinate-reuse` and
+`coordinateReuseBlockSize=8`. It is **2.95× faster than the prior safe batch**.
+Ring and torus retain the prepared scalar kernel and still lose to browser float.
+These results describe this browser capture, not a universal fixed-point win or
+a physical-Saturn speedup. The earlier scalar-table prototype tied float on one
+CI runner and lost on another; performance claims apply to the measured block
+kernel and workload, and remain sensitive to the host/browser environment.
+
+The WASM SHA256 is
+`bf02355225fe2d4bfbd398233efe7c991fd5f4740f129c5f01dd3bf9ca2c67e0`.
+The CI artifact includes the complete distributions, component timings,
+precision checks, module hash and browser metadata in the three exported
+`test-result*.json` files. All three captures had zero fixed mismatches and
+maximum float error of one Q16.16 LSB at their captured pose.
+
+[Host CI 43495362743](https://github.com/lamb2k/SH2ZAM/actions/runs/43495362743)
+passed all 11 targets in GCC, Clang and the sanitizer configuration. The new
+reuse suite performs **2,395,331 independent oracle/contract checks**, including
+broken coordinate patterns, every range alignment and tail length, exact output
+order, matrix updates, numeric/capacity fallback and forbidden overlap. The
+integrated WASM tests checked 737,280 random coordinates plus all **1,267,560
+shared-fixture coordinates across 315 mesh/pose combinations**, with zero fixed
+mismatches and maximum float error **0.000015497207641601562 world units**.
+[SH-2 CI 43495362707](https://github.com/lamb2k/SH2ZAM/actions/runs/43495362707)
+also passed the native build, instruction audits and executed-model checks.
+
+The optional API and proof are documented in [COORDINATE_REUSE.md](COORDINATE_REUSE.md).
+Browser captures include the selected strategy and block size; no scene-name
+test or transformed-output cache participates in selection or timing.
+
 ## Executed SH-2 instruction-model evidence
 
 The actual compiled SH-2 software-float, safe, prepared, fused MAC.L and fused

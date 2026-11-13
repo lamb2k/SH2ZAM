@@ -37,6 +37,7 @@
 - An exact batch-transform fast path with one rounding step per row and an automatic full-range fallback.
 - Prepared immutable meshes with cached coordinate bounds and a clamp-free batch kernel when the matrix proof succeeds.
 - Opt-in exact coordinate reuse for repetitive meshes, with caller-owned tables rebuilt for each matrix.
+- A checked eight-vertex loop that shares coordinate-table loads while preserving original output order.
 - Opt-in fused SH-2 `MAC.L` and `DMULS.L` candidates with audited loops and a five-kernel console benchmark.
 - No heap allocation, runtime floating point or mutable global state in the math core.
 - Wide-intermediate products and normalization that handle small and large inputs.
@@ -198,6 +199,13 @@ float reference and optimized SH2ZAM images run together. A live table compares
 float32, the prior safe batch and a prepared or coordinate-reuse batch,
 with the math shown alongside. Mesh detail changes the number of vertices; every
 path receives the same vertices and quantized matrix.
+
+In a [recorded Chromium capture](saturn/VALIDATION.md), Cube field detail 4
+(1,728 vertices) took **2.686 µs** with coordinate reuse versus **4.557 µs** for
+the unchanged float reference: **1.70× faster**, including matrix qualification
+and complete table rebuilding. The prior safe batch took 7.910 µs. Ring and
+torus still favored browser float in that capture; the lab shows the actual
+result for each selected workload and browser.
 
 The two fixed-point paths must match bit for bit. Browser timings include the actual
 C kernels compiled to WebAssembly and report slower results honestly. **Browser
