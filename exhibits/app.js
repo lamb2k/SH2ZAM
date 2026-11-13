@@ -12,6 +12,7 @@
   let liveAt = -Infinity, liveOrder = 0;
   const paths = ['reference','general','optimized'];
   const liveSamples = {reference:[],general:[],optimized:[]};
+  const liveIterations = {reference:64,general:64,optimized:64};
   const specs = {
     saturn: ['Ring world', 'A low-poly planet and concentric rings, transformed in lockstep.'],
     cubes: ['Cube field', 'A lattice of independent cubes sharing one batched transform.'],
@@ -19,11 +20,12 @@
   };
   const {makeMesh}=window.SH2ZAM_MESHES;
   function invalidate() {
-    paths.forEach(path=>{liveSamples[path].length=0;}); liveAt=-Infinity;
+    paths.forEach(path=>{liveSamples[path].length=0;liveIterations[path]=64;}); liveAt=-Infinity;
     $('live-status').textContent='Sampling…';
     $('stage-before-time').textContent=$('stage-after-time').textContent='—';
     report=null; $('before-time').textContent=$('general-time').textContent=$('after-time').textContent='—';
     $('batch-ratio').textContent=$('float-ratio').textContent='—';
+    $('plan-time').textContent=$('kernel-time').textContent='Capture to measure';
     $('export').disabled=true; $('result').textContent='Live · browser timings';
   }
   function loadScene() {
@@ -51,7 +53,7 @@
     $('saturn-status').textContent='Not measured';
     $('saturn-provenance').textContent='Recorded hardware results will appear here after a console run.';
     // Emulator captures are retained for correctness but never presented as hardware timing.
-    if(!row||run?.environment!=='physical-console'||run?.kernelSet!=='float-general-batch-v1'||data.schema!==2)return;
+    if(!row||run?.environment!=='physical-console'||run?.kernelSet!=='float-safe-prepared-fused-v1'||data.schema!==3)return;
     $('saturn-status').textContent='Recorded · physical console';
     $('saturn-reference').textContent=`${row.referenceMs.toFixed(3)} ms`;
     $('saturn-general').textContent=`${row.generalMs.toFixed(3)} ms`;
@@ -61,7 +63,7 @@
     $('saturn-optimized-cycles').textContent=`${row.optimizedCycles.toLocaleString()} cycles`;
     $('saturn-ratio').textContent=`${row.generalOverOptimized.toFixed(2)}×`;
     $('saturn-float-ratio').textContent=`${row.referenceOverOptimized.toFixed(2)}×`;
-    $('saturn-error').textContent=`Current / optimized: bit-exact · Max float error ≤ ${row.maxErrorLSB} Q16 LSB`;
+    $('saturn-error').textContent=`Safe / prepared: bit-exact · ${row.preparedAvailable?'Bounds proved':'Full-range fallback'} · Max float error ≤ ${row.maxErrorLSB} Q16 LSB`;
     $('saturn-provenance').textContent=`${run.console} · ${run.videoMode} · ${run.compiler} · ${run.sourceCommit.slice(0,8)} · ${run.capturedAt}`;
     $('saturn-evidence').href=run.evidenceUrl;$('saturn-evidence').hidden=false;
   }
@@ -110,7 +112,7 @@
       &&maxWorldError<=MAX_WORLD_ERROR&&maxGeneralWorldError<=MAX_WORLD_ERROR;
     $('error').textContent=Number.isFinite(maxError)?`${maxError.toFixed(3)} px`:'Invalid';
     $('world-error').textContent=Number.isFinite(maxWorldError)?`${maxWorldError.toFixed(7)}`:'Invalid';
-    $('fixed-equality').textContent=fixedMismatches?`${fixedMismatches} differing components`:'Current / optimized: bit-exact';
+    $('fixed-equality').textContent=fixedMismatches?`${fixedMismatches} differing components`:'Safe / prepared: bit-exact';
     $('fixed-equality').classList.toggle('mismatch',fixedMismatches!==0);
   }
   function draw() {
@@ -123,7 +125,7 @@
     maxError=0; for(let i=0;i<a.length;i++) maxError=Math.max(maxError,Math.hypot(a[i][3]-b[i][3],a[i][4]-b[i][4]));
     checkPrecision();
     $('play').textContent=playing?'Pause':'Play';$('play-state').textContent=playing?'12 SECOND LOOP':'PAUSED';
-    window.SH2ZAM_EXHIBIT_STATE={ready:true,scene,detail,count:input.length/3,maxError,maxWorldError,maxGeneralWorldError,fixedMismatches,outputChecksums,outputsValid,seconds,playing,busy};
+    window.SH2ZAM_EXHIBIT_STATE={ready:true,scene,detail,count:input.length/3,maxError,maxWorldError,maxGeneralWorldError,fixedMismatches,outputChecksums,outputsValid,preparedFastPath:!!(wasm.candidate_available()&1),seconds,playing,busy};
   }
   function frame(now) {
     if(last&&playing&&!busy&&!document.hidden) { seconds=(seconds+Math.min((now-last)/1000,0.1))%12;draw(); }
@@ -131,13 +133,24 @@
     last=now; requestAnimationFrame(frame);
   }
   const median=xs=>[...xs].sort((a,b)=>a-b)[Math.floor(xs.length/2)];
-  function measurePaths(order,iterations) {
+  function measureAdaptive(fn,targetMs,initialIterations) {
+    let iterations=initialIterations,elapsed;
+    do {
+      const start=performance.now();
+      for(let j=0;j<iterations;j++)fn();
+      elapsed=performance.now()-start;
+      if(elapsed>=targetMs||iterations>=1048576)break;
+      iterations=Math.min(1048576,iterations*Math.max(2,Math.min(8,Math.ceil(targetMs/Math.max(elapsed,0.01)))));
+    } while(true);
+    return {ms:elapsed/iterations,elapsedMs:elapsed,iterations};
+  }
+  function measurePaths(order,targetMs,iterations) {
     const functions={reference:wasm.before,general:wasm.general,optimized:wasm.after},sample={};
     // Rotate first/second/third position; all three see the same current pose.
     for(let i=0;i<3;i++) {
-      const path=paths[(order+i)%3],fn=functions[path],start=performance.now();
-      for(let j=0;j<iterations;j++)fn();
-      sample[path]=(performance.now()-start)/iterations;
+      const path=paths[(order+i)%3];
+      sample[path]=measureAdaptive(functions[path],targetMs,iterations[path]);
+      iterations[path]=sample[path].iterations;
     }
     return sample;
   }
@@ -155,9 +168,9 @@
   }
   function sampleLive() {
     if(!outputsValid) {showTimings({});$('live-status').textContent='PRECISION CHECK FAILED';$('result').textContent='Measurement failed: transform outputs did not pass precision checks.';return;}
-    // Amortize timer resolution over 64 transforms, excluding setup and drawing.
-    const sample=measurePaths(liveOrder++,64),times={};
-    for(const path of paths) {liveSamples[path].push(sample[path]);if(liveSamples[path].length>5)liveSamples[path].shift();times[path]=median(liveSamples[path]);}
+    // Increase repetitions until each live sample spans at least 0.75 ms.
+    const sample=measurePaths(liveOrder++,0.75,liveIterations),times={};
+    for(const path of paths) {liveSamples[path].push(sample[path].ms);if(liveSamples[path].length>5)liveSamples[path].shift();times[path]=median(liveSamples[path]);}
     showTimings(times);
     for(const id of ['before-time','general-time','after-time'])$(id).dataset.samples=String(liveOrder);
     $('live-status').textContent=`LIVE · SAMPLE ${liveOrder}`;
@@ -166,23 +179,40 @@
   async function benchmark() {
     if(busy||!wasm) return; busy=true; playing=false; report=null; draw();
     const controls=[...document.querySelectorAll('button,input')];controls.forEach(c=>c.disabled=true);
-    const samples={reference:[],general:[],optimized:[]},iterations=64;
+    const samples={reference:[],general:[],optimized:[]},iterations={reference:64,general:64,optimized:64};
+    const sampleIterations={reference:[],general:[],optimized:[]},sampleElapsedMs={reference:[],general:[],optimized:[]};
+    const componentSamples={planPreparation:[],kernelOnly:[]},componentIterations={planPreparation:64,kernelOnly:64};
+    const targetSampleMs=5;
     try {
       if(!outputsValid)throw new Error('Transform outputs did not pass precision checks.');
       for(let i=0;i<32;i++){wasm.before();wasm.general();wasm.after();}
       for(let i=0;i<21;i++) {
         $('result').textContent=`Measuring three transform paths ${i+1}/21…`;await yieldFrame();
-        const sample=measurePaths(i,iterations);
-        for(const path of paths)samples[path].push(sample[path]);
+        const sample=measurePaths(i,targetSampleMs,iterations);
+        for(const path of paths) {
+          if(sample[path].elapsedMs<targetSampleMs)throw new Error('Timer resolution is insufficient for a capture.');
+          samples[path].push(sample[path].ms);
+          sampleIterations[path].push(sample[path].iterations);
+          sampleElapsedMs[path].push(sample[path].elapsedMs);
+        }
+        const components={planPreparation:wasm.plan_prepare,kernelOnly:wasm.after_kernel};
+        for(const path of (i%2?['planPreparation','kernelOnly']:['kernelOnly','planPreparation'])) {
+          const component=measureAdaptive(components[path],targetSampleMs,componentIterations[path]);
+          componentSamples[path].push(component);
+          componentIterations[path]=component.iterations;
+        }
       }
       checkPrecision();
       if(!outputsValid)throw new Error('Transform outputs did not pass precision checks.');
       const times=Object.fromEntries(paths.map(path=>[path,median(samples[path])]));
+      const componentTimes=Object.fromEntries(Object.entries(componentSamples).map(([path,values])=>[path,median(values.map(value=>value.ms))]));
       showTimings(times);
+      $('plan-time').textContent=`${componentTimes.planPreparation.toFixed(5)} ms`;
+      $('kernel-time').textContent=`${componentTimes.kernelOnly.toFixed(4)} ms`;
       $('live-status').textContent='CAPTURED';
       const measurable=paths.every(path=>times[path]>0);
-      $('result').textContent=!measurable?'Timer resolution is insufficient; increase mesh detail.':`Captured · current / optimized: ${(times.general/times.optimized).toFixed(2)}× · browser timings`;
-      report={schema:2,kernelSet:'float-general-batch-v1',backend:'SH2ZAM portable C / WebAssembly',reference:'float32 C / WebAssembly (browser float)',scene,detail,vertices:input.length/3,triangles:mesh.faces.length,loopSeconds:seconds,maximumScreenErrorPx:maxError,maximumWorldError:{general:maxGeneralWorldError,optimized:maxWorldError},maximumAllowedWorldError:MAX_WORLD_ERROR,fixedMismatches,outputChecksums,iterationsPerSample:iterations,sampleCount:21,measurementOrder:'rotate reference/general/optimized',medianMs:times,samplesMs:samples,ratios:measurable?{generalOverOptimized:times.general/times.optimized,referenceOverOptimized:times.reference/times.optimized}:null,wasmSHA256:window.SH2ZAM_WASM_SHA256,userAgent:navigator.userAgent,measuredAt:new Date().toISOString(),excludes:['geometry generation','matrix setup and quantization','rendering','input conversion','precision checks'],saturnBenchmark:false};
+      $('result').textContent=!measurable?'Timer resolution is insufficient; increase mesh detail.':`Captured · safe / prepared: ${(times.general/times.optimized).toFixed(2)}× · browser timings`;
+      report={schema:3,kernelSet:'float-safe-prepared-v1',backend:'SH2ZAM prepared scalar C / WebAssembly',reference:'float32 C / WebAssembly (browser float)',preparedFastPath:!!(wasm.candidate_available()&1),scene,detail,vertices:input.length/3,triangles:mesh.faces.length,loopSeconds:seconds,maximumScreenErrorPx:maxError,maximumWorldError:{general:maxGeneralWorldError,optimized:maxWorldError},maximumAllowedWorldError:MAX_WORLD_ERROR,fixedMismatches,outputChecksums,minimumSampleDurationMs:targetSampleMs,sampleIterations,sampleElapsedMs,sampleCount:21,measurementOrder:'rotate reference/general/optimized',medianMs:times,samplesMs:samples,components:{medianMs:componentTimes,samples:componentSamples},ratios:measurable?{generalOverOptimized:times.general/times.optimized,referenceOverOptimized:times.reference/times.optimized}:null,wasmSHA256:window.SH2ZAM_WASM_SHA256,userAgent:navigator.userAgent,measuredAt:new Date().toISOString(),includes:['one matrix bounds qualification per optimized batch','range validation','output writes','JS-to-WASM call'],excludes:['geometry generation','matrix construction and quantization','rendering','input conversion','one-time mesh bounds scan','precision checks'],saturnBenchmark:false};
     } catch(error) {if(!outputsValid)showTimings({});$('live-status').textContent='CAPTURE FAILED';$('result').textContent=`Measurement failed: ${error.message}`; }
     finally { busy=false;controls.forEach(c=>c.disabled=false);$('export').disabled=!report;draw(); }
   }
@@ -200,7 +230,7 @@
       if(!window.SH2ZAM_WASM_BASE64) throw new Error('Build the exhibit first with bash exhibits/build.sh, or use the ready-to-run CI artifact.');
       const bytes=Uint8Array.from(atob(window.SH2ZAM_WASM_BASE64),c=>c.charCodeAt(0));
       const module=await WebAssembly.instantiate(bytes,{});wasm=module.instance.exports;
-      $('backend').textContent='ACTUAL SH2ZAM C · PORTABLE BACKEND';
+      $('backend').textContent='ACTUAL SH2ZAM C · PREPARED SCALAR BACKEND';
       $('play').disabled=$('benchmark').disabled=false;
       loadScene();resize();requestAnimationFrame(frame);
     } catch(error) { $('backend').textContent='EXHIBIT NOT LOADED';$('failure').hidden=false;$('failure').textContent=error.message;$('result').textContent='No fallback simulation is shown.';window.SH2ZAM_EXHIBIT_STATE={ready:false,error:error.message}; }

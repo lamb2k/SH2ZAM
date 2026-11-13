@@ -1,41 +1,60 @@
-# Saturn three-way transform benchmark
+# Saturn prepared-transform benchmark
 
-Status: the harness compares **software float → general SH2ZAM → optimized SH2ZAM**.
-**No physical-console measurements are recorded.** Browser/WASM timing is shown
-separately in the interactive lab. Saturn values remain unmeasured until an evidenced
-capture is committed.
+The harness compares **software float → the prior safe batch → a prepared batch**,
+then measures two experimental SH-2 assembly candidates against the same inputs.
+**No physical-console measurements are recorded.** Browser/WASM timing remains
+separate. A cross-compiled image and instruction audit do not establish that the
+image has booted, that an assembly candidate has executed correctly, or that it is
+faster on a Saturn.
 
 ## Workload and kernels
 
-`exhibits/meshes.js` supplies both the browser and the fixture generator: Ring world,
-Cube field and Twisted orbit, each at detail 1–5. `generate-fixtures.cjs` freezes the
-exact Q16.16 vertex inputs and 21 poses across the same 12-second loop. Its manifest
-records vertex counts and a SHA256 of the complete inputs and poses.
+`exhibits/meshes.js` supplies the browser and fixture generator: Ring world, Cube
+field and Twisted orbit, each at detail 1–5. `generate-fixtures.cjs` freezes the exact
+Q16.16 vertices and 21 poses across the same 12-second loop. Its manifest records
+vertex counts and a SHA256 of all inputs and poses.
 
-Both environments compile `exhibits/bridge.c`. All three transform kernels receive
-the same vertices and the same matrix coefficients. Setup constructs the Q16.16
-matrix once, then converts those exact coefficients and vertices to float32 outside
-timing. This isolates transform arithmetic; it does not compare different trig
-approximations or matrix construction methods.
+Both environments compile `exhibits/bridge.c`. Matrix construction quantizes once;
+the float kernel receives float32 conversions of those same matrix coefficients
+and vertices. Matrix construction, input conversion, and the one-time scan that
+prepares the immutable mesh view are outside transform timing. Per-matrix plan
+qualification is measured separately and included once in each prepared whole-mesh
+result. Input arrays remain unchanged throughout all poses.
 
-| Path | Function | What is measured |
+| Path | Bridge function | Measured operation |
 |---|---|---|
-| Software float | `before_range` | Float32 affine transform; SH-2 compiler software-float helpers |
-| General SH2ZAM | `general_range` | Existing full-range `sh2z_mat34_transform_points_general` |
-| Optimized SH2ZAM | `after_range` | Safe dispatch through `sh2z_mat34_transform_points`, including its matrix bound check |
+| Software float | `before_range` | Float32 affine transform; SH-2 software-float helpers |
+| Prior safe batch | `general_range` | `sh2z_mat34_transform_points`, including its matrix-only dispatch |
+| Portable prepared | `after_range` | `sh2z_transform_plan_execute_range` on a qualified plan |
+| Experimental MAC.L | `mac_range` | Prepared wrapper using fused native accumulation when available |
+| Experimental DMULS.L | `dmuls_range` | Prepared wrapper using native products and ADDC accumulation when available |
 
-The general and optimized paths must match **bit for bit** at every output coordinate.
-The benchmark also measures their error against float32. Separate output buffers and
-checksums keep all three results observable. The optimized path retains the general
-fallback for matrices outside its proven accumulator bound.
+The legacy JSON keys `general` and `optimized` now mean **prior safe batch** and
+**portable prepared**, respectively. Schema 3 makes that change explicit. The
+original full-range scalar routine remains the correctness fallback and is covered
+by the host oracle suites; it is no longer the middle timing baseline.
 
-The browser uses WebAssembly hardware floating-point operations and the portable
-fixed-point backend. On Saturn, float32 uses software helpers; fixed point uses
-native `dmuls.l`. CI checks `__mulsf3` and `__addsf3` dependencies and exports native
-multiplication disassembly, relocations and symbol sizes for inspection. These checks
-do not establish a hardware speedup.
+The portable prepared implementation uses ordinary C arithmetic, so GCC generates
+its SH instructions. The two assembly candidates are optional entry points, not
+the default prepared dispatcher. MAC.L requires SR.S to be clear and does not alter
+it. Both candidates require a successful prepared bounds proof and a native SH-2
+build. Otherwise they execute the ordinary prepared fallback. Availability is
+recorded for every pose; a fallback timing is never published as an active native
+candidate result. See `include/sh2zam/batch_experimental.h` for the contracts.
 
-## Build and run
+All four fixed-point outputs must match bit for bit at every coordinate. Separate
+buffers and checksums keep all five results observable. Host tests compare the
+prepared implementation and instruction models against an independent 128-bit
+integer oracle. The shared-fixture test additionally checks float error and
+whole-mesh/chunk parity; executing a host fallback does not test SH-2 assembly.
+
+The browser uses WebAssembly hardware floating point and the portable fixed-point
+backend. Saturn float32 uses software helpers. CI checks the bridge's `__mulsf3`
+and `__addsf3` dependencies and exports native disassembly, relocations, symbol
+sizes and fused-loop audits. Paired results within one environment are comparable;
+browser timings cannot establish a Saturn speedup.
+
+## Build and capture
 
 Use the Yaul SDK/toolchain pinned in `.github/workflows/sh2-cross.yml`:
 
@@ -45,88 +64,127 @@ make -C saturn/benchmarks/yaul
 ```
 
 CI builds the bootable `sh2zam-benchmark` image and uploads it in
-`sh2-compile-evidence`, with the compiler version, image checksum, manifest, linked
-outputs and instruction/helper audit. Build success does not establish that the image
-has booted on a console.
+`sh2-compile-evidence`, with the compiler version, image digest, manifest, linked
+outputs and instruction/helper audits. The artifact remains unqualified until it
+has actually booted and produced valid output.
 
-Boot the ISO/CUE using your usual Saturn loader. The app captures all 15 workloads,
-then displays **30 result pages: two pages per workload**. Each page holds up to 11
-poses so four raw timing columns remain readable at 320×224. Pages advance every 600
-display frames and repeat. Photograph all pages, including build/fixture identifiers,
-all four checksums, maximum error, mismatch count, and all 21 float/general/optimized
-sample triples with their overhead samples. Any `INVALID` result is unusable.
+Boot the ISO/CUE using your usual Saturn loader. The application captures all 15
+workloads, then shows **60 pages: four per workload**. The first two pages, marked
+A, cover poses 0–10 and 11–20; the next two, marked B, cover those poses again with
+the remaining fields. Each page fits at most 11 sample rows at 320×224. Pages
+advance every 600 display frames and repeat.
 
-Keep the image digest, complete source commit and photographs/log as public capture
-evidence. An emulator can test boot and correctness; emulator timings must be marked
-`emulator` and are not shown as Saturn performance in the lab.
+| Page | Display columns | Capture fields |
+|---|---|---|
+| A | `float`, `safe`, `empty`, `prep64` | `referenceTicks`, `generalTicks`, `overheadTicks`, `prepareTicks` |
+| B | `prepared`, `mac`, `dmuls`, `pe64`, `A` | `optimizedTicks`, `macTicks`, `dmulsTicks`, `prepareOverheadTicks`, `candidateMasks` |
 
-Record console model, PAL/NTSC region, actual CPU clock, video mode (this app selects
-320 horizontal), compiler/flags, cache policy and memory placement. SDK startup cache
-settings are not automatically certified by this harness. The app warms all paths;
-it does not flush caches between samples. It does not start slave-CPU work. Inspect
-the SDK startup and linked map when documenting those settings. No clock is guessed
-by the browser or converter.
+`prep64` and `pe64` are raw FRT ticks for 64 plan-preparation calls and 64 matching
+empty calls. The `A` column is a bit mask: 1 = prepared proof succeeded, 2 = MAC.L
+available, 4 = DMULS.L available. For example, 7 means all three; 5 means the
+prepared and DMULS.L paths are available while MAC.L falls back. A zero mask means
+the plan's full-range fallback is required.
 
-## Measurement
+Photograph all pages, including the commit/fixture prefixes, six checksums,
+maximum error, mismatch count, every raw timing sample and every availability
+mask. The checksum labels map to `referenceChecksum`, `generalChecksum`,
+`optimizedChecksum`, `macChecksum`, `dmulsChecksum`, and combined `checksum`.
+Any `INVALID` result is unusable. Keep the full source commit, image digest and
+photographs/log as public evidence; displayed prefixes alone are insufficient.
 
-- 21 deterministic poses, one sample per pose for each kernel. The three timing
-  orders rotate so every kernel occupies each position seven times.
-- All three kernels are warmed twice at each pose. Their inputs, matrix coefficients,
-  buffer layout, compiler flags and vertex counts match.
-- CPU FRT clock /128; 32-vertex chunks prevent long intervals from wrapping the
-  16-bit timer. Each chunk resets the count. The overflow flag invalidates a capture
-  rather than silently wrapping. FRT control follows Yaul's `cpu/frt.h` and
-  `cpu_frt.c` APIs. This timer integration still needs first-console qualification.
-- Interrupt mask 15 only during timed chunks, restored to 0 afterward. Rendering,
-  matrix construction, input conversion, checksums and precision checks are outside
-  the measured interval. This measures isolated CPU transform work, not game FPS.
-- Raw whole-mesh tick sums include the normal range wrapper and dispatch cost for
-  every chunk. The optimized matrix bound check is inside timing. A full-mesh call
-  amortizes that check over more vertices; the fixed 32-vertex chunks therefore do
-  not measure the best possible full-batch throughput. Keep chunk size in provenance.
-- A matching empty-call measurement is retained per pose. The converter subtracts
-  each overhead sample, then takes the median of 21 adjusted whole-mesh totals for
-  each kernel. Nonpositive adjusted samples are rejected. Cache effects are not
-  removed by subtraction.
-- Cycles = adjusted ticks × 128. Milliseconds = cycles / recorded CPU clock × 1000.
-  `referenceOverGeneral`, `referenceOverOptimized` and `generalOverOptimized` are the
-  numerator's time divided by the denominator's time; values above 1 favor the
-  denominator. Slower optimized results remain valid measurements.
-- `fixedMismatches` counts general/optimized component differences and must be zero.
-  Both fixed-point checksums must also agree. `maxErrorLSB` is the maximum float32
-  error, rounded up to Q16 LSB units over every vertex and pose. Capture validation
-  requires at most 66 LSB (about 0.00101 world units). It is not a screen-pixel error.
-- Every output contributes to its kernel checksum and a combined checksum. Separate
-  translation units, memory barriers and `-fno-lto` prevent benchmark elimination.
-  Hardware and browser builds use `-O2` and `-O3` respectively; compare paired kernels
-  within each environment, not absolute times across environments.
+Record console model, PAL/NTSC region, actual CPU clock, video mode (320×224 here),
+compiler/flags, cache policy and memory placement. SDK startup cache settings are
+not certified by this harness. Inspect startup code and the linked map when
+recording those settings. The app warms paths without flushing caches and does
+not start slave-CPU work. An emulator can test boot and behavior; emulator timing
+must be labeled `emulator` and is not shown as physical Saturn performance.
 
-## Publish a capture
+## Timing and interpretation
 
-Edit `results/captures.json`. Leave `run: null` and `records: []` until evidence exists.
-The data uses **schema 2**. Schema 1 two-kernel captures are rejected; they cannot be
-relabeled as measurements of the optimized path. A real `run` must contain:
+There are 21 deterministic poses and five kernels. The start of the timing order
+rotates by one path per pose, so each kernel occupies each position **four or five
+times**, rather than an exactly balanced count. All kernels are warmed twice at
+each pose. The preparation and preparation-empty measurement order alternates.
+
+The CPU FRT runs at clock /128. Each kernel is timed in 32-vertex chunks, resetting
+the 16-bit counter for each chunk and summing the ticks. Any overflow flag
+invalidates the capture instead of guessing a wrap count. The interrupt mask is
+15 during the timed interval and restored to 0 afterward. Rendering, matrix
+construction, input conversion, mesh scanning, checksums and precision checks are
+outside these intervals. This measures isolated CPU transform work, not game FPS.
+The timer integration itself still needs first-console qualification.
+
+Every chunk includes the path's range wrapper. The safe batch checks its matrix
+for every chunk; prepared paths validate their output/range and reuse the prepared
+plan. Those range costs remain in the measurements. A direct full-mesh call can
+amortize wrapper work over more vertices, so chunked FRT timing is not a claim of
+the best achievable full-batch throughput. Keep chunk size in provenance.
+
+Plan qualification is measured as a separate block of 64 `plan_prepare()` calls,
+with a matching 64-call empty-loop measurement. For each pose, the converter uses:
+
+```text
+setup ticks per batch = (prepareTicks - prepareOverheadTicks) / 64
+kernel ticks         = raw kernel ticks - overheadTicks
+prepared total ticks = prepared kernel ticks + setup ticks per batch
+MAC/DMULS total ticks = candidate kernel ticks + setup ticks per batch
+```
+
+It adds setup **once per whole mesh**, not once per 32-vertex chunk. All adjustment
+and addition happens per pose before taking the median of the 21 samples. Separate
+medians must not be added together. The converter also exports kernel-only and
+setup medians, so setup amortization can be inspected. A resolved zero setup cost
+is allowed and means the timer did not resolve a positive net value; it is not
+replaced with an epsilon. Negative setup or nonpositive adjusted kernel samples
+are rejected. Empty-loop subtraction does not remove cache effects or uncertainty
+from FRT quantization.
+
+Cycles are adjusted ticks × 128; milliseconds are cycles / the recorded CPU clock
+× 1000. `referenceOverGeneral`, `referenceOverOptimized` and
+`generalOverOptimized` divide the numerator's total by the denominator's total.
+Values above 1 favor the denominator; slower prepared results remain valid.
+Native-candidate summaries are null if any pose used a fallback. Their raw samples
+and availability masks remain in the output for inspection.
+
+`fixedMismatches` counts coordinates where any fixed-point path differs from the
+safe batch and must be zero. All four fixed-point checksums must agree.
+`maxErrorLSB` is the maximum float32 error, rounded up to Q16 LSB units across all
+vertices and poses, and must not exceed 66 LSB (about 0.00101 world units). This is
+not a screen-pixel error. Every output contributes to its own checksum and the
+combined checksum. Separate translation units, memory barriers and `-fno-lto`
+keep the calls and output consumption observable. Hardware and browser builds use
+`-O2` and `-O3` respectively; compare kernels within each environment.
+
+## Capture schema and publication
+
+Keep `results/captures.json` at `run: null`, `records: []` until evidence exists.
+The data uses **schema 3** and kernel set `float-safe-prepared-fused-v1`. Schema 1
+and 2 records are rejected because they measured different kernel sets and did
+not include prepared setup or native-candidate availability.
+
+A real `run` contains:
 
 | Field | Required value |
 |---|---|
-| environment | `physical-console` or `emulator` |
-| kernelSet | `float-general-batch-v1` |
-| backend | `sh2-dmuls` |
-| timerDivisor / chunkVertices | `128` / `32` |
-| sourceCommit / imageSHA256 | Full source SHA and boot ISO digest |
-| clockHz | Validated CPU frequency for the console/mode |
-| compiler / flags | Exact toolchain and compilation options |
-| console / videoMode | Console identity, region and selected video mode |
-| cachePolicy / memoryPlacement | Observed/configured cache and linked memory placement |
-| capturedAt / evidenceUrl | ISO timestamp and HTTPS capture evidence link |
+| `environment` | `physical-console` or `emulator` |
+| `kernelSet` / `backend` | `float-safe-prepared-fused-v1` / `sh2-dmuls` |
+| `timerDivisor` / `chunkVertices` | 128 / 32 |
+| `prepareIterations` | 64 |
+| `sourceCommit` / `imageSHA256` | Full source commit and boot ISO digest |
+| `clockHz` | Validated CPU frequency for the console and video mode |
+| `compiler` / `flags` | Exact toolchain and compilation options |
+| `console` / `videoMode` | Console identity, region and selected video mode |
+| `cachePolicy` / `memoryPlacement` | Observed settings and linked memory placement |
+| `capturedAt` / `evidenceUrl` | ISO timestamp and HTTPS evidence link |
 
 Each record identifies `scene`, `detail`, `vertices`, `invalid: false`,
-`fixedMismatches: 0`, integer `maxErrorLSB`, and four eight-digit hexadecimal checksums:
-`referenceChecksum`, `generalChecksum`, `optimizedChecksum`, and combined `checksum`.
-It also contains **21 integers in each** of `referenceTicks`, `generalTicks`,
-`optimizedTicks`, and `overheadTicks`. Scene names are `saturn`, `cubes`, `torus`.
-Keep the manifest's `fixtureSHA256`; changing geometry or poses invalidates old data.
-Partial captures are allowed: missing scene/detail combinations remain unmeasured.
+`fixedMismatches: 0`, integer `maxErrorLSB`, and the six eight-digit hexadecimal
+checksums listed above. It has **21 integers in each** of the nine arrays
+`referenceTicks`, `generalTicks`, `optimizedTicks`, `macTicks`, `dmulsTicks`,
+`overheadTicks`, `prepareTicks`, `prepareOverheadTicks`, and `candidateMasks`.
+Scene names are `saturn`, `cubes`, `torus`. Keep the manifest's `fixtureSHA256`;
+changing geometry or poses invalidates earlier data. Partial captures are allowed:
+missing scene/detail combinations remain unmeasured.
 
 ```sh
 node saturn/benchmarks/generate-fixtures.cjs
@@ -134,15 +192,25 @@ node saturn/benchmarks/compile-results.cjs
 node saturn/benchmarks/test-results.cjs
 ```
 
-The converter produces `referenceCycles`, `generalCycles`, `optimizedCycles`, their
-`*Ms` equivalents and the three time ratios. Generated `exhibits/saturn-results.js`
-is bundled by the site build and offline artifact. The UI shows only physical-console
-records matching the selected scene/detail, with evidence and recorded build provenance.
-The validator checks consistency, not authenticity: review capture evidence and source
-before publication. A measurement from older math code remains a measurement of that
-recorded build, never a new measurement.
+The converter retains all raw data and derives:
 
-## Correctness check
+- `referenceCycles`, `generalCycles`, `optimizedCycles`: headline float, safe and
+  prepared totals; prepared includes one plan setup per mesh.
+- `prepareCycles`, `optimizedKernelCycles`: separately observable setup and
+  prepared kernel medians.
+- `macCycles`, `dmulsCycles`, `macKernelCycles`, `dmulsKernelCycles`: candidate
+  totals/kernel medians, or null when unavailable for any pose.
+- Matching `*Ms` fields, ratios, and `preparedAvailable`, `macAvailable`,
+  `dmulsAvailable` flags.
+
+Generated `exhibits/saturn-results.js` is bundled in the site and offline artifact.
+The initial UI presents the three headline columns for physical-console records
+matching the selected scene/detail; candidate details remain in the data export.
+The validator checks consistency, not authenticity. Review source and capture
+evidence before publication. A result belongs to its recorded build, and cannot
+be relabeled as a measurement of later code.
+
+## Host correctness check
 
 ```sh
 node saturn/benchmarks/generate-fixtures.cjs
@@ -153,6 +221,10 @@ cc -O2 -std=c11 -Wall -Wextra -Werror -ffp-contract=off \
 /tmp/sh2zam-fixtures
 ```
 
-This runs all 315 mesh/pose combinations, validates full-batch/chunk output identity
-for all three kernels, requires exact general/optimized equality and checks a 0.001
-world-unit error bound against float32. It produces correctness evidence only.
+The fixture test runs all 315 mesh/pose combinations, validates whole-mesh/chunk
+identity for five wrappers, checks prepared-kernel/inclusive-call parity, requires
+exact equality among all four fixed-point outputs and verifies a 0.001 world-unit
+float error bound. It also checks that source vertices remain unchanged. Assertions
+remain active in Release builds. Host candidate calls exercise their portable
+fallbacks; the independent oracle and native instruction-model suites are CTest
+`prepared_transform_oracles` and `native_batch_host_models`.

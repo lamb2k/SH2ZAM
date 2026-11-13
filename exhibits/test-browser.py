@@ -35,8 +35,10 @@ with sync_playwright() as p:
     assert page.locator('#saturn-optimized').inner_text()=='—'
     assert page.locator('.kernel-table pre code').count()==3
     assert 'float result' in page.locator('.kernel-table').inner_text()
-    assert 'p - q * 65536' in page.locator('.kernel-table').inner_text()
+    assert 'sh2zi_clamp(' in page.locator('.kernel-table').inner_text()
     assert 'sh2zi_floor16(sum)' in page.locator('.kernel-table').inner_text()
+    assert 'sh2zi_prepared_floor16(sum)' in page.locator('.kernel-table').inner_text()
+    assert page.evaluate('SH2ZAM_EXHIBIT_STATE.preparedFastPath') is True
     assert page.evaluate('SH2ZAM_EXHIBIT_STATE.fixedMismatches')==0
     assert 'bit-exact' in page.locator('#fixed-equality').inner_text()
     page.click('#play')
@@ -65,15 +67,23 @@ with sync_playwright() as p:
         page.click('#export')
     result.value.save_as(root/'test-result.json')
     data=json.loads((root/'test-result.json').read_text())
-    assert data['schema']==2 and data['kernelSet']=='float-general-batch-v1'
+    assert data['schema']==3 and data['kernelSet']=='float-safe-prepared-v1'
+    assert data['preparedFastPath'] is True
+    assert data['minimumSampleDurationMs']==5
     assert data['fixedMismatches']==0 and data['saturnBenchmark'] is False
     assert data['outputChecksums']['general']==data['outputChecksums']['optimized']
     assert all(len(value)==8 for value in data['outputChecksums'].values())
     for path in ['reference','general','optimized']:
         assert len(data['samplesMs'][path])==21
         assert data['medianMs'][path]>=0
+        assert len(data['sampleIterations'][path])==21
+        assert all(value>=5 for value in data['sampleElapsedMs'][path])
+    for component in ['planPreparation','kernelOnly']:
+        assert len(data['components']['samples'][component])==21
+        assert data['components']['medianMs'][component]>0
+    assert 'one matrix bounds qualification per optimized batch' in data['includes']
     assert data['maximumWorldError']['general']==data['maximumWorldError']['optimized']
-    print('Browser capture:',json.dumps({key:data[key] for key in ['schema','scene','detail','vertices','medianMs','ratios','maximumWorldError','fixedMismatches','outputChecksums','wasmSHA256']}),flush=True)
+    print('Browser capture:',json.dumps({key:data[key] for key in ['schema','scene','detail','vertices','medianMs','components','ratios','maximumWorldError','fixedMismatches','outputChecksums','wasmSHA256']}),flush=True)
     captured=page.locator('#before-time').inner_text()
     page.wait_for_timeout(650)
     assert page.locator('#before-time').inner_text()==captured
@@ -114,5 +124,5 @@ with sync_playwright() as p:
     assert 'precision checks' in invalid.locator('#result').inner_text()
     browser.close()
 server.shutdown()
-print('PASS: three live paths, exact fixed outputs, artwork, scenes, detail, pause, split, keyboard, three-way export, mobile, reduced motion, offline HTML')
+print('PASS: three live paths, inclusive prepared setup, adaptive capture, exact fixed outputs, artwork, scenes, detail, pause, split, keyboard, export, mobile, reduced motion, offline HTML')
 

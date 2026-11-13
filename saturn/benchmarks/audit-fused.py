@@ -37,7 +37,7 @@ for symbol, wanted in expected.items():
     actual_name, text = find_function(symbol)
     loops[actual_name] = text
     instructions = {
-        opcode: len(re.findall(r"\b" + re.escape(opcode) + r"\b", text))
+        opcode: len(re.findall(r"\b" + re.escape(opcode) + r"(?=\s)", text))
         for opcode in ["mac.l", "dmuls.l", "clrmac", "clrt", "sts", "addc", "xtrct"]
     }
     calls = len(re.findall(r"\b(?:jsr|bsr|bsrf)\b", text))

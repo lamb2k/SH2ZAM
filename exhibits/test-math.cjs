@@ -16,9 +16,10 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
   for(let frame=0;frame<120;frame++){
     const x=(frame*211)&65535,y=(frame*547)&65535,rx=x*Math.PI*2/65536,ry=y*Math.PI*2/65536;
     w.setup(x,y,Math.sin(rx),Math.cos(rx),Math.sin(ry),Math.cos(ry));w.before();w.general();w.after();
+    assert.equal(w.candidate_available(),1,'bounded exhibit selects prepared scalar, not native SH-2 candidates');
     for(let i=0;i<a.length;i++){
       assert.ok(Number.isFinite(a[i]));
-      assert.equal(b[i],g[i],'optimized is bit-exact with the current kernel');
+      assert.equal(b[i],g[i],'prepared is bit-exact with the prior safe batch');
       const error=Math.abs(a[i]-b[i]/65536),generalError=Math.abs(a[i]-g[i]/65536);
       maximum=Math.max(maximum,error);generalMaximum=Math.max(generalMaximum,generalError);
       assert.ok(error<2/65536,'shared-coefficient transform precision drift');checks++;
@@ -30,5 +31,14 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
     assert.equal(g[i],input[i],'general identity');
     assert.equal(a[i],input[i]/65536,'float identity');
   }
+  // The timed inclusive wrapper and kernel-only diagnostic must agree.
+  const expected=b.slice();b.fill(0);w.after_kernel();
+  assert.deepEqual(b,expected);
+  // Fresh preparation of full-range coordinates must select the general
+  // fallback, including INT32_MIN's unsigned magnitude, and stay exact.
+  for(let i=0;i<input.length;i++)input[i]=i%3===0?-2147483648:i%3===1?2147483647:i*65537;
+  assert.equal(w.prepare(n),1);w.setup(8192,9216,0,0,0,0);
+  assert.equal(w.candidate_available(),0,'full-range mesh fails the no-clamp proof');
+  w.general();w.after();assert.deepEqual(b,g,'prepared fallback preserves full-range safe output');
   console.log(JSON.stringify({checks,maximumWorldError:{general:generalMaximum,optimized:maximum},fixedMismatches:0,identity:'pass',imports:0}));
 })().catch(e=>{console.error(e);process.exit(1);});

@@ -58,7 +58,8 @@ sh2zi_mac_row(const int32_t row[4],const sh2z_vec3_t *point) {
 }
 
 static inline __attribute__((always_inline)) int32_t
-sh2zi_dmuls_row(const int32_t row[4],int32_t x,int32_t y,int32_t z) {
+sh2zi_dmuls_row(const sh2z_mat34_t *matrix,const int32_t row[4],
+    int32_t x,int32_t y,int32_t z) {
     const int32_t *coefficients=row;
     int32_t hi,result,scratch,lo;
     __asm__ volatile(
@@ -87,7 +88,11 @@ sh2zi_dmuls_row(const int32_t row[4],int32_t x,int32_t y,int32_t z) {
           [hi] "=&r" (hi), [result] "=&r" (result),
           [scratch] "=&r" (scratch), [lo] "=&r" (lo)
         : [x] "r" (x), [y] "r" (y), [z] "r" (z),
-          "m" (*(const int32_t (*)[4])row)
+          /* The enclosing matrix models every coefficient/translation read
+           * while reusing its already-live base register. A separate original
+           * row address would stay live beside the postincrement pointer and
+           * caused a row-pointer spill in GCC 13.2's SH-2 register allocation. */
+          "m" (*matrix)
         : "mach","macl","t");
     return result;
 }
@@ -111,10 +116,12 @@ sh2zi_batch_dmuls_kernel(sh2z_vec3_t *out,const sh2z_mat34_t *matrix,
     const sh2z_vec3_t *in,size_t count) {
     for(size_t i=0;i<count;i++) {
         const int32_t x=in[i].x,y=in[i].y,z=in[i].z;
-        const int32_t rx=sh2zi_dmuls_row(matrix->m[0],x,y,z);
-        const int32_t ry=sh2zi_dmuls_row(matrix->m[1],x,y,z);
-        const int32_t rz=sh2zi_dmuls_row(matrix->m[2],x,y,z);
-        out[i]=(sh2z_vec3_t){rx,ry,rz};
+        /* xyz is captured; validation rejects output overlap with matrix/input.
+         * Retire each output now instead of keeping three results live through
+         * the following asm blocks: SH-2 has only sixteen general registers. */
+        out[i].x=sh2zi_dmuls_row(matrix,matrix->m[0],x,y,z);
+        out[i].y=sh2zi_dmuls_row(matrix,matrix->m[1],x,y,z);
+        out[i].z=sh2zi_dmuls_row(matrix,matrix->m[2],x,y,z);
     }
 }
 #endif
