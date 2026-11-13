@@ -3,64 +3,83 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
-<meta name="description" content="Compare float32, safe SH2ZAM and optimized SH2ZAM batch transforms with live timings and exact precision checks.">
-<title>SH2ZAM / The math lab</title>
-<link rel="stylesheet" href="style.css?v=target-model-1">
-<script defer src="math-module.js?v=target-model-1"></script><script defer src="meshes.js?v=target-model-1"></script><script defer src="saturn-results.js?v=target-model-1"></script><script defer src="sh2-model-results.js?v=target-model-1"></script><script defer src="app.js?v=target-model-1"></script>
+<meta name="description" content="Compare standalone C and SH2ZAM transforms compiled for Sega Saturn's SH-2, with modeled cycles, precision checks and reproducible evidence.">
+<title>SH2ZAM / Saturn math lab</title>
+<link rel="stylesheet" href="style.css?v=saturn-adoption-2">
+<script defer src="math-module.js?v=saturn-adoption-2"></script><script defer src="meshes.js?v=saturn-adoption-2"></script><script defer src="saturn-results.js?v=saturn-adoption-2"></script><script defer src="sh2-model-results.js?v=saturn-adoption-2"></script><script defer src="app.js?v=saturn-adoption-2"></script>
 </head>
 <body>
-<header class="top"><a class="wordmark" href="https://github.com/lamb2k/SH2ZAM">SH<span>2</span>ZAM<span class="dot">·</span></a><span class="topnote">SEGA SATURN MATH / INTERACTIVE LAB</span><a class="source" href="https://github.com/lamb2k/SH2ZAM/tree/main/exhibits">View source ↗</a></header>
+<header class="top"><a class="wordmark" href="https://github.com/lamb2k/SH2ZAM">SH<span>2</span>ZAM<span class="dot">·</span></a><span class="topnote">SEGA SATURN / MATH LAB</span><a class="source" href="https://github.com/lamb2k/SH2ZAM/tree/main/exhibits">View source ↗</a></header>
 <main>
-<section class="hero"><div><h1>SH2ZAM<br><span>Math lab.</span></h1><p class="intro">One mesh. Three transform paths.</p><span id="backend" hidden>Loading WebAssembly…</span></div><img class="heroart" src="gainz.webp" alt="Sega Saturn with turquoise flexing arms above the word GAINZ" width="190" height="190"></section>
+<section class="hero"><div><p class="eyebrow">COMPILED FOR SH-2</p><h1>Saturn math.<br><span>Before and after.</span></h1><p class="intro">The same mesh, with and without SH2ZAM.</p><span id="backend" hidden>Loading visual preview…</span></div><img class="heroart" src="gainz.webp" alt="Sega Saturn with turquoise flexing arms above the word GAINZ" width="190" height="190"></section>
 <nav class="scenes" aria-label="Choose a 3D exhibit"><button class="active" data-scene="saturn" aria-pressed="true"><small>01</small> Ring world</button><button data-scene="cubes" aria-pressed="false"><small>02</small> Cube field</button><button data-scene="torus" aria-pressed="false"><small>03</small> Twisted orbit</button></nav>
-<section class="viewer" aria-label="3D math comparison">
-<div class="scene-header"><div><h2 id="scene-title">Ring world</h2><p id="scene-caption">A low-poly planet and concentric rings, transformed in lockstep.</p></div><span id="mesh-count">— vertices</span></div>
-<div class="stage" id="stage"><canvas id="after-canvas" aria-label="Optimized SH2ZAM fixed-point 3D rendering"></canvas><canvas id="before-canvas" aria-label="Floating-point reference 3D rendering"></canvas><div class="badges"><span><b>Float32 · Browser/WASM</b><strong id="stage-before-time">—</strong></span><span><b id="stage-after-label">Prepared Q16.16 · Browser/WASM</b><strong id="stage-after-time">—</strong></span></div><div class="divider" id="divider"></div><div class="stage-foot"><span id="play-state">12 SECOND LOOP</span><span id="live-status">Loading timings…</span></div></div>
-<div class="controls"><button id="play" class="button" type="button" disabled>Pause</button><div><label for="detail">Mesh detail <output id="detail-value">3</output></label><input id="detail" type="range" min="1" max="5" step="1" value="3"></div></div>
+<section class="workload" aria-label="Choose the workload">
+<div><h2 id="scene-title">Ring world</h2><p id="mesh-count">Loading mesh…</p></div>
+<div class="detail-control"><label for="detail">Mesh detail <output id="detail-value">3</output></label><input id="detail" type="range" min="1" max="5" step="1" value="3"></div>
 </section>
-<h2 class="measurement-heading">Browser / WASM <small>Live</small></h2>
-<section class="metrics" aria-label="Comparison measurements"><article><p>FLOAT32</p><strong id="before-time">—</strong><small>C float / median batch time</small></article><article><p>SAFE BATCH</p><strong id="general-time">—</strong><small>Prior batch Q16.16 / median time</small></article><article><p id="after-label">PREPARED BATCH</p><strong id="after-time">—</strong><small>Q16.16 / includes matrix preparation</small></article></section>
-<div class="comparison-summary"><span>Safe / optimized time <strong id="batch-ratio">—</strong></span><span>Float / optimized time <strong id="float-ratio">—</strong></span><small>Above 1× means optimized is faster.</small></div>
-<div class="precision"><span>Matrix preparation <strong id="plan-time">Capture to measure</strong></span><span>Optimized kernel alone <strong id="kernel-time">Capture to measure</strong></span></div>
-<div class="precision"><span id="fixed-equality">Checking outputs…</span><span>Max float error <strong id="world-error">—</strong> world units</span><span>Screen offset <strong id="error">—</strong></span></div>
-<section class="recorded model-recorded" aria-label="SH-2 instruction model">
-<h2 class="measurement-heading">SH-2 / instruction model <small id="model-status">Loading evidence…</small></h2>
-<p id="model-workload"></p>
-<table class="model-table"><thead><tr><th scope="col">Kernel</th><th scope="col">Modeled cycles</th><th scope="col">Float / kernel</th></tr></thead><tbody>
-<tr><th scope="row">Software float</th><td id="model-reference">—</td><td id="model-reference-ratio">—</td></tr>
-<tr><th scope="row">Safe batch</th><td id="model-safe">—</td><td id="model-safe-ratio">—</td></tr>
-<tr><th scope="row">Prepared C</th><td id="model-prepared">—</td><td id="model-prepared-ratio">—</td></tr>
-<tr class="model-fused"><th scope="row">Fused MAC.L</th><td id="model-mac">—</td><td id="model-mac-ratio">—</td></tr>
-<tr><th scope="row">Fused DMULS.L</th><td id="model-dmuls">—</td><td id="model-dmuls-ratio">—</td></tr>
-</tbody></table>
-<p>Compiled SH-2 instructions, including software-float helpers. Prepared and fused costs include matrix qualification once per batch.</p>
-<p id="model-proof"></p><p id="model-provenance"></p>
-<p>Instruction-model results exclude Saturn cache, bus and pipeline effects. Physical-console timings remain unmeasured.</p>
-<a href="https://github.com/lamb2k/SH2ZAM/tree/main/saturn/benchmarks/sh2-model">Model source &amp; evidence ↗</a>
+<section class="model-recorded" aria-label="SH-2 performance comparison">
+<div class="section-heading"><h2>SH-2 transform cost</h2><span class="status-tag" id="model-status">Loading evidence…</span></div>
+<div class="comparison-options">
+<fieldset><legend>Without SH2ZAM</legend><div class="segmented" role="group" aria-label="Starting implementation"><button type="button" data-baseline="plain" class="active" aria-pressed="true">Fixed-point C</button><button type="button" data-baseline="reference" aria-pressed="false">Software float</button></div></fieldset>
+<fieldset><legend>With SH2ZAM</legend><div class="segmented" role="group" aria-label="SH2ZAM implementation"><button type="button" data-kernel="mac" class="active" aria-pressed="true">Native MAC.L <small>optional API</small></button><button type="button" data-kernel="prepared" aria-pressed="false">Prepared C</button></div></fieldset>
+</div>
+<div class="metrics" aria-live="polite">
+<article><p id="model-before-label">PLAIN FIXED-POINT C</p><strong id="model-before-cycles">—</strong><span class="metric-unit">modeled cycles / mesh</span><small id="model-before-per-vertex">— cycles / vertex</small></article>
+<article class="with-library"><p id="model-after-label">SH2ZAM · NATIVE MAC.L</p><strong id="model-after-cycles">—</strong><span class="metric-unit">modeled cycles / mesh</span><small id="model-after-per-vertex">— cycles / vertex</small></article>
+<article class="gain-card"><p id="model-savings-label">TRANSFORM COST SAVED</p><strong id="model-savings">—</strong><small id="model-speedup">Awaiting model evidence</small></article>
+</div>
+<div class="cost-bars" aria-hidden="true"><div><span>Without SH2ZAM</span><div class="bar-track"><div id="model-before-bar" class="bar baseline"></div></div></div><div><span>With SH2ZAM</span><div class="bar-track"><div id="model-after-bar" class="bar optimized"></div></div></div></div>
+<p id="model-workload" class="model-caption"></p>
+<p id="model-comparison-note" class="model-caption"></p>
+<div class="model-proof-line"><span id="model-proof">Checking model evidence…</span><span id="model-float-error"></span></div>
+<p class="scope-note">Compiled SH-2 code · per-matrix setup included · instruction model, not a console timing capture.</p>
 </section>
-<section class="recorded" aria-label="Recorded Saturn benchmarks"><h2 class="measurement-heading">Saturn / SH-2 <small id="saturn-status">Not measured</small></h2><p id="saturn-workload"></p><div class="metrics"><article><p>SOFTWARE FLOAT</p><strong id="saturn-reference">—</strong><small id="saturn-reference-cycles">No console capture</small></article><article><p>SAFE BATCH</p><strong id="saturn-general">—</strong><small id="saturn-general-cycles">No console capture</small></article><article><p>PREPARED BATCH</p><strong id="saturn-optimized">—</strong><small id="saturn-optimized-cycles">No console capture</small></article></div><div class="comparison-summary"><span>Safe / prepared time <strong id="saturn-ratio">—</strong></span><span>Float / prepared time <strong id="saturn-float-ratio">—</strong></span></div><p id="saturn-error">Unmeasured</p><p id="saturn-provenance">Recorded hardware results will appear here after a console run.</p><a id="saturn-evidence" hidden>Capture evidence ↗</a><a href="https://github.com/lamb2k/SH2ZAM/tree/main/saturn/benchmarks">Benchmark source &amp; run instructions ↗</a></section>
-<h2 class="measurement-heading">Transform math <small>One output row</small></h2>
-<section class="kernel-table" aria-label="Transform source code"><article><h3>Reference · float32</h3><pre><code>float result =
-    row[0] * x
-  + row[1] * y
-  + row[2] * z
-  + row[3];</code></pre><a href="https://github.com/lamb2k/SH2ZAM/blob/main/exhibits/bridge.c">Float matrix source ↗</a></article><article><h3>Safe batch · Q16.16</h3><pre><code>int64_t sum =
-    sh2zi_product(row[0], x)
-  + sh2zi_product(row[1], y)
-  + sh2zi_product(row[2], z);
-return sh2zi_clamp(
-    sh2zi_floor16(sum) + row[3]);</code></pre><a href="https://github.com/lamb2k/SH2ZAM/blob/main/saturn/src/sh2zam_transform.c">Safe batch source ↗</a></article><article><h3 id="optimized-code-title">Prepared batch · Q16.16</h3><pre><code id="optimized-code">// Mesh bounds cached; matrix qualified.
+<section class="viewer" aria-label="Live visual precision check">
+<div class="scene-header"><div><h2>Same geometry. Checked precision.</h2><p id="scene-caption">A low-poly planet and concentric rings, transformed in lockstep.</p></div><button id="play" class="button" type="button" disabled>Pause</button></div>
+<div class="stage" id="stage"><canvas id="after-canvas" aria-label="SH2ZAM fixed-point visual preview"></canvas><canvas id="before-canvas" aria-label="Floating-point reference visual preview"></canvas><div class="badges"><span><b>Float32 reference</b></span><span><b>SH2ZAM output</b></span></div><div class="divider" id="divider"></div><div class="stage-foot"><span id="play-state">12 SECOND LOOP</span><span>VISUAL PRECISION CHECK</span></div></div>
+<div class="precision"><span id="fixed-equality">Loading visual check…</span><span>Float error <strong id="world-error">—</strong> world units</span><span>Screen offset <strong id="error">—</strong></span></div>
+<p class="visual-note">The preview runs in your browser. Performance figures above come from the recorded SH-2 model.</p>
+</section>
+<p id="failure" class="failure" role="alert" hidden></p>
+<section class="integration" aria-label="Transform source code">
+<div class="section-heading"><h2>What changes in your code</h2><a href="https://github.com/lamb2k/SH2ZAM/tree/main/saturn/examples">Integration examples ↗</a></div>
+<div class="kernel-table"><article><h3 id="baseline-code-title">Without SH2ZAM · one fixed-point row</h3><pre><code id="baseline-code">// Bounds qualified for this matrix.
 int64_t sum =
     (int64_t)row[0] * x
   + (int64_t)row[1] * y
   + (int64_t)row[2] * z;
-return (int32_t)(
-    sh2zi_prepared_floor16(sum) + row[3]);</code></pre><a id="optimized-source" href="https://github.com/lamb2k/SH2ZAM/blob/main/saturn/src/sh2zam_prepared.c">Prepared batch source ↗</a></article></section>
-<div class="benchmark"><div><button id="benchmark" class="button primary" disabled>Capture benchmark</button><button id="export" class="button" disabled>Export results</button></div><p id="result" role="status">Loading…</p></div>
-<p id="failure" class="failure" role="alert" hidden></p>
-<details><summary>Technical notes</summary><p>All three kernels run as WebAssembly in the live view. Browser float32 uses the browser’s floating-point implementation; Saturn’s compiled float path uses software helpers. The separate Saturn section only displays recorded physical-console measurements.</p><p>Every path receives the same quantized vertices and matrix coefficients. Inputs and matrices are converted once for float outside timing. Float error measures transform rounding and excludes the common matrix/trigonometry quantization. Safe and optimized fixed-point outputs are checked bit for bit on every displayed pose.</p><p>The safe batch is the previous optimization: one matrix bound check, three direct products per row, one floor and one clamp. The prepared path scans the immutable mesh once and caches its coordinate bounds. Each new matrix then proves that products, sums and outputs fit, allowing the hot loop to use a defined branchless floor and omit clamps. Both paths retain the full-range fallback. The code panels show equivalent single-row arithmetic; source links contain the complete kernels.</p><p>The optimized path selects shared coordinate products when the immutable mesh has enough repeated coordinates. It rebuilds all products for each matrix and writes every output in its original order. When a checked coordinate pattern permits, an eight-vertex loop shares loaded terms across the block; other ranges retain scalar execution. Other meshes use the prepared scalar kernel. Selection depends on measured coordinate counts, not the scene name. The optimized time includes matrix qualification and any product-table rebuilding once per batch. Capture measures matrix preparation and the kernel independently for diagnosis. Mesh scanning, coordinate indexing and workspace binding are part of one-time input preparation, alongside float conversion. Each timed batch rechecks the matrix bounds and rebuilds its tables, even when the matrix is unchanged. Mutating the input mesh requires preparation again. Matrix construction, rendering and precision checks are outside timing for every path.</p><p>Live timings update every 500 ms using a rolling median of five adaptive samples, each spanning at least 0.75 ms. Capture pauses the loop, warms all paths and takes 21 samples, increasing repetitions until each spans at least 5 ms. First, second and third measurement positions rotate. Times include the JS-to-WASM call. Capture holds the result for export; Play resumes live sampling. Browser timing resolution, JIT, power state and other tabs affect results. Export includes sample durations and counts, all three distributions, component timings, precision checks and the WASM hash.</p><p>Reduced-motion preferences start the scene paused. Scene or detail changes clear old timings. The shared JavaScript projection supplies the visual comparison; timings measure transforms, not FPS.</p></details>
+// SH-2 arithmetic shift floors once.
+out = (int32_t)((sum >> 16) + row[3]);</code></pre><a id="baseline-source" href="https://github.com/lamb2k/SH2ZAM/blob/main/exhibits/bridge.c">Complete baseline source ↗</a></article><article><h3 id="optimized-code-title">With SH2ZAM · optional native MAC.L</h3><pre><code id="optimized-code">sh2z_mesh_view_t mesh;
+sh2z_transform_plan_t plan;
+
+// Once for an immutable mesh:
+if (!sh2z_mesh_view_init(&amp;mesh, vertices, count))
+    return false;
+
+// Each new matrix:
+if (!sh2z_transform_plan_init(&amp;plan, &amp;mesh, &amp;matrix))
+    return false;
+return sh2z_transform_plan_execute_mac(
+    out, &amp;plan, 0, count);</code></pre><a id="optimized-source" href="https://github.com/lamb2k/SH2ZAM/blob/main/saturn/include/sh2zam/batch_experimental.h">API and contracts ↗</a></article></div>
+<p id="kernel-contract" class="scope-note">MAC.L is an optional experimental API. It uses native accumulation when bounds qualify and SR.S is clear; otherwise it uses the prepared fallback.</p>
+</section>
+<details class="evidence"><summary>Results &amp; measurement details</summary>
+<p>Every implementation receives the same quantized vertices and matrices. Costs are medians across 21 poses; matrix qualification is included once per whole mesh. Mesh scanning and input conversion happen once, outside the measured transform.</p>
+<div class="table-scroll"><table class="model-table"><thead><tr><th scope="col">Implementation</th><th scope="col">Cycles / mesh</th><th scope="col">Cycles / vertex</th><th scope="col">Baseline / path</th></tr></thead><tbody>
+<tr data-model-row="plain"><th scope="row">Plain fixed-point C <small>without SH2ZAM</small></th><td id="model-plain">—</td><td id="model-plain-per-vertex">—</td><td id="model-plain-ratio">—</td></tr>
+<tr data-model-row="reference"><th scope="row">Software float <small>without SH2ZAM</small></th><td id="model-reference">—</td><td id="model-reference-per-vertex">—</td><td id="model-reference-ratio">—</td></tr>
+<tr data-model-row="prepared"><th scope="row">SH2ZAM prepared C</th><td id="model-prepared">—</td><td id="model-prepared-per-vertex">—</td><td id="model-prepared-ratio">—</td></tr>
+<tr data-model-row="mac"><th scope="row">SH2ZAM native MAC.L <small>optional API</small></th><td id="model-mac">—</td><td id="model-mac-per-vertex">—</td><td id="model-mac-ratio">—</td></tr>
+<tr data-model-row="dmuls"><th scope="row">SH2ZAM native DMULS.L <small>optional API</small></th><td id="model-dmuls">—</td><td id="model-dmuls-per-vertex">—</td><td id="model-dmuls-ratio">—</td></tr>
+<tr data-model-row="safe"><th scope="row">SH2ZAM prior safe batch</th><td id="model-safe">—</td><td id="model-safe-per-vertex">—</td><td id="model-safe-ratio">—</td></tr>
+</tbody></table></div>
+<p>The fixed-point baseline uses independent C arithmetic with three unrolled rows, cached matrix values and one rounding step per dot product. It does not call SH2ZAM. All native paths are built with the same SH-2 compiler and optimization flags.</p>
+<p>The instruction model uses flat RAM. It excludes cache and bus delays, pipeline and multiplier contention, interrupts, peripherals and the second CPU. These figures describe modeled transform work; they are not whole-game FPS or measured Saturn milliseconds.</p>
+<p id="model-provenance"></p>
+<div class="evidence-actions"><a id="model-evidence" href="https://github.com/lamb2k/SH2ZAM/tree/main/saturn/benchmarks/sh2-model">Capture evidence ↗</a><a href="https://github.com/lamb2k/SH2ZAM/tree/main/saturn/benchmarks/sh2-model">Model source ↗</a><button id="export" class="button" type="button" disabled>Export model results</button></div>
+</details>
+<div class="hardware-status"><span>Physical Saturn</span><strong id="saturn-status">Not measured</strong><a id="saturn-evidence" href="https://github.com/lamb2k/SH2ZAM/tree/main/saturn/benchmarks">Console benchmark ↗</a></div>
 </main>
 <footer><span>SH2ZAM · INDEPENDENT SATURN MATH</span><p>Inspired by <a href="https://github.com/gyrovorbis/sh4zam">SH4ZAM</a> by Falco Girgis and SH4ZAM Contributors. <a href="LICENSE">MIT license</a> · <a href="NOTICE.md">Credits</a>. No Sega or upstream endorsement.</p></footer>
-<noscript>This interactive exhibit requires JavaScript and WebAssembly. The source and static documentation are available in the repository.</noscript>
+<noscript>This exhibit requires JavaScript for the model tables and WebAssembly for the visual preview. Reproducible SH-2 results and source are available in the repository.</noscript>
 </body></html>
-

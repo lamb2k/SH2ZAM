@@ -1,7 +1,8 @@
 # Saturn prepared-transform benchmark
 
-The harness compares **software float → the prior safe batch → a prepared batch**,
-then measures two experimental SH-2 assembly candidates against the same inputs.
+The instruction model compares **standalone fixed-point C or software float →
+SH2ZAM prepared C or native batch kernels**, using the same inputs. It also
+retains the prior safe SH2ZAM batch for the library's optimization history.
 **The compiled SH-2 kernels have executed and passed exact output checks in an
 isolated instruction model. No physical-console measurements are recorded.**
 The [model evidence](sh2-model/README.md), browser/WASM timing and console capture
@@ -24,6 +25,7 @@ result. Input arrays remain unchanged throughout all poses.
 
 | Path | Bridge function | Measured operation |
 |---|---|---|
+| Independent fixed-point C (model) | `plain_range` | Bounded Q16.16 transform without SH2ZAM arithmetic calls; independent qualification included once per batch |
 | Software float | `before_range` | Float32 affine transform; SH-2 software-float helpers |
 | Prior safe batch | `general_range` | `sh2z_mat34_transform_points`, including its matrix-only dispatch |
 | Portable prepared | `after_range` | `sh2z_transform_plan_execute_range` on a qualified plan |
@@ -35,6 +37,12 @@ The legacy JSON keys `general` and `optimized` now mean **prior safe batch** and
 original full-range scalar routine remains the correctness fallback and is covered
 by the host oracle suites; it is no longer the middle timing baseline.
 
+The standalone fixed-point baseline caches the matrix, unrolls the three rows,
+accumulates in 64 bits and floors once per output. It uses an independent mesh
+bound scan and per-matrix proof. Unbounded inputs are rejected without output
+writes. Its setup-inclusive measurements belong to instruction-model schema 2;
+the physical-console FRT harness retains the five paths documented below.
+
 The portable prepared implementation uses ordinary C arithmetic, so GCC generates
 its SH instructions. The two assembly candidates are optional entry points, not
 the default prepared dispatcher. MAC.L requires SR.S to be clear and does not alter
@@ -43,17 +51,18 @@ build. Otherwise they execute the ordinary prepared fallback. Availability is
 recorded for every pose; a fallback timing is never published as an active native
 candidate result. See `include/sh2zam/batch_experimental.h` for the contracts.
 
-All four fixed-point outputs must match bit for bit at every coordinate. Separate
-buffers and checksums keep all five results observable. Host tests compare the
+All five fixed-point outputs in the model must match bit for bit at every
+coordinate. Separate buffers and checksums keep all six results observable.
+The console harness retains its four fixed paths and float. Host tests compare the
 prepared implementation and instruction models against an independent 128-bit
 integer oracle. The shared-fixture test additionally checks float error and
 whole-mesh/chunk parity; executing a host fallback does not test SH-2 assembly.
 
-The browser uses WebAssembly hardware floating point and the portable fixed-point
-backend. Saturn float32 uses software helpers. CI checks the bridge's `__mulsf3`
-and `__addsf3` dependencies and exports native disassembly, relocations, symbol
-sizes and fused-loop audits. Paired results within one environment are comparable;
-browser timings cannot establish a Saturn speedup.
+The site displays recorded SH-2 model costs. Its live WebAssembly preview only
+renders geometry and checks precision; it collects no browser transform timings.
+Saturn float32 uses software helpers. CI checks the bridge's `__mulsf3` and
+`__addsf3` dependencies and exports native disassembly, relocations, symbol sizes
+and fused-loop audits.
 
 ## Executed SH-2 instruction model
 
@@ -62,10 +71,10 @@ big-endian benchmark ELF, including libgcc software-float helpers, through
 unmodified Yabause SH-2 opcode handlers pinned at
 [`7e38821dbac265490f115e163c523a939acda759`](https://github.com/Yabause/yabause/tree/7e38821dbac265490f115e163c523a939acda759).
 The committed [results.json](sh2-model/results.json) uses the ELF from SH2ZAM
-commit [`26a935eea2c6fb9a7dfba6a81d273ab81562a2eb`](https://github.com/lamb2k/SH2ZAM/commit/26a935eea2c6fb9a7dfba6a81d273ab81562a2eb),
-[CI artifact 14068406384](https://github.com/lamb2k/SH2ZAM/actions/runs/43487712557/artifacts/14068406384),
+commit [`29a4a5b43bd4fd83cd09f64b2662e819d1a1df8d`](https://github.com/lamb2k/SH2ZAM/commit/29a4a5b43bd4fd83cd09f64b2662e819d1a1df8d),
+[CI artifact 14077414299](https://github.com/lamb2k/SH2ZAM/actions/runs/43510305134/artifacts/14077414299),
 with ELF SHA256
-`38a7c875c749c0348f886405f30224d7e4ea8846c9e0f3341f173e7fe12a89a6`.
+`d3eb9af325c03f142711507177fc4b6f9cbdb756fadc2ebc3afbf28cb84e4c46`.
 
 All **315 mesh/pose combinations** executed, checking **1,267,560 coordinates per
 fixed path** against an independent `__int128` oracle with **zero mismatches**.
@@ -73,7 +82,9 @@ The maximum software-float difference was **0.000015497207641601562 world units*
 (**1.015625 Q16.16 units**, within the two-unit comparison bound). Every ordinary
 pose selected availability mask 7, and opcode counts confirmed execution of the
 native candidates. Additional SR.S=1 and full-range checks verified exact fallback
-outputs; every target call checked the stack, callee-saved registers and SR.S.
+outputs; the independent baseline rejected full-range inputs without writing.
+Every target call checked the stack, callee-saved registers and SR.S. The plain
+kernel executed nine native DMULS.L instructions per vertex and zero MAC.L.
 
 For Ring world detail 4, **1,584 vertices**, the inclusive medians across 21 poses
 were:
@@ -81,15 +92,22 @@ were:
 | Path | Modeled instruction cycles per whole batch |
 | --- | ---: |
 | Software float | 6,751,532 |
+| Independent fixed-point C, including qualification | 123,881 |
 | Prior safe batch | 316,178 |
 | Prepared C, including plan | 152,597 |
 | Fused MAC.L, including plan | 93,956 |
 | Fused DMULS.L, including plan | 136,725 |
 
-Across the 15 workloads, the model reports **43.65–45.41× float/prepared**,
+Across all 15 workloads, native MAC.L uses **22.90–24.24% fewer modeled cycles**
+than independent fixed-point C (**1.297–1.320× speedup**). Prepared C uses
+**23.14–23.82% more cycles** than the same baseline. The site exposes both
+library paths and their results; the native kernel is an optional API.
+
+For software-float migration, the model reports **43.65–45.41× float/prepared**,
 **70.67–73.80× float/MAC**, and **48.71–50.68× float/DMULS**. Prepared and native
 samples include one plan preparation per full batch, added per pose before taking
-the median. Range wrappers and all output stores are included; one-time input
+the median. The independent baseline includes its own qualification and matrix
+snapshot on the same basis. Range wrappers and all output stores are included; one-time input
 conversion and mesh scanning, matrix construction, and precision checks are
 excluded. Raw guest instruction counts are retained separately from modeled cycles.
 

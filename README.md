@@ -184,7 +184,7 @@ The library does not replace Yaul, SGL, Jo Engine or a renderer. SDK/runtime com
 
 | Example | Description |
 |---|---|
-| [Interactive math lab](exhibits/README.md) | Three looping scenes, live float/safe/optimized timings, precision checks, measurement export and a separate recorded SH-2 instruction-model table. |
+| [Interactive math lab](exhibits/README.md) | Three looping scenes with SH-2 model comparisons against independent fixed-point C or software float, precision checks and evidence export. |
 | [Sprite orbit](saturn/examples/orbit.c) | Integer-only orbit coordinates for driving a sprite. |
 | [Cube transforms](saturn/examples/cube.c) | Eight vertices through model, view, perspective and screen-coordinate transforms. |
 | [Batch jobs](saturn/examples/batch.c) | Two disjoint vertex jobs compared with serial execution; no slave-CPU launch. |
@@ -194,30 +194,32 @@ Host example commands and Saturn-disc build instructions are in [the examples gu
 
 # Showcase
 
-The browser lab includes **Ring world**, **Cube field** and **Twisted orbit**. The
-float reference and optimized SH2ZAM images run together. A live table compares
-float32, the prior safe batch and a prepared or coordinate-reuse batch,
-with the math shown alongside. Mesh detail changes the number of vertices; every
-path receives the same vertices and quantized matrix.
+The [math lab](https://lamb2k.github.io/SH2ZAM/) shows what changes when a
+Saturn developer adopts SH2ZAM. Choose **Ring world**, **Cube field** or
+**Twisted orbit**, then change mesh detail to compare the same workload with
+and without the library. Every performance figure comes from executing compiled
+SH-2 code in the [instruction model](saturn/benchmarks/sh2-model/README.md).
+The browser renders a live precision comparison; it does not time the kernels.
 
-In a [recorded Chromium capture](saturn/VALIDATION.md), Cube field detail 4
-(1,728 vertices) took **2.686 µs** with coordinate reuse versus **4.557 µs** for
-the unchanged float reference: **1.70× faster**, including matrix qualification
-and complete table rebuilding. The prior safe batch took 7.910 µs. Ring and
-torus still favored browser float in that capture; the lab shows the actual
-result for each selected workload and browser.
+Choose an independent **plain C Q16.16** baseline for existing fixed-point code,
+or **software float** for a floating-point port. Compare it with the prepared
+batch API or the optional native MAC.L kernel. The lab reports modeled cycles
+per mesh and per vertex, speedup and the percentage of transform cost saved.
+Matrix qualification is included once per batch, and every output is checked
+against an independent integer oracle. Slower results remain visible.
 
-The two fixed-point paths must match bit for bit. Browser timings include the actual
-C kernels compiled to WebAssembly and report slower results honestly. **Browser
-timings are not Saturn benchmarks.** The separate [Saturn benchmark](saturn/benchmarks/README.md)
-compares SH-2 software float with the safe batch, portable prepared batch and two
-experimental fused accumulator kernels. Prepared times include matrix qualification
-once per batch. An [isolated SH-2 instruction-model capture](saturn/benchmarks/sh2-model/README.md)
-executes the compiled target ELF across all 315 mesh/pose combinations. The
-recorded fused MAC path uses **70.67–73.80× fewer modeled cycles than software
-float**, with zero fixed-point mismatches. The model excludes cache, bus and
-pipeline effects; hardware results stay unmeasured until a console capture
-exists. See [the lab and measurement contract](exhibits/README.md).
+The native MAC.L path is an explicit experimental API, not the default prepared
+dispatcher. It requires proven bounds and SR.S clear; the library preserves its
+fallback when those conditions do not hold. The standalone fixed-point baseline
+is intentionally bounded and reports unsupported inputs instead of silently
+overflowing. The same quantized vertices, matrices and output writes are used
+for every measured path.
+
+The model excludes cache, bus and pipeline effects. Its recorded cycle counts
+are not converted to Saturn milliseconds or game FPS. Physical-console results
+remain unmeasured until a capture exists. Source, build and fixture identities
+are included in the lab's downloadable evidence. See [the measurement
+contract](exhibits/README.md) and [validation record](saturn/VALIDATION.md).
 
 There are no independently verified production adopters or Saturn speedup claims listed yet. Share measured integrations through this repository's issues.
 

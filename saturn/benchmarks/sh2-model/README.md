@@ -2,9 +2,13 @@
 
 This harness executes the **actual big-endian SH-2 benchmark ELF**, including its
 software-float runtime helpers and native MAC/DMULS instructions, through the
-unmodified Yabause SH-2 interpreter. The fixed kernels beat the software-float
-reference in this isolated instruction model. **These are not physical Saturn
-measurements, full-system emulator timings, or browser timings.**
+unmodified Yabause SH-2 interpreter. Against an independent plain C fixed-point
+baseline, the optional native MAC.L kernel uses **22.90–24.24% fewer modeled
+cycles** across all 15 workloads. The standard prepared C path uses
+**23.14–23.82% more cycles** than that baseline. Every fixed path beats software
+float, but adopting the library does not produce a universal performance win.
+**These are not physical Saturn measurements, full-system emulator timings,
+or browser timings.**
 
 The pinned source is
 [Yabause/yabause `7e38821dbac265490f115e163c523a939acda759`](https://github.com/Yabause/yabause/tree/7e38821dbac265490f115e163c523a939acda759),
@@ -15,12 +19,12 @@ model build; it is not vendored into the math library.
 
 ## What is executed
 
-The recorded ELF comes from main commit
-[`26a935eea2c6fb9a7dfba6a81d273ab81562a2eb`](https://github.com/lamb2k/SH2ZAM/commit/26a935eea2c6fb9a7dfba6a81d273ab81562a2eb),
-[SH-2 build 43487712557](https://github.com/lamb2k/SH2ZAM/actions/runs/43487712557),
-[artifact 14068406384](https://github.com/lamb2k/SH2ZAM/actions/runs/43487712557/artifacts/14068406384).
+The recorded ELF comes from source commit
+[`29a4a5b43bd4fd83cd09f64b2662e819d1a1df8d`](https://github.com/lamb2k/SH2ZAM/commit/29a4a5b43bd4fd83cd09f64b2662e819d1a1df8d),
+[SH-2 build 43510305134](https://github.com/lamb2k/SH2ZAM/actions/runs/43510305134),
+[artifact 14077414299](https://github.com/lamb2k/SH2ZAM/actions/runs/43510305134/artifacts/14077414299).
 It was built with the project's pinned Yaul GCC 13.2 toolchain. Its SHA256 is
-`38a7c875c749c0348f886405f30224d7e4ea8846c9e0f3341f173e7fe12a89a6`.
+`d3eb9af325c03f142711507177fc4b6f9cbdb756fadc2ebc3afbf28cb84e4c46`.
 
 The harness loads the ELF's RAM segments, then invokes its compiled bridge
 functions using the SH-2 calling convention. The data, poses, matrices, input
@@ -35,8 +39,9 @@ The collector verifies the source commit and fixture SHA against strings in that
 ELF, and checks the workload metadata against the fixture manifest. Changing
 geometry or the recorded build invalidates old evidence.
 
-Each pose executes software float, the safe batch, portable prepared C, native
-MAC.L and native DMULS.L. All four fixed outputs are compared coordinate by
+Each pose executes software float, independent plain C fixed point, the SH2ZAM
+safe batch, prepared C, native MAC.L and native DMULS.L. All five fixed outputs
+are compared coordinate by
 coordinate with an independent host `__int128` oracle using the actual input and
 quantized matrix read from target RAM. Float outputs are checked separately.
 The final capture checked **1,267,560 coordinates per fixed path**, with zero
@@ -44,7 +49,8 @@ fixed mismatches and maximum float error **0.000015497207641601562 world units**
 (about **1.016 Q16.16 units**, within the two-unit comparison bound).
 All 315 benchmark poses report availability mask 7, and instruction instrumentation
 confirms nine MAC.L or DMULS.L multiplications per vertex in the respective native
-candidate, rather than a portable fallback.
+candidate, rather than a portable fallback. The independent plain kernel also
+executes exactly nine DMULS.L instructions per vertex and zero MAC.L instructions.
 
 Two additional actual target-execution checks exercise the dispatch guards:
 
@@ -52,7 +58,9 @@ Two additional actual target-execution checks exercise the dispatch guards:
   instructions, output remains exact, and SR.S is preserved.
 - **Full-range input and matrix:** the prepared proof fails, all native candidate
   availability bits are clear, and all four fixed wrappers agree with the
-  independent saturation/rounding oracle. No MAC.L instruction executes.
+  independent saturation/rounding oracle. No MAC.L instruction executes. The
+  independent bounded baseline rejects the input without modifying its output;
+  it does not borrow the library fallback.
 
 These checks execute the assembly through the CPU interpreter. They complement
 host arithmetic models; they do not certify a console's interrupt handlers,
@@ -97,29 +105,41 @@ is already SH2ZAM and must never be labeled "without SH2ZAM."
 
 The complete machine-readable evidence is [results.json](results.json). Values
 below are medians across the 21 poses, in **Yabause's modeled instruction-cycle
-units per complete batch**. Prepared, MAC and DMULS include one measured
-`plan_prepare()` call per batch, added before taking the median.
+units per complete batch**. Plain C includes one measured `plain_prepare()`
+call. Prepared, MAC and DMULS each include one measured `plan_prepare()` call.
+Setup is added to each pose before taking the median.
 
 | Path | Ring world d4, 1,584 vertices | Cubes d4, 1,728 vertices | Torus d4, 2,016 vertices |
 | --- | ---: | ---: | ---: |
+| Plain C fixed point, including proof | 123,881 | 135,113 | 157,577 |
+| SH2ZAM prepared C, including plan | 152,597 | 166,421 | 194,069 |
+| SH2ZAM optional MAC.L, including plan | 93,956 | 102,452 | 119,444 |
+| SH2ZAM optional DMULS.L, including plan | 136,725 | 149,109 | 173,877 |
+| SH2ZAM prior safe batch | 316,178 | 344,885 | 402,344 |
 | Software float | 6,751,532 | 7,556,934 | 8,804,596 |
-| Prior safe batch | 316,178 | 344,885 | 402,344 |
-| Prepared C, including plan | 152,597 | 166,421 | 194,069 |
-| Fused MAC.L, including plan | 93,956 | 102,452 | 119,444 |
-| Fused DMULS.L, including plan | 136,725 | 149,109 | 173,877 |
-| Software float / MAC | 71.86× | 73.76× | 73.71× |
+| Plain C / MAC | 1.319× | 1.319× | 1.319× |
+| MAC cycle reduction versus plain C | 24.16% | 24.17% | 24.20% |
 
-Across all 15 workloads, the model's inclusive float/prepared ratio is
+Across all 15 workloads, the optional MAC.L kernel uses **22.90–24.24% fewer
+cycles than independent plain C fixed point** (plain/MAC ratio
+**1.297–1.320×**). Standard prepared C uses **23.14–23.82% more cycles**, and the
+optional DMULS.L kernel uses **10.32–11.06% more cycles**. These results include
+each path's own per-matrix preparation. MAC.L is an optional experimental entry
+point requiring its documented bounds and SR.S conditions; it is not the
+standard prepared dispatcher.
+
+For migration from software float, the inclusive float/prepared ratio is
 **43.65–45.41×**, float/MAC is **70.67–73.80×**, and float/DMULS is
-**48.71–50.68×**. This answers a target-instruction question: the actual SH-2
-software-float helper path performs far more work than these integer kernels.
-It does not establish those speedups on a real console.
+**48.71–50.68×**. That larger gain includes changing from software floating-point
+to fixed-point arithmetic and must not be presented as the benefit over an
+existing fixed-point implementation. None of these ratios establishes a
+physical-console speedup.
 
 Guest instruction counts are recorded independently from the cycle counter.
 They count every fetched opcode, including delay slots, without changing
 instruction semantics. For Ring world d4, median counts including plan
-preparation are 5,893,934 for float, 278,932 for safe, 136,703 for prepared,
-63,813 for MAC and 120,838 for DMULS. Memory reads/writes and native multiplication
+preparation are 108,001 for independent plain C, 136,703 for prepared, 63,813
+for MAC, 120,838 for DMULS, 278,932 for safe and 5,893,934 for float. Memory reads/writes and native multiplication
 opcode counts are also retained per pose. None is a host wall-clock measurement.
 
 ## Measurement boundary and limits
@@ -148,7 +168,9 @@ chunks. Model timings therefore must not be inserted into the console capture
 schema or relabeled as results from that timer harness. One-time input conversion
 and mesh scanning, matrix construction and float coefficient conversion are
 outside steady-state transform costs. Plan qualification is included once for
-prepared/MAC/DMULS and reported separately. Oracle checks run after measurement.
+prepared/MAC/DMULS and reported separately. Plain C includes its independent
+bound proof and matrix snapshot once per batch, also reported separately.
+Oracle checks run after measurement.
 
 ## Reproduce
 
@@ -159,7 +181,7 @@ commercial ROM or local SH crosscompiler is needed.
 From the repository root, after extracting the native evidence artifact:
 
 ```sh
-MODEL_EVIDENCE_URL=https://github.com/lamb2k/SH2ZAM/actions/runs/43487712557/artifacts/14068406384 \
+MODEL_EVIDENCE_URL=https://github.com/lamb2k/SH2ZAM/actions/runs/43510305134/artifacts/14077414299 \
   bash saturn/benchmarks/sh2-model/run.sh \
   /path/to/saturn/benchmarks/yaul/build/sh2zam-benchmark.elf \
   /path/to/saturn/benchmarks/yaul/build/sh2zam-benchmark.sym \
@@ -176,10 +198,12 @@ ELFs under ignored build storage. It does not overwrite this committed capture
 unless its output path is explicitly selected.
 
 The result uses an independent schema and kernel set
-`float-safe-prepared-fused-sh2-model-v1`. `kernelCycles` and `kernelInstructions`
-hold 21 raw values per path. `planPreparationCycles` and
-`planPreparationInstructions` hold 21 setup values. `medianCycles` and
-`medianInstructions` include setup for prepared/MAC/DMULS before the median.
+`float-plain-fixed-safe-prepared-fused-sh2-model-v2`. `kernelCycles` and
+`kernelInstructions` hold 21 raw values per path. `planPreparationCycles` and
+`planPreparationInstructions` hold 21 library setup values;
+`plainPreparationCycles` and `plainPreparationInstructions` hold 21 independent
+baseline setup values. `medianCycles` and `medianInstructions` include the
+applicable setup for plain/prepared/MAC/DMULS before the median.
 Per-pose checksums, availability, numerical error, metadata and all source/ELF
 hashes remain available to audit the result.
 

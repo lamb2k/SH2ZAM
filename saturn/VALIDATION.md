@@ -1,6 +1,57 @@
 # Validation record — 2026-11-13
 
-## Coordinate reuse beats the browser float reference on the cube field
+## Saturn adoption comparison against independent fixed-point C
+
+The site now reports recorded SH-2 instruction-model costs and has no browser
+transform timing or sampling. Its default comparison is independent fixed-point
+C against the optional native MAC.L API. Software float and prepared C remain
+selectable. The browser only renders the live precision check.
+
+[Native CI 43510305134](https://github.com/lamb2k/SH2ZAM/actions/runs/43510305134)
+executed the compiled ELF from
+[`29a4a5b43bd4fd83cd09f64b2662e819d1a1df8d`](https://github.com/lamb2k/SH2ZAM/commit/29a4a5b43bd4fd83cd09f64b2662e819d1a1df8d).
+The [evidence artifact](https://github.com/lamb2k/SH2ZAM/actions/runs/43510305134/artifacts/14077414299)
+contains the target ELF, symbols, raw capture and validated schema-2 result.
+The ELF SHA256 is
+`d3eb9af325c03f142711507177fc4b6f9cbdb756fadc2ebc3afbf28cb84e4c46`.
+The committed [model record](benchmarks/sh2-model/results.json) retains all raw
+samples, checksums and provenance for this capture.
+
+The standalone baseline calls no SH2ZAM arithmetic, bounds-proof or execution
+routine. It caches the matrix, unrolls three rows, accumulates products in 64 bits
+and floors each result once. Its own per-matrix proof and snapshot are included,
+just as library plan preparation is included. All paths use the same target
+compiler and optimization flags. Unsupported inputs make the bounded baseline
+fail without writing outputs.
+
+Inclusive medians across 21 poses, in modeled cycles per whole batch:
+
+| Detail 4 workload | Vertices | Plain fixed-point C | SH2ZAM prepared C | SH2ZAM native MAC.L | MAC cost saved vs plain |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Ring world | 1,584 | 123,881 | 152,597 | 93,956 | 24.16% |
+| Cube field | 1,728 | 135,113 | 166,421 | 102,452 | 24.17% |
+| Twisted orbit | 2,016 | 157,577 | 194,069 | 119,444 | 24.20% |
+
+Across all 15 workloads, native MAC.L saves **22.90–24.24%** of modeled transform
+cost against plain fixed-point C (**1.297–1.320×**). Prepared C costs
+**23.14–23.82% more** than plain C. These results support a measured benefit for
+the explicit native API; they do not establish a universal library speedup.
+The software-float comparison is a separate migration result.
+
+All **315 poses** passed, with **1,267,560 coordinates checked per fixed path**
+and zero mismatches against the independent 128-bit oracle. The plain kernel
+executed nine DMULS.L instructions per vertex and zero MAC.L. Native availability,
+SR.S preservation, ABI preservation and full-range library fallback checks also
+passed; the plain baseline rejected the full-range fixture without output writes.
+The maximum float difference remained **1.015625 Q16.16 units**.
+
+The interpreter has flat RAM and no cache, bus wait-state, pipeline, multiplier
+contention or peripheral timing model. These are modeled transform costs, not
+physical-console milliseconds or game FPS. Physical-console results remain
+unmeasured. The browser captures below are historical and are no longer displayed
+or collected by the site.
+
+## Historical: coordinate reuse beats the browser float reference on the cube field
 
 Implementation:
 [`43f98abaacd074150efc04c64cb4087723ddf5f4`](https://github.com/lamb2k/SH2ZAM/commit/43f98abaacd074150efc04c64cb4087723ddf5f4).
@@ -51,7 +102,7 @@ The optional API and proof are documented in [COORDINATE_REUSE.md](COORDINATE_RE
 Browser captures include the selected strategy and block size; no scene-name
 test or transformed-output cache participates in selection or timing.
 
-## Executed SH-2 instruction-model evidence
+## Historical: original five-path SH-2 instruction-model evidence
 
 The actual compiled SH-2 software-float, safe, prepared, fused MAC.L and fused
 DMULS.L paths have now executed through the unmodified opcode handlers of
@@ -66,7 +117,7 @@ The recorded ELF is from
 [artifact 14068406384](https://github.com/lamb2k/SH2ZAM/actions/runs/43487712557/artifacts/14068406384).
 Its SHA256 is
 `38a7c875c749c0348f886405f30224d7e4ea8846c9e0f3341f173e7fe12a89a6`.
-[The model record](benchmarks/sh2-model/results.json) retains that provenance,
+[The historical model record](https://github.com/lamb2k/SH2ZAM/blob/741bcbf12442dd6b073525641a2d318708e2a6b2/saturn/benchmarks/sh2-model/results.json) retains that provenance,
 fixture and harness hashes, all raw samples, opcode counts, output checksums,
 availability masks and precision checks.
 
