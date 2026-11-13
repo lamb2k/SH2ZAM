@@ -59,6 +59,28 @@ not turn its cycle counter into Saturn milliseconds or game FPS. Console capture
 remain separate and unmeasured until the
 [physical-console benchmark](../saturn/benchmarks/README.md) produces evidence.
 
+## Math library improvements
+
+The second results section compares **SH2ZAM at `10786b6` with optimized
+SH2ZAM**, separately from the independent transform adoption baseline. Select
+one of 48 existing APIs to see bounded, tiny and full-range inputs together.
+The initial operation is 3D vector normalization.
+
+Each cell reports the median of seven deterministic 32-call batches, divided
+by 32 to give modeled cycles per call. Both versions use the same input bytes,
+range wrapper and result writes. Fixture generation and output comparison sit
+outside the measured range. Every output must match exactly, and native stack,
+callee-saved register and SR.S checks must pass. Regressions and unchanged
+results are represented explicitly; no aggregate across unrelated APIs is
+presented as a universal speedup.
+
+`compile-math-results.cjs` applies the strict math evidence validator before
+creating `math-results.js`. The page rejects absent or invalid evidence rather
+than substituting measurements. Raw samples, frozen-source checksums, compiled
+ELF identity and model limitations are retained in the export. See
+[the suite and input profiles](../saturn/benchmarks/math-model/README.md) and
+[the implementation/results guide](../saturn/MATH_OPTIMIZATIONS.md).
+
 ## Live visuals and precision
 
 The two images run together: a float32 reference and SH2ZAM output. Both receive
@@ -92,6 +114,11 @@ provenance. The selection envelope is `sh2zam-model-selection-v1` and identifies
 `isolated-sh2-interpreter` execution. It includes the source commit, ELF and
 interpreter identities, fixture hash, guard results, and model limitations.
 
+When the math capture is present, the same export also includes `mathLibrary`:
+the selected family/operation plus the complete validated 144-record dataset
+and every raw math sample. The math results and export work independently of
+WebAssembly and animation.
+
 The export contains model cycles, not browser wall time. It does not imply that
 changing the animation pose reruns the model. Full raw per-pose samples can be
 obtained from the evidence link.
@@ -110,6 +137,7 @@ Node.js, then run from the repository root:
 bash exhibits/build.sh
 node exhibits/test-math.cjs
 node saturn/benchmarks/test-model-results.cjs
+node saturn/benchmarks/math-model/validate.cjs
 python3 -m http.server --directory exhibits 8000
 ```
 
@@ -131,6 +159,11 @@ model-derived savings, honest slower results, evidence export, and separation of
 model costs from animation. It also covers exact visual checks, the single-slider
 layout, pause/play, mobile layout, reduced motion, offline loading, and model
 availability when WebAssembly fails. It does not collect browser benchmarks.
+
+The math checks exercise all 48 operation selectors, all three profiles,
+zero-change and cost-increase formatting, combined evidence export, keyboard
+navigation and mobile layout. Missing, incomplete or invalid math evidence
+must suppress its figures while leaving the vertex comparison usable.
 
 Run it with Playwright and Chromium installed:
 

@@ -5,7 +5,7 @@ This is a functional-category comparison, not a percentage-complete claim. Scope
 | Category | SH2ZAM 0.2 | Explicit gap / decision |
 |---|---|---|
 | Scalars | Q16.16 arithmetic, rounding, sqrt/rsqrt, reciprocal, interpolation | No float ABI, NaN/Inf, exp/log/pow/hyperbolic families |
-| Trigonometry | sin/cos/sincos/tan, atan/atan2/asin/acos, turn angles | No float-radian API; inverse trig is a bounded-search baseline, not a performance claim |
+| Trigonometry | sin/cos/sincos/tan, atan/atan2/asin/acos, turn angles | Shared-table interpolation and exact inverse cell search; no float-radian API |
 | Vectors | 2/3/4 arithmetic, dot, length, normalize, lerp; cross2/3 | Not every upstream convenience/swizzle/utility |
 | Matrices | 2x2/3x3/3x4/4x4; multiplication/transforms; 3x3/4x4 transpose; rigid inverse; camera helpers | No 3x2/4x3 distinct layouts, general inverse/decomposition/determinant API |
 | Quaternions | Product, normalize, conjugate, axis-angle, nlerp, matrix and vector rotation | No SLERP, quaternion exp/log or full upstream facade |

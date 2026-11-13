@@ -1,5 +1,34 @@
 # Validation record — 2026-11-13
 
+## Exact math expansion: 48 APIs on the SH-2 model
+
+[Native CI 43518264229](https://github.com/lamb2k/SH2ZAM/actions/runs/43518264229) passes the new math suite and
+repeats the existing 315-pose vertex suite for source
+[`fbbd984b`](https://github.com/lamb2k/SH2ZAM/commit/fbbd984b184ad329e772ec519cdcdf0a427bc690).
+[Artifact 14082420751](https://github.com/lamb2k/SH2ZAM/actions/runs/43518264229/artifacts/14082420751)
+contains the ELF, symbols, raw observations, validated datasets and disassembly.
+ELF SHA-256: `47acbcd28b46ffbdede2c61b4d88e3768434b9cc3901fe369e4e440911993ec6`.
+
+The [math record](benchmarks/math-model/results.json) compares frozen SH2ZAM
+`10786b6` with the optimized library, using identical deterministic inputs and
+the same SH-2 compiler. It covers 48 operations × 3 profiles × 7 batches ×
+32 calls. **120 workload medians are faster, 24 are unchanged and none are
+slower**; no individual sampled batch regresses. **114,912 output words match
+exactly**, with SR.S/ABI/input-preservation checks passing. This is a library
+revision comparison, separate from the independent plain-C adoption baseline.
+See [all operation costs and exact implementation changes](MATH_OPTIMIZATIONS.md).
+
+[Host CI 43518264323](https://github.com/lamb2k/SH2ZAM/actions/runs/43518264323)
+passes 14 targets in GCC Release, Clang Release and Clang ASan/UBSan. The three
+new test suites add independent arithmetic oracles, frozen-source differential
+checks, exhaustive trig domains, matrix aliasing and full-range/invalid cases.
+
+The [current vertex record](benchmarks/sh2-model/results.json) is refreshed from
+this same successful native run. All 1,267,560 coordinates per fixed path and
+both fallback guards pass; the independent baseline comparison remains separate.
+The historical adoption capture below retains its original commit and binary
+identity. No model cycles are converted to physical-console time or FPS.
+
 ## Saturn adoption comparison against independent fixed-point C
 
 The site now reports recorded SH-2 instruction-model costs and has no browser
@@ -14,7 +43,7 @@ The [evidence artifact](https://github.com/lamb2k/SH2ZAM/actions/runs/4351030513
 contains the target ELF, symbols, raw capture and validated schema-2 result.
 The ELF SHA256 is
 `d3eb9af325c03f142711507177fc4b6f9cbdb756fadc2ebc3afbf28cb84e4c46`.
-The committed [model record](benchmarks/sh2-model/results.json) retains all raw
+The [historical model record](https://github.com/lamb2k/SH2ZAM/blob/10786b64f4593d647d06d2a4a73e752c0c413dd0/saturn/benchmarks/sh2-model/results.json) retains all raw
 samples, checksums and provenance for this capture.
 
 The standalone baseline calls no SH2ZAM arithmetic, bounds-proof or execution

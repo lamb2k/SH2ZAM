@@ -82,6 +82,7 @@ memory alignment, batch sizes, and integration with other Saturn work.
 ## Licensing
 
 The math library, frozen benchmark source, fixtures and target wrappers are
-MIT licensed. `capture.h` extends the optional GPL-2.0-or-later model harness
-and is not part of the shipping MIT library or browser build. Yabause remains
+MIT licensed. `capture.h` and `collect.py` extend the optional
+GPL-2.0-or-later model tooling and are not part of the shipping MIT library
+or browser build. Yabause remains
 an unmodified, separately fetched GPL dependency; see `../sh2-model/LICENSE`.

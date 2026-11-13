@@ -12,7 +12,7 @@ Scalar/trig and 2/3/4D vectors; cancellation-safe dot/matrix products; 2x2/3x3/3
 
 ## Then optimize measured bottlenecks
 
-DIVU needs a per-CPU ownership/preemption contract, saturation/zero handling and explicit protection against interrupt/nested use. Do not silently enable MMIO division. Batched MAC assembly needs range/rounding proofs and register-preserving ISR validation. Fast normalization/trig variants need documented error envelopes and separate names. LTO is opt-in until measured.
+DIVU needs a per-CPU ownership/preemption contract, saturation/zero handling and explicit protection against interrupt/nested use. Do not silently enable MMIO division. Batched MAC assembly needs range/rounding proofs and register-preserving ISR validation. Approximate normalization/trig variants need documented error envelopes and separate names. Exact internal optimizations keep the existing API and numeric contracts. LTO is opt-in until measured.
 
 ## Extend only for concrete consumers
 

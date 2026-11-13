@@ -41,6 +41,7 @@
 - Opt-in fused SH-2 `MAC.L` and `DMULS.L` candidates with audited loops and a five-kernel console benchmark.
 - No heap allocation, runtime floating point or mutable global state in the math core.
 - Wide-intermediate products and normalization that handle small and large inputs.
+- Exact square-root, normalization, matrix, quaternion, trig, projection and collision optimizations measured as compiled SH-2 code.
 - Caller-owned transform stacks and batch transforms without hidden CPU scheduling.
 - Installable CMake targets, a Yaul cross-toolchain file and runnable examples.
 - Host regression/oracle tests, sanitizer checks and actual SH-2 build checks.
@@ -221,6 +222,14 @@ remain unmeasured until a capture exists. Source, build and fixture identities
 are included in the lab's downloadable evidence. See [the measurement
 contract](exhibits/README.md) and [validation record](saturn/VALIDATION.md).
 
+The **Math library improvements** section covers 48 existing APIs across bounded,
+tiny and full-range inputs. It compares the frozen prior SH2ZAM implementation
+with the optimized library, using the same SH-2 compiler, fixtures and output
+checks. This is a separate library-revision comparison; it does not relabel the
+old library as independent engine code. Select a math family and operation to
+inspect all three profiles, then export the raw samples and provenance. See
+[the exact math changes and results](saturn/MATH_OPTIMIZATIONS.md).
+
 There are no independently verified production adopters or Saturn speedup claims listed yet. Share measured integrations through this repository's issues.
 
 # Conventions
@@ -249,6 +258,7 @@ Use [SH2ZAM issues](https://github.com/lamb2k/SH2ZAM/issues) for Saturn-specific
 - **SH2ZAM Contributors:** the independent Saturn implementation, tests, integration examples and interactive exhibit.
 
 Original MIT notices are preserved. See [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md). New Saturn code lives in `saturn/`; the inherited SH4ZAM sources remain as provenance/reference, not active Saturn dependencies.
-The optional `saturn/benchmarks/sh2-model/` harness is GPL-2.0-or-later and
-downloads Yabause separately. It is not linked into the MIT math library or
-browser module.
+The optional `saturn/benchmarks/sh2-model/` harness and the GPL-marked
+`math-model/capture.h` and `math-model/collect.py` extensions are GPL-2.0-or-later
+and download Yabause separately. They are not linked into the MIT math library
+or browser module.

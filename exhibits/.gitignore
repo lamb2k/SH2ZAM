@@ -8,3 +8,5 @@ NOTICE.md
 screenshot-*.png
 test-result.json
 __pycache__/
+
+math-results.js

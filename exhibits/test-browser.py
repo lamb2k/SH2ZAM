@@ -50,6 +50,35 @@ def assert_comparison(page, scene, detail, baseline, kernel):
     return state
 
 
+def assert_math_comparison(page, family, operation):
+    state = page.evaluate('SH2ZAM_MATH_STATE')
+    assert state['ready'] and state['family'] == family and state['operation'] == operation, state
+    assert state['baselineCommit'] == '10786b64f4593d647d06d2a4a73e752c0c413dd0'
+    assert state['sourceCommit'] == page.evaluate('SH2ZAM_MATH_MODEL.run.sourceCommit')
+    assert len(state['records']) == 3
+    expected = page.evaluate('(operation) => SH2ZAM_MATH_MODEL.records.filter(r => r.operation === operation)', operation)
+    assert state['records'] == expected
+    for row in state['records']:
+        prefix = '#math-' + row['profile']
+        before, after = row['cyclesPerCall']['before'], row['cyclesPerCall']['after']
+        for suffix, cycles in [('before', before), ('after', after)]:
+            rendered = float(page.locator(prefix + '-' + suffix).inner_text().replace(',', ''))
+            assert math.isclose(rendered, cycles, abs_tol=0.00501), (row, suffix, rendered)
+        assert math.isclose(row['speedup'], before / after, rel_tol=1e-12)
+        assert math.isclose(row['cyclesSavedPercent'], (1 - after / before) * 100, abs_tol=1e-9)
+        change = page.locator(prefix + '-change')
+        if after > before:
+            assert 'more' in change.inner_text() and 'math-loss' in change.get_attribute('class')
+        elif after < before:
+            assert 'less' in change.inner_text() and 'math-gain' in change.get_attribute('class')
+        else:
+            assert 'No change' in change.inner_text()
+        assert page.locator(prefix + '-precision').inner_text() == 'Bit-exact'
+        assert row['srSRetained'] and row['srSOutputMatch']
+    assert 'bit-exact across all three profiles' in page.locator('#math-proof').inner_text()
+    return state
+
+
 def export_model(page):
     if not page.locator('#export').is_visible():
         page.locator('details.evidence > summary').click()
@@ -78,6 +107,14 @@ def export_model(page):
     assert len(evidence['run']['limitations']) >= 3
     assert evidence['guards']['fullRange']['candidateMask'] == 0
     assert evidence['guards']['saturationMode']['candidateMask'] == 5
+    if page.evaluate('SH2ZAM_MATH_STATE.ready'):
+        math_state = page.evaluate('SH2ZAM_MATH_STATE')
+        assert data['mathLibrary']['selection'] == {key: math_state[key] for key in ['family', 'operation']}
+        assert data['mathLibrary']['evidence'] == page.evaluate('SH2ZAM_MATH_MODEL')
+        assert data['mathLibrary']['evidence']['comparison']['independentNonShazamBaseline'] is False
+        assert data['mathLibrary']['evidence']['mismatches'] == 0
+    else:
+        assert 'mathLibrary' not in data
     # Model provenance may contain its recorded capture date; this download must
     # not add browser benchmarking distributions or imply new target execution.
     serialized = json.dumps(data)
@@ -122,6 +159,35 @@ try:
         assert page.locator('input[type=range]').get_attribute('id') == 'detail'
         for retired_id in ['before-time', 'general-time', 'after-time', 'batch-ratio', 'float-ratio', 'plan-time', 'kernel-time', 'benchmark', 'stage-before-time', 'stage-after-time']:
             assert page.locator('#' + retired_id).count() == 0, retired_id
+
+        # Every math choice is backed by a separate recorded SH-2 fixture set.
+        # This comparison upgrades the library; it is not the plain-C baseline.
+        math_available = page.evaluate('!!window.SH2ZAM_MATH_MODEL')
+        if math_available:
+            assert page.evaluate('SH2ZAM_MATH_STATE.ready')
+            assert_math_comparison(page, 'vector', 'vec3_normalize')
+            operations = page.evaluate('[...new Map(SH2ZAM_MATH_MODEL.records.map(r => [r.operation, {family:r.family, operation:r.operation}])).values()]')
+            assert len(operations) == 48
+            for item in operations:
+                page.select_option('#math-family', item['family'])
+                page.select_option('#math-operation', item['operation'])
+                assert_math_comparison(page, item['family'], item['operation'])
+            page.select_option('#math-family', 'scalar')
+            page.locator('#math-family').focus()
+            page.keyboard.press('ArrowDown')
+            assert page.evaluate('SH2ZAM_MATH_STATE.family') == 'vector'
+            page.select_option('#math-operation', 'vec4_dot')
+            page.locator('#math-operation').focus()
+            page.keyboard.press('Home')
+            page.keyboard.press('ArrowDown')
+            assert_math_comparison(page, 'vector', 'vec3_dot')
+            page.select_option('#math-operation', 'vec3_normalize')
+            assert_math_comparison(page, 'vector', 'vec3_normalize')
+            page.locator('.math-library').screenshot(path=str(root / 'screenshot-math-desktop.png'))
+        else:
+            assert not page.evaluate('SH2ZAM_MATH_STATE.ready')
+            assert page.locator('#math-family').is_disabled()
+            assert 'Awaiting' in page.locator('#math-status').inner_text()
 
         # Target costs remain the same while the live visual advances.
         initial = page.evaluate('({model: SH2ZAM_MODEL_STATE, seconds: SH2ZAM_EXHIBIT_STATE.seconds, calls: __visualCalls})')
@@ -173,6 +239,7 @@ try:
         page.screenshot(path=str(root / 'screenshot-desktop.png'), full_page=True)
         page.set_viewport_size({'width': 390, 'height': 844})
         page.screenshot(path=str(root / 'screenshot-mobile.png'), full_page=True)
+        page.locator('.math-library').screenshot(path=str(root / 'screenshot-math-mobile.png'))
         assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
         assert not errors, errors
 
@@ -187,6 +254,69 @@ try:
         wait_model(local)
         local.wait_for_function('window.SH2ZAM_EXHIBIT_STATE?.ready')
         assert_comparison(local, 'saturn', 3, 'plain', 'mac')
+        if math_available:
+            assert_math_comparison(local, 'vector', 'vec3_normalize')
+
+        # Missing math evidence is a pending capture, never a fabricated gain.
+        missing_math = context.new_page()
+        missing_math.route('**/math-results.js*', lambda route: route.fulfill(status=200, content_type='application/javascript', body='/* no capture */'))
+        missing_math.goto(url)
+        wait_model(missing_math)
+        assert not missing_math.evaluate('SH2ZAM_MATH_STATE.ready')
+        assert missing_math.locator('#math-family').is_disabled()
+        assert missing_math.locator('#math-operation').is_disabled()
+        for profile in ['bounded', 'tiny', 'full-range']:
+            assert missing_math.locator('#math-' + profile + '-before').inner_text() == '—'
+            assert missing_math.locator('#math-' + profile + '-after').inner_text() == '—'
+        export_model(missing_math)
+        missing_math.close()
+
+        if math_available:
+            # Presentation-only mutations test losses and rejected precision
+            # evidence; neither becomes benchmark evidence or a committed file.
+            math_loss = context.new_page()
+            math_loss.add_init_script("""
+                let data;
+                Object.defineProperty(window, 'SH2ZAM_MATH_MODEL', {
+                  configurable: true, get() { return data; },
+                  set(value) {
+                    data = value;
+                    const row = data.records.find(r => r.operation === 'vec3_normalize' && r.profile === 'bounded');
+                    for (const sample of row.samples) sample.after.cycles = sample.before.cycles * 2;
+                    row.medianCycles.after = row.medianCycles.before * 2;
+                    row.cyclesPerCall.after = row.cyclesPerCall.before * 2;
+                    row.speedup = 0.5; row.cyclesSavedPercent = -100;
+                  }
+                });
+            """)
+            math_loss.goto(url)
+            wait_model(math_loss)
+            assert_math_comparison(math_loss, 'vector', 'vec3_normalize')
+            assert '100.0% more' in math_loss.locator('#math-bounded-change').inner_text()
+            math_loss.close()
+            for mutation in [
+                'data.records[0].srSOutputMatch = false;',
+                'data.records.pop();',
+                'data.records[0].samples.pop();',
+                'data.records[0].samples[0].mismatches = 1;',
+                'data.records[0].outputWords++; data.records[0].checkedOutputWords += 224;',
+            ]:
+                bad_math = context.new_page()
+                bad_math.add_init_script("""
+                    let data;
+                    Object.defineProperty(window, 'SH2ZAM_MATH_MODEL', {
+                      configurable: true, get() { return data; },
+                      set(value) { data = value; MUTATION }
+                    });
+                """.replace('MUTATION', mutation))
+                bad_math.goto(url)
+                wait_model(bad_math)
+                assert not bad_math.evaluate('SH2ZAM_MATH_STATE.ready')
+                assert bad_math.locator('#math-family').is_disabled()
+                assert 'did not pass' in bad_math.locator('#math-proof').inner_text()
+                assert bad_math.locator('#math-bounded-before').inner_text() == '—'
+                export_model(bad_math)
+                bad_math.close()
 
         # The performance evidence has no WebAssembly dependency. Failure of
         # either feature detection or module loading must preserve model controls.
@@ -200,6 +330,8 @@ try:
             wait_model(unavailable)
             unavailable.wait_for_function('document.getElementById("failure")?.hidden === false')
             assert_comparison(unavailable, 'saturn', 3, 'plain', 'mac')
+            if math_available:
+                assert_math_comparison(unavailable, 'vector', 'vec3_normalize')
             unavailable.click('[data-scene="cubes"]')
             unavailable.locator('#detail').fill('5')
             unavailable.click('[data-baseline="reference"]')
@@ -261,4 +393,4 @@ try:
 finally:
     server.shutdown()
 
-print('PASS: 15 native workloads, both baselines/kernels, honest savings, model export, animation separation, exact visuals, mobile, reduced motion, offline HTML, and WebAssembly-independent evidence')
+print('PASS: 15 native transform workloads, optional 48-operation math capture with three profiles, honest losses, exactness guards, combined export, keyboard/mobile, offline HTML, and WebAssembly-independent evidence')

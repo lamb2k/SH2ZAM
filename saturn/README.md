@@ -11,6 +11,8 @@ The maintained overview, build commands, API scope and upstream credits are in t
 - [Exact coordinate-reuse API](COORDINATE_REUSE.md)
 - [Five-kernel Saturn transform benchmark](benchmarks/README.md)
 - [Executed SH-2 instruction-model results](benchmarks/sh2-model/README.md)
+- [Exact math optimizations and SH-2 model results](MATH_OPTIMIZATIONS.md)
+- [48-operation native math comparison and reproduction](benchmarks/math-model/README.md)
 - [Remaining work](PORTING_PLAN.md)
 
 Both `cmake -S .` from the repository root and `cmake -S saturn` build the Saturn library. Batch transforms now select a specialized exact kernel when the matrix proves direct accumulation safe, with a general fallback for the remaining matrices. Full SH4ZAM API parity and physical-console performance qualification remain incomplete.

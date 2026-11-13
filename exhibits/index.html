@@ -5,8 +5,8 @@
 <meta name="color-scheme" content="dark">
 <meta name="description" content="Compare standalone C and SH2ZAM transforms compiled for Sega Saturn's SH-2, with modeled cycles, precision checks and reproducible evidence.">
 <title>SH2ZAM / Saturn math lab</title>
-<link rel="stylesheet" href="style.css?v=saturn-adoption-2">
-<script defer src="math-module.js?v=saturn-adoption-2"></script><script defer src="meshes.js?v=saturn-adoption-2"></script><script defer src="saturn-results.js?v=saturn-adoption-2"></script><script defer src="sh2-model-results.js?v=saturn-adoption-2"></script><script defer src="app.js?v=saturn-adoption-2"></script>
+<link rel="stylesheet" href="style.css?v=math-suite-1">
+<script defer src="math-module.js?v=math-suite-1"></script><script defer src="meshes.js?v=saturn-adoption-2"></script><script defer src="saturn-results.js?v=saturn-adoption-2"></script><script defer src="sh2-model-results.js?v=math-suite-1"></script><script defer src="math-results.js?v=math-suite-1"></script><script defer src="app.js?v=math-suite-1"></script>
 </head>
 <body>
 <header class="top"><a class="wordmark" href="https://github.com/lamb2k/SH2ZAM">SH<span>2</span>ZAM<span class="dot">·</span></a><span class="topnote">SEGA SATURN / MATH LAB</span><a class="source" href="https://github.com/lamb2k/SH2ZAM/tree/main/exhibits">View source ↗</a></header>
@@ -41,6 +41,19 @@
 <p class="visual-note">The preview runs in your browser. Performance figures above come from the recorded SH-2 model.</p>
 </section>
 <p id="failure" class="failure" role="alert" hidden></p>
+<section class="math-library" aria-labelledby="math-title">
+<div class="section-heading"><h2 id="math-title">Math library improvements</h2><span class="status-tag" id="math-status">Awaiting native capture</span></div>
+<p class="model-caption">The existing math APIs, before and after optimization. Both versions are compiled for SH-2. This compares library revisions; the transform comparison above uses an independent baseline.</p>
+<div class="math-controls"><div><label for="math-family">Math family</label><select id="math-family" disabled><option>Awaiting capture</option></select></div><div><label for="math-operation">Operation</label><select id="math-operation" disabled><option>Awaiting capture</option></select></div></div>
+<div class="table-scroll math-table-scroll" role="region" aria-label="Math cost by input range" tabindex="0"><table class="model-table math-table"><caption>Modeled cycles / call</caption><thead><tr><th scope="col">Input profile</th><th scope="col">Prior SH2ZAM <small>10786b6</small></th><th scope="col">Optimized SH2ZAM</th><th scope="col">Cost change</th><th scope="col">Precision</th></tr></thead><tbody>
+<tr data-math-profile="bounded"><th scope="row">Bounded</th><td id="math-bounded-before">—</td><td id="math-bounded-after">—</td><td id="math-bounded-change">Not measured</td><td id="math-bounded-precision">Awaiting checks</td></tr>
+<tr data-math-profile="tiny"><th scope="row">Tiny</th><td id="math-tiny-before">—</td><td id="math-tiny-after">—</td><td id="math-tiny-change">Not measured</td><td id="math-tiny-precision">Awaiting checks</td></tr>
+<tr data-math-profile="full-range"><th scope="row">Full range</th><td id="math-full-range-before">—</td><td id="math-full-range-after">—</td><td id="math-full-range-change">Not measured</td><td id="math-full-range-precision">Awaiting checks</td></tr>
+</tbody></table></div>
+<p id="math-proof" class="math-proof" aria-live="polite">Awaiting a validated native SH-2 capture. No math performance figures are available yet.</p>
+<p id="math-sampling" class="scope-note"></p>
+<div class="math-evidence"><p id="math-provenance" class="scope-note"></p><a id="math-evidence" href="https://github.com/lamb2k/SH2ZAM/tree/main/saturn/benchmarks/math-model">Math capture &amp; source ↗</a></div>
+</section>
 <section class="integration" aria-label="Transform source code">
 <div class="section-heading"><h2>What changes in your code</h2><a href="https://github.com/lamb2k/SH2ZAM/tree/main/saturn/examples">Integration examples ↗</a></div>
 <div class="kernel-table"><article><h3 id="baseline-code-title">Without SH2ZAM · one fixed-point row</h3><pre><code id="baseline-code">// Bounds qualified for this matrix.

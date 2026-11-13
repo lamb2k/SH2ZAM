@@ -25,6 +25,9 @@
   let maxError = 0, maxWorldError = 0, maxGeneralWorldError = 0, fixedMismatches = 0;
   let outputChecksums = {}, outputsValid = false, visualError = null;
   let modelRow = null, modelData = null;
+  let mathData = null, mathFamily = 'vector', mathOperation = 'vec3_normalize';
+  const mathFamilies = {scalar: 'Scalar arithmetic', vector: 'Vectors', matrix: 'Matrices', quaternion: 'Quaternions', trig: 'Trigonometry', geometry: 'Geometry'};
+  const mathProfiles = ['bounded', 'tiny', 'full-range'];
   const positive = value => Number.isSafeInteger(value) && value > 0;
   const number = value => value.toLocaleString('en-US');
 
@@ -113,7 +116,7 @@
         + ' · ELF ' + run.elfSHA256.slice(0, 12) + ' · ' + data.records.length + ' shared workloads'
       : '';
     $('model-evidence').href = valid ? run.evidenceUrl : 'https://github.com/lamb2k/SH2ZAM/tree/main/saturn/benchmarks/sh2-model';
-    $('export').disabled = !valid;
+    $('export').disabled = !valid && !mathData;
     for (const name of modelPaths) {
       const cycles = valid && positive(row.medianCycles?.[name]) ? row.medianCycles[name] : null;
       $('model-' + name).textContent = cycles === null ? 'Not measured' : number(cycles);
@@ -134,6 +137,116 @@
     $('saturn-status').textContent = captured ? 'Console capture available' : 'Not measured';
     $('saturn-evidence').href = captured ? run.evidenceUrl : 'https://github.com/lamb2k/SH2ZAM/tree/main/saturn/benchmarks';
     $('saturn-evidence').textContent = captured ? 'Console evidence ↗' : 'Console benchmark ↗';
+  }
+
+  function validatedMath(data) {
+    const run = data?.run, baselineCommit = '10786b64f4593d647d06d2a4a73e752c0c413dd0';
+    if (data?.schema !== 1 || data.kernelSet !== 'previous-optimized-math-sh2-model-v1'
+      || run?.environment !== 'isolated-sh2-interpreter' || run.hardwareMeasured !== false
+      || run.browserTimingUsed !== false || run.hostResults !== false
+      || !/^[a-f0-9]{40}$/.test(run.sourceCommit) || !/^[a-f0-9]{64}$/.test(run.elfSHA256)
+      || data.baseline?.sourceCommit !== baselineCommit || data.comparison?.independentNonShazamBaseline !== false
+      || data.batchSize !== 32 || data.samplesPerProfile !== 7 || data.mismatches !== 0
+      || data.checkedOutputWords !== 114912 || !Array.isArray(data.records) || data.records.length !== 144) return null;
+    const groups = new Map(), close = (a, b) => Number.isFinite(a) && Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(b));
+    let checkedOutputWords = 0;
+    for (const row of data.records) {
+      if (!row || !Object.hasOwn(mathFamilies, row.family) || !/^[a-z][a-z0-9_]{0,63}$/.test(row.operation)
+        || !mathProfiles.includes(row.profile) || row.sampleCount !== data.samplesPerProfile
+        || !Array.isArray(row.samples) || row.samples.length !== 7 || !row.samples.every(sample => sample?.mismatches === 0)
+        || !positive(row.outputWords) || row.checkedOutputWords !== row.outputWords * data.batchSize * row.sampleCount
+        || row.srSRetained !== true || row.srSOutputMatch !== true
+        || !positive(row.medianCycles?.before) || !positive(row.medianCycles?.after)
+        || !close(row.cyclesPerCall?.before, row.medianCycles.before / data.batchSize)
+        || !close(row.cyclesPerCall?.after, row.medianCycles.after / data.batchSize)
+        || !close(row.speedup, row.medianCycles.before / row.medianCycles.after)
+        || !close(row.cyclesSavedPercent, (1 - row.medianCycles.after / row.medianCycles.before) * 100)) return null;
+      const key = row.family + ':' + row.operation;
+      if (!groups.has(key)) groups.set(key, new Set());
+      const profiles = groups.get(key);
+      if (profiles.has(row.profile)) return null;
+      profiles.add(row.profile);
+      checkedOutputWords += row.checkedOutputWords;
+    }
+    return checkedOutputWords === data.checkedOutputWords
+      && [...groups.values()].every(profiles => profiles.size === mathProfiles.length) ? data : null;
+  }
+
+  function fillOptions(select, entries, selected) {
+    select.replaceChildren(...entries.map(([value, label]) => {
+      const option = document.createElement('option');
+      option.value = value; option.textContent = label; return option;
+    }));
+    select.value = selected;
+  }
+
+  function selectMathOperations() {
+    const operations = [...new Set(mathData.records.filter(row => row.family === mathFamily).map(row => row.operation))];
+    if (!operations.includes(mathOperation)) mathOperation = operations[0];
+    fillOptions($('math-operation'), operations.map(operation => [operation, 'sh2z_' + operation]), mathOperation);
+  }
+
+  function showMathResults() {
+    const ready = !!mathData;
+    const records = ready ? mathData.records.filter(row => row.family === mathFamily && row.operation === mathOperation) : [];
+    window.SH2ZAM_MATH_STATE = {ready, family: mathFamily, operation: mathOperation,
+      baselineCommit: ready ? mathData.baseline.sourceCommit : null,
+      sourceCommit: ready ? mathData.run.sourceCommit : null, records};
+    $('math-status').textContent = ready ? 'Recorded · SH-2 model' : 'Awaiting native capture';
+    for (const profile of mathProfiles) {
+      const row = records.find(record => record.profile === profile), prefix = 'math-' + profile;
+      const cycles = value => value.toLocaleString('en-US', {maximumFractionDigits: 2});
+      $(prefix + '-before').textContent = row ? cycles(row.cyclesPerCall.before) : '—';
+      $(prefix + '-after').textContent = row ? cycles(row.cyclesPerCall.after) : '—';
+      const cell = $(prefix + '-change');
+      cell.classList.toggle('math-gain', !!row && row.cyclesSavedPercent > 0);
+      cell.classList.toggle('math-loss', !!row && row.cyclesSavedPercent < 0);
+      if (row) {
+        const saved = row.cyclesSavedPercent;
+        const percent = Math.abs(saved) < 0.05 && saved !== 0 ? '<0.1' : Math.abs(saved).toFixed(1);
+        cell.textContent = saved === 0 ? 'No change' : percent + '% ' + (saved > 0 ? 'less' : 'more');
+        const ratio = document.createElement('small');
+        ratio.textContent = saved === 0 ? 'Same cost' : saved > 0
+          ? row.speedup.toFixed(2) + '× speedup' : (1 / row.speedup).toFixed(2) + '× prior cost';
+        cell.append(ratio);
+      } else cell.textContent = 'Not measured';
+      $(prefix + '-precision').textContent = row ? 'Bit-exact' : 'Awaiting checks';
+      $(prefix + '-precision').classList.toggle('math-exact', !!row);
+    }
+    $('math-proof').classList.toggle('pending', !ready);
+    $('math-proof').textContent = ready
+      ? 'sh2z_' + mathOperation + ' · ' + number(records.reduce((sum, row) => sum + row.checkedOutputWords, 0))
+        + ' output words checked · bit-exact across all three profiles.'
+      : window.SH2ZAM_MATH_MODEL ? 'The loaded math data did not pass its SH-2 evidence checks. No performance figures are shown.'
+        : 'Awaiting a validated native SH-2 capture. No math performance figures are available yet.';
+    $('math-sampling').textContent = ready
+      ? mathData.batchSize + '-call batches · median of ' + mathData.samplesPerProfile
+        + ' fixture sets per profile · full-range inputs can take safe fallbacks. Instruction-model costs, not console timings.' : '';
+    $('math-provenance').textContent = ready
+      ? new Set(mathData.records.map(row => row.operation)).size + ' operations · prior 10786b6 → '
+        + mathData.run.sourceCommit.slice(0, 8) + ' · ELF ' + mathData.run.elfSHA256.slice(0, 12) : '';
+    const source = 'https://github.com/lamb2k/SH2ZAM/tree/main/saturn/benchmarks/math-model';
+    let evidence = source;
+    if (ready) {
+      try {
+        const url = new URL(mathData.run.evidenceUrl);
+        if (url.origin === 'https://github.com' && url.pathname.startsWith('/lamb2k/SH2ZAM/')) evidence = url.href;
+      } catch (_) { /* A malformed link cannot override the fixed source URL. */ }
+    }
+    $('math-evidence').href = evidence;
+    $('export').disabled = !mathData && !modelData;
+  }
+
+  function loadMathResults() {
+    mathData = validatedMath(window.SH2ZAM_MATH_MODEL);
+    if (mathData) {
+      const families = Object.entries(mathFamilies).filter(([family]) => mathData.records.some(row => row.family === family));
+      if (!families.some(([family]) => family === mathFamily)) mathFamily = families[0][0];
+      fillOptions($('math-family'), families, mathFamily);
+      selectMathOperations();
+      $('math-family').disabled = false; $('math-operation').disabled = false;
+    }
+    showMathResults();
   }
 
   function loadScene() {
@@ -242,10 +355,11 @@
     requestAnimationFrame(frame);
   }
   function exportModel() {
-    if (!modelData || !modelRow) return;
+    if ((!modelData || !modelRow) && !mathData) return;
     const state = window.SH2ZAM_MODEL_STATE;
     const report = {
       schema: 'sh2zam-model-selection-v1', environment: 'isolated-sh2-interpreter',
+      ...(modelData && modelRow ? {
       selection: {scene, detail, baseline, kernel},
       comparison: {
         referenceCycles: state.referenceCycles, kernelCycles: state.kernelCycles,
@@ -255,6 +369,8 @@
         schema: modelData.schema, kernelSet: modelData.kernelSet, fixtureSHA256: modelData.fixtureSHA256,
         run: modelData.run, guards: modelData.guards, records: [modelRow]
       }
+      } : {}),
+      ...(mathData ? {mathLibrary: {selection: {family: mathFamily, operation: mathOperation}, evidence: mathData}} : {})
     };
     const url = URL.createObjectURL(new Blob([JSON.stringify(report, null, 2)], {type: 'application/json'}));
     const link = document.createElement('a');
@@ -281,6 +397,14 @@
     kernel = button.dataset.kernel; selectButtons('data-kernel', kernel); showModelResults();
   }));
   $('export').addEventListener('click', exportModel);
+  $('math-family').addEventListener('change', event => {
+    if (!mathData) return;
+    mathFamily = event.target.value; selectMathOperations(); showMathResults();
+  });
+  $('math-operation').addEventListener('change', event => {
+    if (!mathData) return;
+    mathOperation = event.target.value; showMathResults();
+  });
   reduced.addEventListener('change', event => { if (event.matches) { playing = false; draw(); } });
   new ResizeObserver(resize).observe($('stage'));
 
@@ -305,6 +429,7 @@
     }
   }
   // Model evidence does not depend on WebAssembly or animation starting.
+  loadMathResults();
   loadScene();
   initVisual();
 })();
