@@ -31,6 +31,15 @@ git -C "$model_core" diff --exit-code HEAD -- yabause/src
 "${CC:-cc}" -O2 -fwrapv -fno-strict-aliasing -ffunction-sections -fdata-sections \
   -DHAVE_STDINT_H -I"$model_core/yabause/src" -Wl,--gc-sections \
   "$model_dir/harness.c" -lm -o "$model_build/harness"
+if [ "${MODEL_SUITE:-vertex}" = math ]; then
+  "$model_build/harness" "$model_elf" "$model_symbols" --math > "$model_build/math-raw.json"
+  python3 "$project_root/saturn/benchmarks/math-model/collect.py" \
+    --raw "$model_build/math-raw.json" --elf "$model_elf" --symbols "$model_symbols" \
+    --core "$model_core" --manifest "$project_root/saturn/benchmarks/math-model/legacy/manifest.json" \
+    --output "$model_output" \
+    --evidence-url "${MODEL_EVIDENCE_URL:-https://github.com/lamb2k/SH2ZAM/actions/workflows/sh2-cross.yml}"
+  exit 0
+fi
 "$model_build/harness" "$model_elf" "$model_symbols" 15 21 > "$model_build/raw.json"
 python3 "$model_dir/collect.py" --raw "$model_build/raw.json" \
   --elf "$model_elf" --symbols "$model_symbols" --core "$model_core" \

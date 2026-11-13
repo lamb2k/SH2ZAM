@@ -80,12 +80,15 @@ static const char *kernels[]={"_before_range","_general_range","_after_range","_
 static const char *names[]={"float","safe","prepared","mac","dmuls","plain"};
 static const char *outputs[]={"_float_output","_general_output","_fixed_output","_mac_output","_dmuls_output","_plain_output"};
 static void print_cost(struct cost c) {printf("{\"cycles\":%u,\"instructions\":%"PRIu64",\"dataReads\":%"PRIu64",\"dataWrites\":%"PRIu64",\"macInstructions\":%"PRIu64",\"dmulsInstructions\":%"PRIu64"}",c.cycles,c.instructions,c.reads,c.writes,c.mac_ops,c.dmuls_ops);}
+#include "../math-model/capture.h"
 int main(int argc,char**argv) {
- if(argc<3){fprintf(stderr,"usage: harness benchmark.elf benchmark.sym [maxcases] [maxposes]\n");return 2;}
- unsigned case_count=argc>3?(unsigned)atoi(argv[3]):15,pose_count=argc>4?(unsigned)atoi(argv[4]):21;if(case_count==0||pose_count==0||case_count>15||pose_count>21)return 2;
+ if(argc<3){fprintf(stderr,"usage: harness benchmark.elf benchmark.sym [maxcases] [maxposes] | --math\n");return 2;}
+ int math_mode=argc>3&&!strcmp(argv[3],"--math");
+ unsigned case_count=argc>3&&!math_mode?(unsigned)atoi(argv[3]):15,pose_count=argc>4?(unsigned)atoi(argv[4]):21;if(case_count==0||pose_count==0||case_count>15||pose_count>21)return 2;
  load_symbols(argv[2]);load_elf(argv[1]);
  cpu.model=SHMT_SH2;cpu.MappedMemoryReadByte=rb;cpu.MappedMemoryReadWord=rw;cpu.MappedMemoryReadLong=rl;cpu.MappedMemoryWriteByte=wb;cpu.MappedMemoryWriteWord=ww;cpu.MappedMemoryWriteLong=wl;
  for(unsigned i=0;i<65536;i++)cpu.opcodes[i]=decode(SHMT_SH2,(u16)i);for(unsigned i=0;i<256;i++)cpu.fetchlist[i]=fetch;
+ if(math_mode) return capture_math();
  u32 in=sym("_input"),matrix=sym("_fixed_matrix"),cases=sym("_cases"),poses=sym("_poses");
  uint64_t components=0;unsigned mismatches=0;double max_error=0;
  printf("{\"schema\":2,\"kind\":\"Yabause isolated SH2 interpreter flat-RAM model, not Saturn timing\",\"cases\":[");

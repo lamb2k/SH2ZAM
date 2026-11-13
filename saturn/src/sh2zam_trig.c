@@ -1,4 +1,4 @@
-/* SH2ZAM quarter-wave sine lookup: Q16.16, 257 samples, 1 KiB ROM.
+/* SH2ZAM quarter-wave sine lookup: Q16.16, 257 samples, 1,028-byte table.
  * Values generated from the mathematical sin() definition; MIT, root LICENSE.
  * Copyright (c) 2026 SH2ZAM Contributors.
  */
@@ -46,7 +46,19 @@ static sh2z_fx_t lookup_quarter(uint16_t offset) {
     const uint16_t index = (uint16_t)(offset >> 6);
     const uint16_t frac = (uint16_t)(offset & 63u);
     const int32_t a = sin_quarter[index], b = sin_quarter[index+1];
-    return (sh2z_fx_t)((a*(64-(int32_t)frac) + b*frac + 32) >> 6);
+    /* The unchanged table is nonnegative and monotonic. Pulling a*64
+     * outside the shift removes one multiply without changing rounding. */
+    return (sh2z_fx_t)(a + (((b-a)*(int32_t)frac + 32) >> 6));
+}
+
+/* Offset is in [0,16383]. A cosine uses the reflected
+ * table cell; +31 preserves the original +32 rounding at its opposite end. */
+static void lookup_pair(uint16_t offset,sh2z_fx_t *s,sh2z_fx_t *c) {
+    const unsigned index=(unsigned)(offset>>6);
+    const int32_t frac=(int32_t)(offset&63u);
+    const int32_t s0=sin_quarter[index],c0=sin_quarter[256u-index];
+    *s=s0+(((sin_quarter[index+1u]-s0)*frac+32)>>6);
+    *c=c0-(((c0-sin_quarter[255u-index])*frac+31)>>6);
 }
 
 sh2z_angle_t sh2z_angle_from_degrees(int32_t degrees) {
@@ -64,4 +76,62 @@ sh2z_fx_t sh2z_sin(sh2z_angle_t angle) {
 }
 sh2z_fx_t sh2z_cos(sh2z_angle_t angle) {
     return sh2z_sin((sh2z_angle_t)(angle + SH2Z_ANGLE_QUARTER));
+}
+
+void sh2z_sincos(sh2z_angle_t angle,sh2z_fx_t *s,sh2z_fx_t *c) {
+    /* Keep single-output calls cheap, and retain the public null semantics. */
+    if(!s) { if(c) *c=sh2z_cos(angle); return; }
+    if(!c) { *s=sh2z_sin(angle); return; }
+    sh2z_fx_t sv,cv;
+    lookup_pair((uint16_t)(angle&16383u),&sv,&cv);
+    if(angle&SH2Z_ANGLE_QUARTER) {
+        const sh2z_fx_t t=sv;
+        sv=cv; cv=-t;
+    }
+    if(angle&SH2Z_ANGLE_HALF) { sv=-sv; cv=-cv; }
+    /* Store in the same order as the separate calls, including s == c. */
+    *s=sv; *c=cv;
+}
+
+sh2z_angle_t sh2z_atan2(sh2z_fx_t y,sh2z_fx_t x) {
+    if(!y) return (sh2z_angle_t)(x<0 ? SH2Z_ANGLE_HALF : 0);
+    if(!x) return y>0 ? SH2Z_ANGLE_QUARTER : (sh2z_angle_t)49152u;
+    const uint32_t ax=x<0 ? 0u-(uint32_t)x : (uint32_t)x;
+    const uint32_t ay=y<0 ? 0u-(uint32_t)y : (uint32_t)y;
+    unsigned lo=0,hi=256;
+    /* First find the table cell directly: eight comparisons, with no trig
+     * calls or interpolation. The strict comparison preserves which side
+     * contains an exactly represented direction, including table plateaus. */
+    while(hi-lo>1u) {
+        const unsigned mid=(lo+hi)>>1;
+        if((uint64_t)ay*(uint32_t)sin_quarter[256u-mid]>
+           (uint64_t)ax*(uint32_t)sin_quarter[mid]) lo=mid;
+        else hi=mid;
+    }
+    const unsigned base=lo<<6;
+    const int32_t s0=sin_quarter[lo],c0=sin_quarter[256u-lo];
+    const int32_t ds=sin_quarter[lo+1u]-s0;
+    const int32_t dc=c0-sin_quarter[255u-lo];
+    lo=0; hi=64;
+    /* Then resolve every original integer-angle candidate inside that cell.
+     * Reuse its four table values; all interpolations remain bit-exact. */
+    while(hi-lo>1u) {
+        const unsigned mid=(lo+hi)>>1;
+        const uint32_t sv=(uint32_t)(s0+((ds*(int32_t)mid+32)>>6));
+        const uint32_t cv=(uint32_t)(c0-((dc*(int32_t)mid+31)>>6));
+        if((uint64_t)ay*cv>(uint64_t)ax*sv) lo=mid;
+        else hi=mid;
+    }
+    const uint32_t slo=(uint32_t)(s0+((ds*(int32_t)lo+32)>>6));
+    const uint32_t shi=(uint32_t)(s0+((ds*(int32_t)hi+32)>>6));
+    const uint32_t clo=(uint32_t)(c0-((dc*(int32_t)lo+31)>>6));
+    const uint32_t chi=(uint32_t)(c0-((dc*(int32_t)hi+31)>>6));
+    /* F(a)=ay*cos(a)-ax*sin(a) is monotonic. F(lo)>0 and F(hi)<=0,
+     * so abs(F(lo))<=abs(F(hi)) iff F(lo)+F(hi)<=0. Comparing summed
+     * table values needs only two 32x32 products and keeps the lower tie.
+     * Even INT32_MIN magnitudes fit: each final product is at most 2^48. */
+    unsigned a=base+((uint64_t)ay*(clo+chi)<=(uint64_t)ax*(slo+shi) ? lo:hi);
+    if(x<0) a=32768u-a;
+    if(y<0) a=65536u-a;
+    return (sh2z_angle_t)a;
 }

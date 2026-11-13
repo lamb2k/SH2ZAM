@@ -73,6 +73,16 @@ jobs:
         run: python3 saturn/benchmarks/audit-batch.py sh2-batch-disassembly.txt | tee sh2-batch-audit.txt
       - name: Inspect experimental fused instructions
         run: python3 saturn/benchmarks/audit-fused.py sh2-fused-disassembly.txt | tee sh2-fused-audit.txt
+      - name: Execute old and optimized math in the SH-2 instruction model
+        env:
+          MODEL_SUITE: math
+          MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          bash saturn/benchmarks/sh2-model/run.sh \
+            saturn/benchmarks/yaul/build/sh2zam-benchmark.elf \
+            saturn/benchmarks/yaul/build/sh2zam-benchmark.sym \
+            build/sh2-model/math-results.json
+          node saturn/benchmarks/math-model/validate.cjs build/sh2-model/math-results.json
       - name: Execute compiled SH-2 kernels in the isolated instruction model
         env:
           MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -101,3 +111,5 @@ jobs:
             saturn/benchmarks/manifest.json
             build/sh2-model/results.json
             build/sh2-model/raw.json
+            build/sh2-model/math-results.json
+            build/sh2-model/math-raw.json

@@ -13,12 +13,18 @@ bool sh2z_aabb_intersects(sh2z_aabb_t a,sh2z_aabb_t b) {
     return valid_box(a)&&valid_box(b)&&a.min.x<=b.max.x&&b.min.x<=a.max.x&&
         a.min.y<=b.max.y&&b.min.y<=a.max.y&&a.min.z<=b.max.z&&b.min.z<=a.max.z;
 }
-static bool within_radius(const int64_t delta[3],uint64_t radius) {
-    uint64_t remaining=radius*radius;
+/* The unsigned distance between any two int32_t coordinates fits uint32_t,
+ * including opposite endpoints. Signed ordering selects the subtraction;
+ * unsigned arithmetic avoids overflowing the original signed difference. */
+static uint32_t coordinate_distance(int32_t a,int32_t b) {
+    return a>=b?(uint32_t)a-(uint32_t)b:(uint32_t)b-(uint32_t)a;
+}
+static bool within_radius(const uint32_t delta[3],uint32_t radius) {
+    uint64_t remaining=(uint64_t)radius*radius;
     for(unsigned i=0;i<3;i++) {
-        uint64_t d=(uint64_t)(delta[i]<0?-delta[i]:delta[i]);
+        uint32_t d=delta[i];
         if(d>radius) return false;
-        uint64_t square=d*d;
+        uint64_t square=(uint64_t)d*d;
         if(square>remaining) return false;
         remaining-=square;
     }
@@ -26,14 +32,19 @@ static bool within_radius(const int64_t delta[3],uint64_t radius) {
 }
 bool sh2z_sphere_intersects(sh2z_sphere_t a,sh2z_sphere_t b) {
     if(a.radius<0||b.radius<0) return false;
-    int64_t d[]={(int64_t)a.center.x-b.center.x,(int64_t)a.center.y-b.center.y,(int64_t)a.center.z-b.center.z};
-    return within_radius(d,(uint64_t)(uint32_t)a.radius+(uint32_t)b.radius);
+    const uint32_t d[]={coordinate_distance(a.center.x,b.center.x),
+        coordinate_distance(a.center.y,b.center.y),coordinate_distance(a.center.z,b.center.z)};
+    return within_radius(d,(uint32_t)a.radius+(uint32_t)b.radius);
+}
+static uint32_t interval_distance(int32_t value,int32_t low,int32_t high) {
+    if(value<low) return (uint32_t)low-(uint32_t)value;
+    if(value>high) return (uint32_t)value-(uint32_t)high;
+    return 0;
 }
 bool sh2z_sphere_intersects_aabb(sh2z_sphere_t s,sh2z_aabb_t b) {
     if(s.radius<0||!valid_box(b)) return false;
-    int64_t d[]={(int64_t)s.center.x-sh2z_clamp(s.center.x,b.min.x,b.max.x),
-                 (int64_t)s.center.y-sh2z_clamp(s.center.y,b.min.y,b.max.y),
-                 (int64_t)s.center.z-sh2z_clamp(s.center.z,b.min.z,b.max.z)};
+    const uint32_t d[]={interval_distance(s.center.x,b.min.x,b.max.x),
+        interval_distance(s.center.y,b.min.y,b.max.y),interval_distance(s.center.z,b.min.z,b.max.z)};
     return within_radius(d,(uint32_t)s.radius);
 }
 const sh2z_mat34_t *sh2z_stack_top(const sh2z_stack_t *s) {

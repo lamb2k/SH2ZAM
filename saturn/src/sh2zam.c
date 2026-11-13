@@ -23,12 +23,15 @@ sh2z_fx_t sh2z_sub(sh2z_fx_t a,sh2z_fx_t b) {
 sh2z_fx_t sh2z_mul(sh2z_fx_t a,sh2z_fx_t b) { return sh2zi_clamp(sh2zi_floor16(sh2zi_product(a,b))); }
 sh2z_fx_t sh2z_div(sh2z_fx_t a,sh2z_fx_t b) {
     if(!b) return a>0 ? INT32_MAX : (a<0 ? INT32_MIN : 0);
-    return sh2zi_clamp(((int64_t)a*65536)/b);
+    uint32_t magnitude=sh2zi_magnitude(a),divisor=sh2zi_magnitude(b);
+    if(magnitude<=divisor) {
+        int32_t quotient=(int32_t)sh2zi_fraction16(magnitude,divisor);
+        return (a<0)!=(b<0) ? -quotient : quotient;
+    }
+    return sh2zi_div64_32((int64_t)a*65536,b);
 }
 sh2z_fx_t sh2z_muldiv(sh2z_fx_t a,sh2z_fx_t b,sh2z_fx_t c) {
-    int64_t p=sh2zi_product(a,b);
-    if(!c) return p>0 ? INT32_MAX : (p<0 ? INT32_MIN : 0);
-    return sh2zi_clamp(p/c);
+    return sh2zi_div64_32(sh2zi_product(a,b),c);
 }
 sh2z_fx_t sh2z_neg(sh2z_fx_t a) { return a==INT32_MIN ? INT32_MAX : -a; }
 sh2z_fx_t sh2z_abs(sh2z_fx_t a) { return a<0 ? sh2z_neg(a) : a; }
@@ -58,7 +61,7 @@ sh2z_fx_t sh2z_smoothstep(sh2z_fx_t t) {
 static sh2z_fx_t length_n(const int32_t *v,unsigned n) {
     uint64_t sum=0;
     for(unsigned i=0;i<n;i++) {
-        uint64_t a=sh2zi_magnitude(v[i]),square=a*a;
+        uint64_t square=(uint64_t)sh2zi_product(v[i],v[i]);
         if(UINT64_MAX-sum<square) return INT32_MAX;
         sum+=square;
     }
@@ -71,18 +74,24 @@ static void normalize_n(int32_t *out,const int32_t *v,unsigned n) {
     if(!largest) { for(unsigned i=0;i<n;i++) out[i]=0; return; }
     /* Bring maximum into [2^28,2^29). Enough fractional precision for tiny
      * input; four squares fit in 2^60; no length saturation for huge input. */
-    int shift=0; uint32_t m=largest;
-    while(m>=(UINT32_C(1)<<29)) { m>>=1; ++shift; }
-    while(m<(UINT32_C(1)<<28)) { m<<=1; --shift; }
+    int shift=-28; uint32_t m=largest;
+    if(m>=(UINT32_C(1)<<16)) { m>>=16; shift+=16; }
+    if(m>=(UINT32_C(1)<<8)) { m>>=8; shift+=8; }
+    if(m>=(UINT32_C(1)<<4)) { m>>=4; shift+=4; }
+    if(m>=(UINT32_C(1)<<2)) { m>>=2; shift+=2; }
+    if(m>=2) ++shift;
     int32_t scaled[4]; uint64_t sum=0;
     for(unsigned i=0;i<n;i++) {
-        int64_t s=shift>=0 ? (int64_t)v[i]/(INT64_C(1)<<shift)
-                           : (int64_t)v[i]*(INT64_C(1)<<(-shift));
-        scaled[i]=(int32_t)s;
-        sum+=(uint64_t)(s*s);
+        uint32_t magnitude=sh2zi_magnitude(v[i]);
+        magnitude=shift>=0 ? magnitude>>shift : magnitude<<(-shift);
+        scaled[i]=v[i]<0 ? -(int32_t)magnitude : (int32_t)magnitude;
+        sum+=(uint64_t)sh2zi_product(scaled[i],scaled[i]);
     }
-    int64_t len=(int64_t)sh2zi_isqrt(sum);
-    for(unsigned i=0;i<n;i++) out[i]=(int32_t)(((int64_t)scaled[i]*65536)/len);
+    uint32_t len=(uint32_t)sh2zi_isqrt(sum);
+    for(unsigned i=0;i<n;i++) {
+        int32_t quotient=(int32_t)sh2zi_fraction16(sh2zi_magnitude(scaled[i]),len);
+        out[i]=scaled[i]<0 ? -quotient : quotient;
+    }
 }
 sh2z_vec2_t sh2z_vec2_add(sh2z_vec2_t a,sh2z_vec2_t b) { return (sh2z_vec2_t){sh2z_add(a.x,b.x),sh2z_add(a.y,b.y)}; }
 sh2z_vec2_t sh2z_vec2_sub(sh2z_vec2_t a,sh2z_vec2_t b) { return (sh2z_vec2_t){sh2z_sub(a.x,b.x),sh2z_sub(a.y,b.y)}; }

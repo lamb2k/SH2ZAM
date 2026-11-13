@@ -65,6 +65,26 @@ if(SH2Z_BUILD_TESTS AND NOT CMAKE_CROSSCOMPILING)
   add_executable(sh2zam_batch_native_tests tests/test_batch_native.c)
   target_link_libraries(sh2zam_batch_native_tests PRIVATE sh2zam)
   add_test(NAME native_batch_host_models COMMAND sh2zam_batch_native_tests)
+  # Exact previous implementation: comparison only, never installed or linked
+  # into the shipping library. All five units use the legacy_ symbol prefix.
+  add_library(sh2zam_math_legacy STATIC
+    benchmarks/math-model/legacy_sh2zam.c
+    benchmarks/math-model/legacy_sh2zam_trig.c
+    benchmarks/math-model/legacy_sh2zam_angles.c
+    benchmarks/math-model/legacy_sh2zam_transform.c
+    benchmarks/math-model/legacy_sh2zam_geometry.c)
+  target_include_directories(sh2zam_math_legacy PRIVATE include)
+  foreach(family scalar transform trig)
+    add_executable(sh2zam_${family}_fast_tests tests/test_${family}_fast.c)
+    target_link_libraries(sh2zam_${family}_fast_tests PRIVATE sh2zam sh2zam_math_legacy m)
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+      target_compile_options(sh2zam_${family}_fast_tests PRIVATE -Wall -Wextra -Wconversion -Wshadow)
+      if(SH2Z_STRICT)
+        target_compile_options(sh2zam_${family}_fast_tests PRIVATE -Werror -Wpedantic)
+      endif()
+    endif()
+    add_test(NAME ${family}_fast_exact COMMAND sh2zam_${family}_fast_tests)
+  endforeach()
   enable_language(CXX)
   add_executable(sh2zam_cpp tests/test_cpp.cpp)
   set_target_properties(sh2zam_cpp PROPERTIES CXX_STANDARD 11 CXX_STANDARD_REQUIRED YES CXX_EXTENSIONS NO)

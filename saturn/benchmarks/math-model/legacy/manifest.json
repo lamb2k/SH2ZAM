@@ -1,0 +1,11 @@
+{
+  "sourceCommit": "10786b64f4593d647d06d2a4a73e752c0c413dd0",
+  "files": {
+    "sh2zam.c": "75bcbd86c3b67447e5f18305c1b45650cbff0601f2c4b69a5064f133eb5f8bbf",
+    "sh2zam_angles.c": "db75aee64a3598d281346233c17cb89e813470e13ea69a5da24f31218829f849",
+    "sh2zam_trig.c": "9fabe4339171aca77d4128b20a7a79cb2776fa5b60a1ddfeed3c45c7be97e21f",
+    "sh2zam_transform.c": "fd07c2123caba0b6763ce0ef8479f82a15e8007d931b5f10f25ebe9f98943cb4",
+    "sh2zam_geometry.c": "ca9d4c3092039935fa4c60aa5802d98eada512064d0b1ac002c1de6cd6a98b4e",
+    "sh2zam_internal.h": "ed6c40047e4ba6a5df168bad0bbf569f6263888acdc3057d66cdc22dc5de565e"
+  }
+}

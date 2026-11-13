@@ -1,6 +1,37 @@
 /* SH2ZAM matrix/rotation operations. MIT; Copyright (c) 2026 SH2ZAM Contributors. */
 #include "sh2zam_internal.h"
 
+/* If one side's unsigned magnitude sum fits 32 bits, multiplying it by any
+ * int32_t components has total absolute magnitude below 2^63. Thus every
+ * partial sum fits int64_t, and a single floor preserves the general dot's
+ * exact rounding. The gate itself uses only checked 32-bit arithmetic. */
+static inline bool sh2zi_sum2_fits(int32_t a,int32_t b) {
+    return sh2zi_magnitude(a)<=UINT32_MAX-sh2zi_magnitude(b);
+}
+static inline bool sh2zi_sum3_fits(int32_t a,int32_t b,int32_t c) {
+    uint32_t total=sh2zi_magnitude(a),next=sh2zi_magnitude(b);
+    if(total>UINT32_MAX-next) return false;
+    total+=next;
+    return total<=UINT32_MAX-sh2zi_magnitude(c);
+}
+static inline bool sh2zi_sum4_fits(int32_t a,int32_t b,int32_t c,int32_t d) {
+    uint32_t total=sh2zi_magnitude(a),next=sh2zi_magnitude(b);
+    if(total>UINT32_MAX-next) return false;
+    total+=next; next=sh2zi_magnitude(c);
+    if(total>UINT32_MAX-next) return false;
+    total+=next;
+    return total<=UINT32_MAX-sh2zi_magnitude(d);
+}
+static inline int64_t sh2zi_accumulate2(const int32_t *a,int32_t x,int32_t y) {
+    return sh2zi_floor16(sh2zi_product(a[0],x)+sh2zi_product(a[1],y));
+}
+static inline int64_t sh2zi_accumulate3(const int32_t *a,int32_t x,int32_t y,int32_t z) {
+    return sh2zi_floor16(sh2zi_product(a[0],x)+sh2zi_product(a[1],y)+sh2zi_product(a[2],z));
+}
+static inline int64_t sh2zi_accumulate4(const int32_t *a,int32_t x,int32_t y,int32_t z,int32_t w) {
+    return sh2zi_floor16(sh2zi_product(a[0],x)+sh2zi_product(a[1],y)+sh2zi_product(a[2],z)+sh2zi_product(a[3],w));
+}
+
 sh2z_mat22_t sh2z_mat22_identity(void) {
     sh2z_mat22_t m={{{0}}};
     for(unsigned i=0;i<2;i++) m.m[i][i]=SH2Z_ONE;
@@ -8,14 +39,21 @@ sh2z_mat22_t sh2z_mat22_identity(void) {
 }
 void sh2z_mat22_multiply(sh2z_mat22_t *out,const sh2z_mat22_t *a,const sh2z_mat22_t *b) {
     sh2z_mat22_t result;
-    for(unsigned row=0;row<2;row++) for(unsigned col=0;col<2;col++) {
-        int32_t v[2];
-        for(unsigned k=0;k<2;k++) v[k]=b->m[k][col];
-        result.m[row][col]=sh2zi_clamp(sh2zi_dot(a->m[row],v,2,0,0));
+    for(unsigned row=0;row<2;row++) {
+        if(sh2zi_sum2_fits(a->m[row][0],a->m[row][1])) {
+            for(unsigned col=0;col<2;col++)
+                result.m[row][col]=sh2zi_clamp(sh2zi_accumulate2(a->m[row],b->m[0][col],b->m[1][col]));
+        } else for(unsigned col=0;col<2;col++) {
+            const int32_t v[]={b->m[0][col],b->m[1][col]};
+            result.m[row][col]=sh2zi_clamp(sh2zi_dot(a->m[row],v,2,0,0));
+        }
     }
     *out=result;
 }
 sh2z_vec2_t sh2z_mat22_transform(const sh2z_mat22_t *m,sh2z_vec2_t v) {
+    if(sh2zi_sum2_fits(v.x,v.y))
+        return (sh2z_vec2_t){sh2zi_clamp(sh2zi_accumulate2(m->m[0],v.x,v.y)),
+            sh2zi_clamp(sh2zi_accumulate2(m->m[1],v.x,v.y))};
     const int32_t x[]={v.x,v.y}; int32_t y[2];
     for(unsigned row=0;row<2;row++) y[row]=sh2zi_clamp(sh2zi_dot(m->m[row],x,2,0,0));
     return (sh2z_vec2_t){y[0],y[1]};
@@ -27,14 +65,22 @@ sh2z_mat33_t sh2z_mat33_identity(void) {
 }
 void sh2z_mat33_multiply(sh2z_mat33_t *out,const sh2z_mat33_t *a,const sh2z_mat33_t *b) {
     sh2z_mat33_t result;
-    for(unsigned row=0;row<3;row++) for(unsigned col=0;col<3;col++) {
-        int32_t v[3];
-        for(unsigned k=0;k<3;k++) v[k]=b->m[k][col];
-        result.m[row][col]=sh2zi_clamp(sh2zi_dot(a->m[row],v,3,0,0));
+    for(unsigned row=0;row<3;row++) {
+        if(sh2zi_sum3_fits(a->m[row][0],a->m[row][1],a->m[row][2])) {
+            for(unsigned col=0;col<3;col++)
+                result.m[row][col]=sh2zi_clamp(sh2zi_accumulate3(a->m[row],b->m[0][col],b->m[1][col],b->m[2][col]));
+        } else for(unsigned col=0;col<3;col++) {
+            const int32_t v[]={b->m[0][col],b->m[1][col],b->m[2][col]};
+            result.m[row][col]=sh2zi_clamp(sh2zi_dot(a->m[row],v,3,0,0));
+        }
     }
     *out=result;
 }
 sh2z_vec3_t sh2z_mat33_transform(const sh2z_mat33_t *m,sh2z_vec3_t v) {
+    if(sh2zi_sum3_fits(v.x,v.y,v.z))
+        return (sh2z_vec3_t){sh2zi_clamp(sh2zi_accumulate3(m->m[0],v.x,v.y,v.z)),
+            sh2zi_clamp(sh2zi_accumulate3(m->m[1],v.x,v.y,v.z)),
+            sh2zi_clamp(sh2zi_accumulate3(m->m[2],v.x,v.y,v.z))};
     const int32_t x[]={v.x,v.y,v.z}; int32_t y[3];
     for(unsigned row=0;row<3;row++) y[row]=sh2zi_clamp(sh2zi_dot(m->m[row],x,3,0,0));
     return (sh2z_vec3_t){y[0],y[1],y[2]};
@@ -51,14 +97,23 @@ sh2z_mat44_t sh2z_mat44_identity(void) {
 }
 void sh2z_mat44_multiply(sh2z_mat44_t *out,const sh2z_mat44_t *a,const sh2z_mat44_t *b) {
     sh2z_mat44_t result;
-    for(unsigned row=0;row<4;row++) for(unsigned col=0;col<4;col++) {
-        int32_t v[4];
-        for(unsigned k=0;k<4;k++) v[k]=b->m[k][col];
-        result.m[row][col]=sh2zi_clamp(sh2zi_dot(a->m[row],v,4,0,0));
+    for(unsigned row=0;row<4;row++) {
+        if(sh2zi_sum4_fits(a->m[row][0],a->m[row][1],a->m[row][2],a->m[row][3])) {
+            for(unsigned col=0;col<4;col++)
+                result.m[row][col]=sh2zi_clamp(sh2zi_accumulate4(a->m[row],b->m[0][col],b->m[1][col],b->m[2][col],b->m[3][col]));
+        } else for(unsigned col=0;col<4;col++) {
+            const int32_t v[]={b->m[0][col],b->m[1][col],b->m[2][col],b->m[3][col]};
+            result.m[row][col]=sh2zi_clamp(sh2zi_dot(a->m[row],v,4,0,0));
+        }
     }
     *out=result;
 }
 sh2z_vec4_t sh2z_mat44_transform(const sh2z_mat44_t *m,sh2z_vec4_t v) {
+    if(sh2zi_sum4_fits(v.x,v.y,v.z,v.w))
+        return (sh2z_vec4_t){sh2zi_clamp(sh2zi_accumulate4(m->m[0],v.x,v.y,v.z,v.w)),
+            sh2zi_clamp(sh2zi_accumulate4(m->m[1],v.x,v.y,v.z,v.w)),
+            sh2zi_clamp(sh2zi_accumulate4(m->m[2],v.x,v.y,v.z,v.w)),
+            sh2zi_clamp(sh2zi_accumulate4(m->m[3],v.x,v.y,v.z,v.w))};
     const int32_t x[]={v.x,v.y,v.z,v.w}; int32_t y[4];
     for(unsigned row=0;row<4;row++) y[row]=sh2zi_clamp(sh2zi_dot(m->m[row],x,4,0,0));
     return (sh2z_vec4_t){y[0],y[1],y[2],y[3]};
@@ -75,18 +130,32 @@ sh2z_mat34_t sh2z_mat34_identity(void) {
 }
 void sh2z_mat34_multiply(sh2z_mat34_t *out,const sh2z_mat34_t *a,const sh2z_mat34_t *b) {
     sh2z_mat34_t result;
-    for(unsigned row=0;row<3;row++) for(unsigned col=0;col<4;col++) {
-        const int32_t v[]={b->m[0][col],b->m[1][col],b->m[2][col]};
-        result.m[row][col]=sh2zi_clamp(sh2zi_dot(a->m[row],v,3,0,col==3?a->m[row][3]:0));
+    for(unsigned row=0;row<3;row++) {
+        if(sh2zi_sum3_fits(a->m[row][0],a->m[row][1],a->m[row][2])) {
+            for(unsigned col=0;col<3;col++)
+                result.m[row][col]=sh2zi_clamp(sh2zi_accumulate3(a->m[row],b->m[0][col],b->m[1][col],b->m[2][col]));
+            result.m[row][3]=sh2zi_clamp(sh2zi_accumulate3(a->m[row],b->m[0][3],b->m[1][3],b->m[2][3])+a->m[row][3]);
+        } else for(unsigned col=0;col<4;col++) {
+            const int32_t v[]={b->m[0][col],b->m[1][col],b->m[2][col]};
+            result.m[row][col]=sh2zi_clamp(sh2zi_dot(a->m[row],v,3,0,col==3?a->m[row][3]:0));
+        }
     }
     *out=result;
 }
 sh2z_vec3_t sh2z_mat34_transform_point(const sh2z_mat34_t *m,sh2z_vec3_t v) {
+    if(sh2zi_sum3_fits(v.x,v.y,v.z))
+        return (sh2z_vec3_t){sh2zi_clamp(sh2zi_accumulate3(m->m[0],v.x,v.y,v.z)+m->m[0][3]),
+            sh2zi_clamp(sh2zi_accumulate3(m->m[1],v.x,v.y,v.z)+m->m[1][3]),
+            sh2zi_clamp(sh2zi_accumulate3(m->m[2],v.x,v.y,v.z)+m->m[2][3])};
     const int32_t x[]={v.x,v.y,v.z}; int32_t y[3];
     for(unsigned row=0;row<3;row++) y[row]=sh2zi_clamp(sh2zi_dot(m->m[row],x,3,0,m->m[row][3]));
     return (sh2z_vec3_t){y[0],y[1],y[2]};
 }
 sh2z_vec3_t sh2z_mat34_transform_direction(const sh2z_mat34_t *m,sh2z_vec3_t v) {
+    if(sh2zi_sum3_fits(v.x,v.y,v.z))
+        return (sh2z_vec3_t){sh2zi_clamp(sh2zi_accumulate3(m->m[0],v.x,v.y,v.z)),
+            sh2zi_clamp(sh2zi_accumulate3(m->m[1],v.x,v.y,v.z)),
+            sh2zi_clamp(sh2zi_accumulate3(m->m[2],v.x,v.y,v.z))};
     const int32_t x[]={v.x,v.y,v.z}; int32_t y[3];
     for(unsigned row=0;row<3;row++) y[row]=sh2zi_clamp(sh2zi_dot(m->m[row],x,3,0,0));
     return (sh2z_vec3_t){y[0],y[1],y[2]};
@@ -135,7 +204,9 @@ bool sh2z_mat34_look_at(sh2z_mat34_t *out,sh2z_vec3_t eye,sh2z_vec3_t target,sh2
 }
 bool sh2z_mat34_inverse_rigid(sh2z_mat34_t *out,const sh2z_mat34_t *m) {
     if(!out||!m) return false;
-    for(unsigned row=0;row<3;row++) for(unsigned col=0;col<3;col++) {
+    /* Exact dot products are symmetric, so six row pairs cover all nine
+     * orthonormality checks without changing the tolerance or failure rules. */
+    for(unsigned row=0;row<3;row++) for(unsigned col=row;col<3;col++) {
         int64_t d=sh2zi_dot(m->m[row],m->m[col],3,0,0)-(row==col?SH2Z_ONE:0);
         if(d>32||d< -32) return false;
     }
@@ -225,6 +296,14 @@ bool sh2z_partition(size_t count,size_t worker,size_t workers,sh2z_range_t *out)
 
 sh2z_quat_t sh2z_quat_identity(void) { return (sh2z_quat_t){0,0,0,SH2Z_ONE}; }
 sh2z_quat_t sh2z_quat_multiply(sh2z_quat_t a,sh2z_quat_t b) {
+    if(sh2zi_sum4_fits(a.w,a.x,a.y,a.z)) {
+        const int64_t x=sh2zi_product(a.w,b.x)+sh2zi_product(a.x,b.w)+sh2zi_product(a.y,b.z)-sh2zi_product(a.z,b.y);
+        const int64_t y=sh2zi_product(a.w,b.y)-sh2zi_product(a.x,b.z)+sh2zi_product(a.y,b.w)+sh2zi_product(a.z,b.x);
+        const int64_t z=sh2zi_product(a.w,b.z)+sh2zi_product(a.x,b.y)-sh2zi_product(a.y,b.x)+sh2zi_product(a.z,b.w);
+        const int64_t w=sh2zi_product(a.w,b.w)-sh2zi_product(a.x,b.x)-sh2zi_product(a.y,b.y)-sh2zi_product(a.z,b.z);
+        return (sh2z_quat_t){sh2zi_clamp(sh2zi_floor16(x)),sh2zi_clamp(sh2zi_floor16(y)),
+            sh2zi_clamp(sh2zi_floor16(z)),sh2zi_clamp(sh2zi_floor16(w))};
+    }
     const int32_t av[]={a.w,a.x,a.y,a.z};
     const int32_t bx[]={b.x,b.w,b.z,b.y},by[]={b.y,b.z,b.w,b.x};
     const int32_t bz[]={b.z,b.y,b.x,b.w},bw[]={b.w,b.x,b.y,b.z};
