@@ -35,7 +35,7 @@ const SPECS = {
   atan2: {sizes:[32],profiles:['bounded','tiny','full-range'],paths:['prior','current']},
   atan: {sizes:[32],profiles:['bounded','tiny','full-range'],paths:['prior','current']},
   spatial: {sizes:[128,512],profiles:['sparse','mixed','dense','crowded','full-range'],
-    paths:['api_brute','inline_brute','index']}
+    paths:['api_brute','inline_brute','inline_scatter','index']}
 };
 const REQUIRED_LIBRARY_SOURCES = [
   ...BASELINE_FILES.map(name=>'saturn/src/'+name),
@@ -70,7 +70,7 @@ function equalNumber(actual,expected,label) {
 }
 function baselinePaths(group) {
   return group==='rotation' ? ['scalar','composed','composed_mac'] :
-    group==='spatial' ? ['api_brute','inline_brute'] : ['prior'];
+    group==='spatial' ? ['api_brute','inline_brute','inline_scatter'] : ['prior'];
 }
 function validateManifest(manifest) {
   exactKeys(manifest,['schema','samplesPerCase','cases'],'fixture manifest');

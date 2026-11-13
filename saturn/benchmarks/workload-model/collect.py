@@ -37,7 +37,7 @@ SPECS = {
     "atan2": ([32], ["bounded", "tiny", "full-range"], ["prior", "current"]),
     "atan": ([32], ["bounded", "tiny", "full-range"], ["prior", "current"]),
     "spatial": ([128, 512], ["sparse", "mixed", "dense", "crowded", "full-range"],
-                ["api_brute", "inline_brute", "index"]),
+                ["api_brute", "inline_brute", "inline_scatter", "index"]),
 }
 
 
@@ -76,7 +76,7 @@ def load_json(path):
 
 def baseline_paths(group):
     return ["scalar", "composed", "composed_mac"] if group == "rotation" else \
-        ["api_brute", "inline_brute"] if group == "spatial" else ["prior"]
+        ["api_brute", "inline_brute", "inline_scatter"] if group == "spatial" else ["prior"]
 
 
 def validate_manifest(manifest):
@@ -235,7 +235,7 @@ def collect(args):
     result = dict(schema=1, kernelSet=KERNEL_SET,
                   comparison=dict(priorLibraryCommit=BASELINE_COMMIT,
                       rotationBaselines=["scalar", "composed", "composed_mac"],
-                      spatialBaselines=["api_brute", "inline_brute"],
+                      spatialBaselines=["api_brute", "inline_brute", "inline_scatter"],
                       scalarBaseline="prior", claimsUniversalTenfoldGain=False),
                   baseline=dict(sourceCommit=BASELINE_COMMIT, manifestSHA256=file_hash(prior_path), files=prior["files"]),
                   run=run, samplesPerCase=7, checkedOutputWords=raw["checkedOutputWords"],

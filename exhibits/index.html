@@ -5,8 +5,8 @@
 <meta name="color-scheme" content="dark">
 <meta name="description" content="Compare standalone C and SH2ZAM transforms compiled for Sega Saturn's SH-2, with modeled cycles, precision checks and reproducible evidence.">
 <title>SH2ZAM / Saturn math lab</title>
-<link rel="stylesheet" href="style.css?v=workload-suite-1">
-<script defer src="math-module.js?v=workload-suite-1"></script><script defer src="meshes.js?v=saturn-adoption-2"></script><script defer src="saturn-results.js?v=saturn-adoption-2"></script><script defer src="sh2-model-results.js?v=math-suite-1"></script><script defer src="math-results.js?v=workload-suite-1"></script><script defer src="workload-results.js?v=workload-suite-1"></script><script defer src="app.js?v=workload-suite-1"></script>
+<link rel="stylesheet" href="style.css?v=workload-suite-2">
+<script defer src="math-module.js?v=workload-suite-2"></script><script defer src="meshes.js?v=saturn-adoption-2"></script><script defer src="saturn-results.js?v=saturn-adoption-2"></script><script defer src="sh2-model-results.js?v=math-suite-1"></script><script defer src="math-results.js?v=workload-suite-2"></script><script defer src="workload-results.js?v=workload-suite-2"></script><script defer src="app.js?v=workload-suite-2"></script>
 </head>
 <body>
 <header class="top"><a class="wordmark" href="https://github.com/lamb2k/SH2ZAM">SH<span>2</span>ZAM<span class="dot">·</span></a><span class="topnote">SEGA SATURN / MATH LAB</span><a class="source" href="https://github.com/lamb2k/SH2ZAM/tree/main/exhibits">View source ↗</a></header>
@@ -46,7 +46,7 @@
 <p class="model-caption">Reuse one rotation across a mesh, index repeated spatial queries, and improve the existing scalar kernels. Every cost below includes setup and output writes on the same compiled SH-2 model.</p>
 <div class="workload-examples">
 <button type="button" class="workload-example" data-workload-example="rotation" disabled><span>512-vector rotation · bounded</span><strong id="workload-rotation-highlight">—</strong><span id="workload-rotation-control">Against the fastest existing rotation control</span><small id="workload-rotation-other">Repeated calls, matrix + C batch, and matrix + MAC.L stay visible.</small></button>
-<button type="button" class="workload-example" data-workload-example="spatial" disabled><span>512 boxes · 128 sparse queries</span><strong id="workload-spatial-highlight">—</strong><span>Against independent inline C</span><small id="workload-spatial-other">Index construction and all queries are included.</small></button>
+<button type="button" class="workload-example" data-workload-example="spatial" disabled><span>512 boxes · 128 sparse queries</span><strong id="workload-spatial-highlight">—</strong><span id="workload-spatial-control">Against the fastest independent C control</span><small id="workload-spatial-other">Packed output and sparse hit writes stay visible. Index construction and all queries are included.</small></button>
 </div>
 <div class="workload-controls">
 <div><label for="workload-group">Operation</label><select id="workload-group" disabled><option>Awaiting capture</option></select></div>

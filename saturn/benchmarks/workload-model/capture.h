@@ -9,7 +9,7 @@ static const char *workload_numeric_profiles[]={"bounded","tiny","full-range","i
 static const char *workload_spatial_profiles[]={"sparse","mixed","dense","crowded","full-range"};
 static const char *workload_rotation_paths[]={"scalar","composed","composed_mac","batch","mac"};
 static const char *workload_scalar_paths[]={"prior","current"};
-static const char *workload_spatial_paths[]={"api_brute","inline_brute","index"};
+static const char *workload_spatial_paths[]={"api_brute","inline_brute","inline_scatter","index"};
 static u32 workload_check_output(u32 address,u32 words,const u32 *reference) {
  u32 checksum=UINT32_C(2166136261);
  for(u32 i=0;i<WORKLOAD_CAPTURE_WORDS;i++) {
@@ -45,7 +45,7 @@ static int capture_workloads(void) {
   if(group>4||profile>(group==0||group==4?4u:2u)||!size||size>512||!words||words>max_words)
    fail("Unexpected workload case metadata",ci);
   const char **paths=group==0?workload_rotation_paths:group==4?workload_spatial_paths:workload_scalar_paths;
-  u32 path_count=group==0?5u:group==4?3u:2u;
+  u32 path_count=group==0?5u:group==4?4u:2u;
   if(ci) putchar(',');
   printf("{\"id\":\"%s\",\"group\":\"%s\",\"profile\":\"%s\",\"size\":%u,\"queries\":%u,\"outputWords\":%u,\"paths\":[",
    (char*)ram+offset(name,1),workload_groups[group],

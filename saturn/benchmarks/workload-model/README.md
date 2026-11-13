@@ -6,9 +6,9 @@ functions. Each comparison includes the setup, validation, fallbacks and result
 writes required by that path. The benchmark is intended to identify useful
 workload gains with exact results; it does not assume a universal 10× speedup.
 
-Native measurements for this suite are pending. Use the API and measurement
-contracts below to evaluate a capture; no speedup is established by the host
-tests or by adding a batch entry point.
+The final native capture with both independent C output strategies is pending.
+Use the API and measurement contracts below to evaluate a capture; no speedup
+is established by the host tests or by adding a batch entry point.
 
 ## Choose the API for the workload
 
@@ -201,17 +201,27 @@ not demonstrate a similar gain over `composed` or `composed_mac`.
 
 | Path | Work performed in the measured range |
 | --- | --- |
-| `api_brute` | For every query, loop over all boxes with the frozen prior public sphere/AABB predicate; write the complete mask and count. |
-| `inline_brute` | Run an independent ordinary-C predicate inside the same loop, hoisting the sphere's radius square once per query and allowing the compiler to inline the predicate; write the same mask and count. |
+| `api_brute` | For every query, loop over all boxes with the frozen prior public sphere/AABB predicate; assemble each output word with a progressing bit mask and write the complete mask and count. |
+| `inline_brute` | Use the independent ordinary-C predicate, with its radius square prepared once per query and compiler inlining enabled; pack each output word in a register using a progressing bit mask. |
+| `inline_scatter` | Use the same independent predicate and per-query preparation; clear the output mask, then set the original-index bit in memory for each hit. |
 | `index` | Build the complete index once, then run all 128 queries and write every mask and count. |
 
-Both brute controls skip a negative-radius query before the inner loop. The
+All three brute controls skip a negative-radius query before the inner loop. The
 independent implementation in [`standalone.c`](standalone.c) uses full-range,
 overflow-safe integer arithmetic and calls no SH2ZAM geometry or arithmetic
-routines. It provides a competent direct-scan comparison without inflating the
-reference through a mandatory external predicate call for every pair. It is
-still a brute-force algorithm; this suite does not claim superiority over all
-other spatial indexes.
+routines. Both independent variants allow the compiler to inline the predicate
+and hoist invariant sphere work; neither requires an external predicate call
+for each pair.
+
+The packed and scatter variants execute in the same ELF on identical inputs
+and produce the same masks and counts. Packing advances the bit mask for every
+box and writes once per output word; scattering performs indexed bit-setting
+only for hits after clearing the output. Their costs can differ with hit
+density, so neither is presumed fastest for every workload. Retain both
+comparisons. When reporting one adoption ratio for a case, use the lower of
+their median cycle counts as the independent C reference. Both controls still
+use brute-force search; this suite does not claim superiority over all other
+spatial indexes.
 
 Normalization and inverse-tangent records use `prior` and `current` loops over
 the same inputs. They do not reuse results from previous samples or queries.
@@ -220,6 +230,10 @@ the same inputs. They do not reuse results from previous samples or queries.
 
 [`manifest.json`](manifest.json) declares 44 cases, each with seven deterministic
 samples. [`workload_bridge.c`](workload_bridge.c) defines the exact input recipes.
+With both independent spatial controls, complete fixture coverage requires
+1,281 path executions, 173,425 reference output words and 585,060 exact
+comparisons against those reference words. These counts describe coverage,
+not a performance result.
 
 | Group | Sizes | Profiles |
 | --- | --- | --- |

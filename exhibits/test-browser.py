@@ -86,7 +86,7 @@ def assert_workload_comparison(page, group, profile, size, baseline, kernel):
     record = page.evaluate('([group,profile,size]) => SH2ZAM_WORKLOAD_MODEL.records.find(r => r.group === group && r.profile === profile && r.size === size)', [group, profile, size])
     assert state['record'] == record
     if baseline == 'strongest':
-        controls = ['scalar', 'composed', 'composed_mac'] if group == 'rotation' else ['api_brute', 'inline_brute'] if group == 'spatial' else ['prior']
+        controls = ['scalar', 'composed', 'composed_mac'] if group == 'rotation' else ['api_brute', 'inline_brute', 'inline_scatter'] if group == 'spatial' else ['prior']
         selected = min(controls, key=lambda name: record['medianCycles'][name])
     else:
         selected = baseline
@@ -104,14 +104,25 @@ def assert_workload_comparison(page, group, profile, size, baseline, kernel):
     assert path_rows.count() == len(record['paths'])
     for i, name in enumerate(record['paths']):
         assert int(path_rows.nth(i).locator('td').nth(0).inner_text().replace(',', '')) == record['medianCycles'][name]
-    raw_rows = page.locator('#workload-samples tr')
-    assert raw_rows.count() == 7
-    for i, sample in enumerate(record['samples']):
-        assert sample['inputChecksum'] in raw_rows.nth(i).locator('th').inner_text()
-        cells = raw_rows.nth(i).locator('td')
-        for j, name in enumerate(record['paths']):
-            assert int(cells.nth(j).inner_text().replace(',', '')) == sample['paths'][name]['cycles']
-        assert cells.last.inner_text() == sample['paths'][record['paths'][0]]['checksum']
+    raw_details = page.locator('details.workload-details').nth(1)
+    opened_for_check = raw_details.get_attribute('open') is None
+    if opened_for_check:
+        raw_details.locator('summary').click()
+    try:
+        raw_rows = page.locator('#workload-samples tr')
+        assert raw_rows.count() == 7
+        for i, sample in enumerate(record['samples']):
+            checksum_label = raw_rows.nth(i).locator('th').inner_text()
+            assert sample['inputChecksum'] in checksum_label, (record['id'], i, checksum_label, sample['inputChecksum'])
+            cells = raw_rows.nth(i).locator('td')
+            for j, name in enumerate(record['paths']):
+                rendered = int(cells.nth(j).inner_text().replace(',', ''))
+                assert rendered == sample['paths'][name]['cycles'], (record['id'], i, name, rendered, sample['paths'][name]['cycles'])
+            checksum = cells.last.inner_text()
+            assert checksum == sample['paths'][record['paths'][0]]['checksum'], (record['id'], i, checksum, sample['paths'][record['paths'][0]]['checksum'])
+    finally:
+        if opened_for_check:
+            raw_details.locator('summary').click()
     assert record['setupIncluded'] and record['guards']['srSRetained'] and record['guards']['srSOutputMatch']
     assert 'Bit-exact' in page.locator('#workload-proof').inner_text()
     assert page.locator('#workload-all-cases tr').count() == 44
@@ -266,7 +277,10 @@ try:
             page.click('[data-workload-example="spatial"]')
             page.select_option('#workload-profile', 'crowded')
             page.select_option('#workload-size', '512')
-            assert_workload_comparison(page, 'spatial', 'crowded', 512, 'inline_brute', 'index')
+            assert_workload_comparison(page, 'spatial', 'crowded', 512, 'strongest', 'index')
+            assert 'Independent C · packed output' in page.locator('#workload-paths').inner_text()
+            assert 'Independent C · sparse hit writes' in page.locator('#workload-paths').inner_text()
+            assert page.locator('#workload-paths tr').count() == 4
             page.select_option('#workload-group', 'atan2')
             assert_workload_comparison(page, 'atan2', 'bounded', 32, 'prior', 'current')
             export_workloads(page)

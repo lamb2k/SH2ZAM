@@ -30,12 +30,12 @@
   let workloadBaseline = 'strongest', workloadKernel = 'mac';
   const workloadSpecs = {
     rotation: {label: 'Quaternion rotation', sizes: [1, 8, 32, 128, 512], profiles: ['bounded', 'tiny', 'full-range', 'identity', 'zero'], paths: ['scalar', 'composed', 'composed_mac', 'batch', 'mac'], baselines: ['scalar', 'composed', 'composed_mac'], kernels: ['batch', 'mac']},
-    spatial: {label: 'Sphere / box queries', sizes: [128, 512], profiles: ['sparse', 'mixed', 'dense', 'crowded', 'full-range'], paths: ['api_brute', 'inline_brute', 'index'], baselines: ['api_brute', 'inline_brute'], kernels: ['index']},
+    spatial: {label: 'Sphere / box queries', sizes: [128, 512], profiles: ['sparse', 'mixed', 'dense', 'crowded', 'full-range'], paths: ['api_brute', 'inline_brute', 'inline_scatter', 'index'], baselines: ['api_brute', 'inline_brute', 'inline_scatter'], kernels: ['index']},
     normalize: {label: 'Vec3 normalization', sizes: [32], profiles: ['bounded', 'tiny', 'full-range'], paths: ['prior', 'current'], baselines: ['prior'], kernels: ['current']},
     atan2: {label: 'atan2', sizes: [32], profiles: ['bounded', 'tiny', 'full-range'], paths: ['prior', 'current'], baselines: ['prior'], kernels: ['current']},
     atan: {label: 'atan', sizes: [32], profiles: ['bounded', 'tiny', 'full-range'], paths: ['prior', 'current'], baselines: ['prior'], kernels: ['current']}
   };
-  const workloadPathNames = {scalar: 'Prior quat_rotate · repeated calls', composed: 'Prior matrix + C batch', composed_mac: 'Prior matrix + existing MAC.L', batch: 'New quaternion batch', mac: 'New quaternion batch + optional MAC.L', api_brute: 'Prior predicate API loop', inline_brute: 'Independent inline C', index: 'New spatial index', prior: 'Prior SH2ZAM · 3374d77', current: 'Current SH2ZAM'};
+  const workloadPathNames = {scalar: 'Prior quat_rotate · repeated calls', composed: 'Prior matrix + C batch', composed_mac: 'Prior matrix + existing MAC.L', batch: 'New quaternion batch', mac: 'New quaternion batch + optional MAC.L', api_brute: 'Prior predicate API loop', inline_brute: 'Independent C · packed output', inline_scatter: 'Independent C · sparse hit writes', index: 'New spatial index', prior: 'Prior SH2ZAM · 3374d77', current: 'Current SH2ZAM'};
   const workloadProfileNames = {bounded: 'Bounded', tiny: 'Tiny', 'full-range': 'Full range', identity: 'Identity quaternion', zero: 'Zero quaternion', sparse: 'Sparse', mixed: 'Mixed', dense: 'Dense / contained', crowded: 'Crowded / partial overlap'};
   const mathFamilies = {scalar: 'Scalar arithmetic', vector: 'Vectors', matrix: 'Matrices', quaternion: 'Quaternions', trig: 'Trigonometry', geometry: 'Geometry'};
   const mathProfiles = ['bounded', 'tiny', 'full-range'];
@@ -341,7 +341,7 @@
     const spec = workloadSpecs[group];
     workloadProfile = spec.profiles.includes(profile) ? profile : spec.profiles[0];
     workloadSize = spec.sizes.includes(size) ? size : spec.sizes[spec.sizes.length - 1];
-    workloadBaseline = group === 'spatial' ? 'inline_brute' : group === 'rotation' ? 'strongest' : 'prior';
+    workloadBaseline = ['spatial', 'rotation'].includes(group) ? 'strongest' : 'prior';
     workloadKernel = group === 'rotation' ? 'mac' : spec.kernels[0];
     fillOptions($('workload-group'), Object.entries(workloadSpecs).map(([key, value]) => [key, value.label]), group);
     fillOptions($('workload-profile'), spec.profiles.map(name => [name, workloadProfileNames[name]]), workloadProfile);
@@ -357,7 +357,9 @@
   function showWorkloadHighlights() {
     for (const group of ['rotation', 'spatial']) {
       const row = workloadData.records.find(value => value.group === group && value.size === 512 && value.profile === (group === 'rotation' ? 'bounded' : 'sparse'));
-      const control = group === 'rotation' ? strongestWorkloadControl(row) : 'inline_brute', path = group === 'rotation' ? 'mac' : 'index';
+      const control = group === 'rotation' ? strongestWorkloadControl(row)
+        : row.medianCycles.inline_brute <= row.medianCycles.inline_scatter ? 'inline_brute' : 'inline_scatter';
+      const path = group === 'rotation' ? 'mac' : 'index';
       const beforeCycles = row.medianCycles[control], afterCycles = row.medianCycles[path];
       const headline = $('workload-' + group + '-highlight');
       headline.textContent = workloadRatio(beforeCycles, afterCycles);
@@ -366,8 +368,14 @@
         $('workload-rotation-control').textContent = 'Against ' + workloadPathNames[control].toLowerCase();
         $('workload-rotation-other').textContent = ['scalar', 'composed', 'composed_mac'].map(name =>
           (row.medianCycles[name] / afterCycles).toFixed(2) + '× vs ' + ({scalar: 'repeated calls', composed: 'matrix + C', composed_mac: 'matrix + MAC.L'}[name])).join(' · ');
-      } else $('workload-spatial-other').textContent = (row.medianCycles.api_brute / afterCycles).toFixed(2)
-        + '× vs prior API loop · index build + 128 queries included.';
+      } else {
+        $('workload-spatial-control').textContent = 'Against fastest independent C · '
+          + (control === 'inline_brute' ? 'packed output' : 'sparse hit writes');
+        $('workload-spatial-other').textContent = ['inline_brute', 'inline_scatter', 'api_brute'].map(name =>
+          (row.medianCycles[name] / afterCycles).toFixed(2) + '× vs '
+            + ({inline_brute: 'packed output', inline_scatter: 'sparse writes', api_brute: 'API loop'}[name])).join(' · ')
+          + ' · build included.';
+      }
     }
     let faster = 0, same = 0, slower = 0, tenfold = 0;
     const rows = workloadData.records.map(row => {
@@ -429,7 +437,8 @@
     $('workload-baseline-note').textContent = row.group === 'rotation'
       ? (control === 'scalar' ? 'Repeated-call control selected. ' : workloadBaseline === 'strongest' ? 'The fastest existing control is selected for this case. ' : 'Existing composed control selected. ')
         + 'All rotation controls already use SH2ZAM. Both composed paths remain visible so shared-setup gains can be assessed separately from improvements beyond composition.'
-      : row.group === 'spatial' ? 'Independent inline C prepares each query once and tests every box with the same exact predicate. The prior API loop is also retained.'
+      : row.group === 'spatial' ? (workloadBaseline === 'strongest' ? 'The fastest recorded control is selected for this case. ' : 'Selected spatial control shown above. ')
+        + 'Both independent C strategies prepare each query once and use the same exact predicate: packed output writes one word at a time; sparse hit writes update the bitset on a match. Both strategies and the prior API loop remain visible.'
         : 'Latest optimized revision 3374d77 → this capture. The 48-operation table below keeps the earlier 10786b6 comparison separately labeled.';
     $('workload-unit-heading').textContent = 'Cycles / ' + unit;
     $('workload-table-caption').textContent = 'Whole-workload medians · setup included · all ' + row.paths.length + ' paths';

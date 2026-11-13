@@ -64,7 +64,7 @@ function render(data) {
     assert.equal(state().ready,true);
     assert.equal(state().group,'rotation');assert.equal(state().profile,'bounded');assert.equal(state().size,512);
     const row=state().record;
-    const best=['scalar','composed','composed_mac'].reduce((a,b)=>row.medianCycles[a]<row.medianCycles[b]?a:b);
+    const best=['scalar','composed','composed_mac'].reduce((a,b)=>row.medianCycles[a]<=row.medianCycles[b]?a:b);
     assert.equal(state().baseline,best,'Headline uses the strongest recorded control');
     assert.equal(state().speedup,row.medianCycles[best]/row.medianCycles.mac);
     assert.equal(ui.get('workload-paths').children.length,5,'Every rotation control remains visible');
@@ -76,8 +76,13 @@ function render(data) {
     assert.equal(state().afterCycles,row.medianCycles.batch);
     ui.examples[1].click();
     assert.equal(state().group,'spatial');assert.equal(state().profile,'sparse');assert.equal(state().size,512);
-    assert.equal(state().baseline,'inline_brute','Sparse query example defaults to independent inline C');
-    assert.equal(ui.get('workload-paths').children.length,3);
+    const spatial=state().record;
+    const spatialBest=['api_brute','inline_brute','inline_scatter'].reduce((a,b)=>spatial.medianCycles[a]<=spatial.medianCycles[b]?a:b);
+    assert.equal(state().baselineChoice,'strongest');
+    assert.equal(state().baseline,spatialBest,'Sparse query example defaults to the fastest of all three controls');
+    const independentBest=spatial.medianCycles.inline_brute<=spatial.medianCycles.inline_scatter?'packed output':'sparse hit writes';
+    assert.ok(ui.get('workload-spatial-control').textContent.includes(independentBest),'Highlight names the fastest independent C strategy');
+    assert.equal(ui.get('workload-paths').children.length,4,'Both independent output strategies and the API control remain visible');
     assert.match(ui.get('workload-scope').textContent,/One index build \+ all 128 queries/);
     for(const record of data.records) {
       ui.get('workload-group').dispatch('change',record.group);
@@ -102,6 +107,7 @@ function render(data) {
       value=>{value.records[0].samples[0].paths.mac.checksum='deadbeef';},
       value=>{value.run.setupIncluded=false;},
       value=>{value.comparison.claimsUniversalTenfoldGain=true;},
+      value=>{value.records.find(record=>record.group==='spatial').paths.splice(2,1);},
       value=>{value.records.pop();}
     ]) {
       const bad=structuredClone(data);mutate(bad);
@@ -111,6 +117,6 @@ function render(data) {
       assert.throws(()=>compile(invalid,bundle));
       assert.equal(fs.readFileSync(bundle,'utf8'),'previous verified bundle','A rejected capture cannot overwrite valid output');
     }
-    console.log('Workload UI passed: 44 native cases, strongest/default controls, slower-case labels, seven raw samples, full export, and rejected-data publication.');
+    console.log('Workload UI passed: 44 native cases, strongest controls including both independent spatial strategies, slower-case labels, seven raw samples, full export, and rejected-data publication.');
   } finally {fs.rmSync(temporary,{recursive:true,force:true});}
 })().catch(error=>{console.error(error);process.exitCode=1;});

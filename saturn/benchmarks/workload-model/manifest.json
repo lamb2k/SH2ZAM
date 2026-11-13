@@ -495,6 +495,7 @@
       "paths": [
         "api_brute",
         "inline_brute",
+        "inline_scatter",
         "index"
       ]
     },
@@ -508,6 +509,7 @@
       "paths": [
         "api_brute",
         "inline_brute",
+        "inline_scatter",
         "index"
       ]
     },
@@ -521,6 +523,7 @@
       "paths": [
         "api_brute",
         "inline_brute",
+        "inline_scatter",
         "index"
       ]
     },
@@ -534,6 +537,7 @@
       "paths": [
         "api_brute",
         "inline_brute",
+        "inline_scatter",
         "index"
       ]
     },
@@ -547,6 +551,7 @@
       "paths": [
         "api_brute",
         "inline_brute",
+        "inline_scatter",
         "index"
       ]
     },
@@ -560,6 +565,7 @@
       "paths": [
         "api_brute",
         "inline_brute",
+        "inline_scatter",
         "index"
       ]
     },
@@ -573,6 +579,7 @@
       "paths": [
         "api_brute",
         "inline_brute",
+        "inline_scatter",
         "index"
       ]
     },
@@ -586,6 +593,7 @@
       "paths": [
         "api_brute",
         "inline_brute",
+        "inline_scatter",
         "index"
       ]
     },
@@ -599,6 +607,7 @@
       "paths": [
         "api_brute",
         "inline_brute",
+        "inline_scatter",
         "index"
       ]
     },
@@ -612,6 +621,7 @@
       "paths": [
         "api_brute",
         "inline_brute",
+        "inline_scatter",
         "index"
       ]
     }

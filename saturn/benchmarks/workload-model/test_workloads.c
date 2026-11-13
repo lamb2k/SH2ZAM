@@ -18,7 +18,7 @@ static void fail(const char *reason,const struct workload_case *c,
     exit(EXIT_FAILURE);
 }
 static uint32_t path_count(const struct workload_case *c) {
-    return c->group==W_ROTATION?5u:c->group==W_SPATIAL?3u:2u;
+    return c->group==W_ROTATION?5u:c->group==W_SPATIAL?4u:2u;
 }
 static void save_state(void) {
     memcpy(&before_inputs,&workload_inputs,sizeof before_inputs);
@@ -107,7 +107,7 @@ int main(void) {
             check_prepared_outputs(c,sample);
         }
     }
-    if(executions!=1211||reference_words!=173425||comparisons!=486500)
+    if(executions!=1281||reference_words!=173425||comparisons!=585060)
         fail("incomplete canonical workload coverage",NULL,0,0,0);
     printf("PASS: %u cases x %u samples; %" PRIu64 " path executions; %" PRIu64
            " reference output words; %" PRIu64 " exact path comparisons; %" PRIu64

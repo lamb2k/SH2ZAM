@@ -135,12 +135,12 @@ uint32_t workload_run(uint32_t path) {
   return 1;
  }
  if(c->group==W_SPATIAL) {
-  if(path>2)return 0;
+  if(path>3)return 0;
   uint32_t words=(n+31u)/32u;
-  if(path==2 && !sh2z_aabb_index_build(&index_view,workload_inputs.boxes,n,nodes,2*WORKLOAD_BOXES-1,scratch,WORKLOAD_BOXES)) return 0;
+  if(path==3 && !sh2z_aabb_index_build(&index_view,workload_inputs.boxes,n,nodes,2*WORKLOAD_BOXES-1,scratch,WORKLOAD_BOXES)) return 0;
   for(uint32_t query=0;query<c->queries;query++) {
    uint32_t *bits=out+query*(words+1u);size_t matches=0;
-   if(path==2) {
+   if(path==3) {
     if(!sh2z_aabb_index_query_sphere(bits,words,&matches,&index_view,workload_inputs.queries[query])) return 0;
    } else {
     if(workload_inputs.queries[query].radius<0) {
@@ -154,7 +154,7 @@ uint32_t workload_run(uint32_t path) {
        }
        bits[w]=mask;
       }
-     } else {
+     } else if(path==1) {
       const struct plain_sphere sphere=plain_prepare(workload_inputs.queries[query]);
       for(uint32_t w=0;w<words;w++) {
        uint32_t mask=0,bit=1,end=32u*(w+1u);if(end>n)end=n;
@@ -162,6 +162,14 @@ uint32_t workload_run(uint32_t path) {
         mask|=bit;matches++;
        }
        bits[w]=mask;
+      }
+     } else {
+      /* A sparse-output control avoids updating a mask for rejected boxes.
+       * Both this and packed output are timed; neither is assumed fastest. */
+      const struct plain_sphere sphere=plain_prepare(workload_inputs.queries[query]);
+      for(uint32_t w=0;w<words;w++)bits[w]=0;
+      for(uint32_t i=0;i<n;i++) if(plain_sphere_aabb(&sphere,&workload_inputs.boxes[i])) {
+       bits[i>>5]|=UINT32_C(1)<<(i&31u);matches++;
       }
      }
     }
