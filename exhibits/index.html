@@ -5,8 +5,8 @@
 <meta name="color-scheme" content="dark">
 <meta name="description" content="Compare a floating-point C reference with real SH2ZAM fixed-point C math in a looping, interactive 3D exhibit.">
 <title>SH2ZAM / The math lab</title>
-<link rel="stylesheet" href="style.css?v=mesh-only-3">
-<script defer src="math-module.js"></script><script defer src="app.js?v=mesh-only-3"></script>
+<link rel="stylesheet" href="style.css?v=saturn-bench-4">
+<script defer src="math-module.js"></script><script defer src="meshes.js?v=saturn-bench-4"></script><script defer src="saturn-results.js?v=saturn-bench-4"></script><script defer src="app.js?v=saturn-bench-4"></script>
 </head>
 <body>
 <header class="top"><a class="wordmark" href="https://github.com/lamb2k/SH2ZAM">SH<span>2</span>ZAM<span class="dot">·</span></a><span class="topnote">SEGA SATURN MATH / INTERACTIVE LAB</span><a class="source" href="https://github.com/lamb2k/SH2ZAM/tree/main/exhibits">View source ↗</a></header>
@@ -15,17 +15,19 @@
 <nav class="scenes" aria-label="Choose a 3D exhibit"><button class="active" data-scene="saturn" aria-pressed="true"><small>01</small> Ring world</button><button data-scene="cubes" aria-pressed="false"><small>02</small> Cube field</button><button data-scene="torus" aria-pressed="false"><small>03</small> Twisted orbit</button></nav>
 <section class="viewer" aria-label="3D math comparison">
 <div class="scene-header"><div><h2 id="scene-title">Ring world</h2><p id="scene-caption">A low-poly planet and concentric rings, transformed in lockstep.</p></div><span id="mesh-count">— vertices</span></div>
-<div class="stage" id="stage"><canvas id="after-canvas" aria-label="SH2ZAM fixed-point 3D rendering"></canvas><canvas id="before-canvas" aria-label="Floating-point reference 3D rendering"></canvas><div class="badges"><span><b>C float reference</b><strong id="stage-before-time">—</strong></span><span><b>SH2ZAM Q16.16</b><strong id="stage-after-time">—</strong></span></div><div class="divider" id="divider"></div><div class="stage-foot"><span id="play-state">12 SECOND LOOP</span><span id="live-status">Loading timings…</span></div></div>
+<div class="stage" id="stage"><canvas id="after-canvas" aria-label="SH2ZAM fixed-point 3D rendering"></canvas><canvas id="before-canvas" aria-label="Floating-point reference 3D rendering"></canvas><div class="badges"><span><b>C float · Browser/WASM</b><strong id="stage-before-time">—</strong></span><span><b>Q16.16 · Browser/WASM</b><strong id="stage-after-time">—</strong></span></div><div class="divider" id="divider"></div><div class="stage-foot"><span id="play-state">12 SECOND LOOP</span><span id="live-status">Loading timings…</span></div></div>
 <div class="controls"><button id="play" class="button" type="button" disabled>Pause</button><div><label for="detail">Mesh detail <output id="detail-value">3</output></label><input id="detail" type="range" min="1" max="5" step="1" value="3"></div></div>
 </section>
+<h2 class="measurement-heading">Browser / WASM <small>Live</small></h2>
 <section class="metrics" aria-label="Comparison measurements"><article><p>REFERENCE TRANSFORM</p><strong id="before-time">—</strong><small>C float / median batch time</small></article><article><p>SH2ZAM TRANSFORM</p><strong id="after-time">—</strong><small>Q16.16 C / median batch time</small></article><article><p>PROJECTED DIFFERENCE</p><strong id="error">—</strong><small>Max. vertex offset</small></article></section>
-<section class="kernel-table" aria-label="Transform source code"><article><h3>Reference · float32</h3><pre><code>API("before") void before(void) {
-    for(unsigned i=0;i&lt;count;i++)
+<section class="recorded" aria-label="Recorded Saturn benchmarks"><h2 class="measurement-heading">Saturn / SH-2 <small id="saturn-status">Not measured</small></h2><p id="saturn-workload"></p><div class="metrics"><article><p>SOFTWARE FLOAT</p><strong id="saturn-reference">—</strong><small id="saturn-reference-cycles">No console capture</small></article><article><p>NATIVE FIXED-POINT</p><strong id="saturn-fixed">—</strong><small id="saturn-fixed-cycles">No console capture</small></article><article><p>FLOAT / FIXED TIME</p><strong id="saturn-ratio">—</strong><small id="saturn-error">Unmeasured</small></article></div><p id="saturn-provenance">Recorded hardware results will appear here after a console run.</p><a id="saturn-evidence" hidden>Capture evidence ↗</a><a href="https://github.com/lamb2k/SH2ZAM/tree/main/saturn/benchmarks">Benchmark source &amp; run instructions ↗</a></section>
+<section class="kernel-table" aria-label="Transform source code"><article><h3>Reference · float32</h3><pre><code>void before_range(unsigned start,unsigned n) {
+    for(unsigned i=start;i&lt;start+n;i++)
         for(unsigned j=0;j&lt;3;j++)
             float_output[i][j]=float_matrix[j][0]*float_input[i][0]
                 +float_matrix[j][1]*float_input[i][1]+float_matrix[j][2]*float_input[i][2];
-}</code></pre></article><article><h3>SH2ZAM · Q16.16</h3><pre><code>API("after") void after(void) {
-    (void)sh2z_mat34_transform_points(fixed_output,&amp;fixed_matrix,input,count);
+}</code></pre></article><article><h3>SH2ZAM · Q16.16</h3><pre><code>void after_range(unsigned start,unsigned n) {
+    (void)sh2z_mat34_transform_points(fixed_output+start,&amp;fixed_matrix,input+start,n);
 }
 
 sh2z_vec3_t sh2z_mat34_transform_point(const sh2z_mat34_t *m,sh2z_vec3_t v) {
@@ -40,3 +42,4 @@ sh2z_vec3_t sh2z_mat34_transform_point(const sh2z_mat34_t *m,sh2z_vec3_t v) {
 <footer><span>SH2ZAM · INDEPENDENT SATURN MATH</span><p>Inspired by <a href="https://github.com/gyrovorbis/sh4zam">SH4ZAM</a> by Falco Girgis and SH4ZAM Contributors. <a href="LICENSE">MIT license</a> · <a href="NOTICE.md">Credits</a>. No Sega or upstream endorsement.</p></footer>
 <noscript>This interactive exhibit requires JavaScript and WebAssembly. The source and static documentation are available in the repository.</noscript>
 </body></html>
+

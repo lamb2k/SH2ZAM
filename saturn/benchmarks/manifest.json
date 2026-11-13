@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "fixtureSHA256": "3b6b13e97275e3eb8bdb71419cf8c0ea9cb36bd419e0d76ebede01a499b402aa",
+  "poses": 21,
+  "cases": [
+    {
+      "scene": "saturn",
+      "detail": 1,
+      "vertices": 576
+    },
+    {
+      "scene": "saturn",
+      "detail": 2,
+      "vertices": 864
+    },
+    {
+      "scene": "saturn",
+      "detail": 3,
+      "vertices": 1200
+    },
+    {
+      "scene": "saturn",
+      "detail": 4,
+      "vertices": 1584
+    },
+    {
+      "scene": "saturn",
+      "detail": 5,
+      "vertices": 2016
+    },
+    {
+      "scene": "cubes",
+      "detail": 1,
+      "vertices": 216
+    },
+    {
+      "scene": "cubes",
+      "detail": 2,
+      "vertices": 512
+    },
+    {
+      "scene": "cubes",
+      "detail": 3,
+      "vertices": 1000
+    },
+    {
+      "scene": "cubes",
+      "detail": 4,
+      "vertices": 1728
+    },
+    {
+      "scene": "cubes",
+      "detail": 5,
+      "vertices": 2744
+    },
+    {
+      "scene": "torus",
+      "detail": 1,
+      "vertices": 576
+    },
+    {
+      "scene": "torus",
+      "detail": 2,
+      "vertices": 960
+    },
+    {
+      "scene": "torus",
+      "detail": 3,
+      "vertices": 1440
+    },
+    {
+      "scene": "torus",
+      "detail": 4,
+      "vertices": 2016
+    },
+    {
+      "scene": "torus",
+      "detail": 5,
+      "vertices": 2688
+    }
+  ]
+}

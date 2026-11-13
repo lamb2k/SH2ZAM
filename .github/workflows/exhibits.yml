@@ -24,6 +24,9 @@ jobs:
           bash exhibits/build.sh
           node --check exhibits/app.js
           node exhibits/test-math.cjs
+          node saturn/benchmarks/test-results.cjs
+          cc -O2 -std=c11 -Wall -Wextra -Werror -ffp-contract=off -DSH2Z_FORCE_PORTABLE=1 -Isaturn/include saturn/benchmarks/test-fixtures.c exhibits/bridge.c saturn/src/*.c -lm -o /tmp/test-fixtures
+          /tmp/test-fixtures
       - name: Check image and browser controls
         run: |
           sha256sum doc/sh2zam-gainz.webp
@@ -39,7 +42,7 @@ jobs:
       - name: Stage static site
         run: |
           mkdir -p _site
-          cp exhibits/index.html exhibits/style.css exhibits/app.js exhibits/math-module.js exhibits/math.wasm exhibits/gainz.webp exhibits/LICENSE exhibits/NOTICE.md _site/
+          cp exhibits/index.html exhibits/style.css exhibits/app.js exhibits/meshes.js exhibits/saturn-results.js exhibits/math-module.js exhibits/math.wasm exhibits/gainz.webp exhibits/LICENSE exhibits/NOTICE.md _site/
           touch _site/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -68,3 +71,4 @@ jobs:
       - name: Explain Pages setup requirement
         if: steps.pages.outcome != 'success'
         run: echo 'The tested lab artifact is ready. Enable Settings > Pages > GitHub Actions, then rerun this workflow to publish the site.' >> "$GITHUB_STEP_SUMMARY"
+

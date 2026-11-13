@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - name: Generate shared browser workloads
+        run: node saturn/benchmarks/generate-fixtures.cjs
       - name: Pull the Yaul project's documented toolchain image
         run: |
           docker pull ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6
@@ -51,6 +53,12 @@ jobs:
             cat sh2-elf.txt
             cat sh2-undefined.txt
             make -C saturn/examples/yaul-smoke
+            make -C saturn/benchmarks/yaul
+            "$CC" -m2 -mb -O2 -std=c11 -fno-fast-math -ffp-contract=off -fno-lto -DSH2Z_REQUIRE_SH2=1 -DSH2Z_EXHIBIT_CAPACITY=4096 -Isaturn/include -c exhibits/bridge.c -o build/sh2/benchmark-bridge.o
+            "$NM" -u build/sh2/benchmark-bridge.o > sh2-benchmark-float-helpers.txt
+            grep -q __mulsf3 sh2-benchmark-float-helpers.txt
+            grep -q __addsf3 sh2-benchmark-float-helpers.txt
+            sha256sum saturn/benchmarks/yaul/*.iso > sh2-benchmark-image-sha256.txt
           '
       - uses: actions/upload-artifact@v4
         if: always()
@@ -63,3 +71,9 @@ jobs:
             saturn/examples/yaul-smoke/*.cue
             saturn/examples/yaul-smoke/*.bin
             saturn/examples/yaul-smoke/build/
+
+            saturn/benchmarks/yaul/*.iso
+            saturn/benchmarks/yaul/*.cue
+            saturn/benchmarks/yaul/*.bin
+            saturn/benchmarks/yaul/build/
+            saturn/benchmarks/manifest.json

@@ -1,0 +1,5 @@
+fixtures.h
+yaul/build/
+yaul/*.iso
+yaul/*.bin
+yaul/*.cue

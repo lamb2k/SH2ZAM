@@ -26,6 +26,8 @@ with sync_playwright() as p:
     assert page.locator('#stage-before-time').inner_text()==page.locator('#before-time').inner_text()
     assert page.locator('#stage-after-time').inner_text()==page.locator('#after-time').inner_text()
     assert 'LIVE' in page.locator('#live-status').inner_text()
+    assert page.locator('#saturn-status').inner_text()=='Not measured'
+    assert page.locator('#saturn-reference').inner_text()=='—'
     assert page.locator('.kernel-table pre code').count()==2
     assert 'float_matrix' in page.locator('.kernel-table').inner_text()
     assert 'sh2zi_dot' in page.locator('.kernel-table').inner_text()
@@ -36,6 +38,7 @@ with sync_playwright() as p:
         page.locator('#detail').fill('5')
         state=page.evaluate('SH2ZAM_EXHIBIT_STATE')
         assert state['scene']==scene and state['count']<16384
+        assert f"detail 5 · {state['count']} vertices" in page.locator('#saturn-workload').inner_text()
         assert state['maxError']<0.1,state
         assert page.locator('#before-canvas').evaluate('el=>getComputedStyle(el).clipPath')=='inset(0px 50% 0px 0px)'
         page.screenshot(path=str(root/f'screenshot-{scene}.png'),full_page=True)
@@ -73,3 +76,4 @@ with sync_playwright() as p:
     browser.close()
 server.shutdown()
 print('PASS: exact artwork, scenes, high detail, pause, fixed split, mesh keyboard, benchmark/export, mobile, reduced motion, offline HTML')
+

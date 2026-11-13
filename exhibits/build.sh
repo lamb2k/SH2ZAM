@@ -2,6 +2,8 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+node saturn/benchmarks/generate-fixtures.cjs
+node saturn/benchmarks/compile-results.cjs
 # clang + lld, no emscripten, npm bundle, libc, CDN, or web framework needed.
 "${CLANG:-clang}" --target=wasm32 -O3 -std=c11 -ffreestanding -fno-builtin \
   -fno-fast-math -ffp-contract=off -nostdlib -DSH2Z_FORCE_PORTABLE=1 \
@@ -23,3 +25,4 @@ cp doc/sh2zam-gainz.webp exhibits/gainz.webp
 cp LICENSE exhibits/LICENSE
 cp NOTICE.md exhibits/NOTICE.md
 printf 'Built exhibits/math.wasm and self-contained loader. Open exhibits/index.html.\n'
+
