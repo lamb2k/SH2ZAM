@@ -195,6 +195,17 @@ Host example commands and Saturn-disc build instructions are in [the examples gu
 
 # Showcase
 
+## F-Zero X Saturn
+
+[F-Zero X Saturn](https://github.com/lamb2k/fzero-x-saturn) is an early native
+Saturn port foundation with a shared C renderer using SH2ZAM for Saturn and the
+web. It includes a synthetic test course and an importer for user-supplied
+course data. Original gameplay and retail assets remain to be integrated.
+
+[Open the web workbench](https://lamb2k.github.io/fzero-x-saturn/).
+
+## Math lab
+
 The [math lab](https://lamb2k.github.io/SH2ZAM/) shows what changes when a
 Saturn developer adopts SH2ZAM. Choose **Ring world**, **Cube field** or
 **Twisted orbit**, then change mesh detail to compare the same workload with
