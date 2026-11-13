@@ -1,195 +1,134 @@
-<div align="center">
-  <a href="https://github.com/gyrovorbis/sh4zam">
-    <img src="http://sh4zam.com/logo.png" alt="SH4ZAM">
-  </a>
-  <h3 align="center"><strong>SH4ZAM!</strong></h3>
-  <p align="center">
-    Fast math library for the Sega Dreamcast's SH4 CPU
-    <br />
-    <a href="http://sh4zam.com"><strong>Explore the docs »</strong></a>
-    <br />
-    <br />
-    Optimized
-    ·
-    Ergonomic
-    ·
-    Multiplatform
-  </p>
-</div>
-<hr>
+# SH2ZAM
 
-# Overview
-`SH4ZAM` is a hand-optimized, general-purpose math and linear algebra library for harnessing the floating-point power of the SH4 processor in the Sega Dreamcast. It originally began as a collection of inline assembly routines developed specifically to accelerate the math in the Grand Theft Auto 3 and Vice City DC ports. These routines, along with many others from various contributors, have been separated and combined into a single standalone library, which can be leveraged to bring gainz to the Dreamcast and SuperH communities at large.
+**Saturn-native fixed-point math, inspired by SH4ZAM.**
 
-# Features
-- Dual, modern, interoperable C17 and C++20 APIs
-- Extra API features supported for C23 and C++23
-- Ergonomic, overhead-free composition from either C or C++
-- Clean header files, separating interface from implementation
-- Constexpr evaluation handled for both C and C++
-- Zero-cost conversion operators for interop with other APIs
-- Meticulously optimized for latest SH-GCC version 16.x
-- Rigorously unit tested and validated on physical hardware
-- Heavily documented header files and external Doxygen site
-- Software back-end for using SH4ZAM in cross-platform codebases
+SH2ZAM is an independent Sega Saturn / SH-2 adaptation of the mathematical
+capabilities offered by [SH4ZAM](https://github.com/gyrovorbis/sh4zam). It targets
+Saturn development with a C11 fixed-point core, a portable reference path, and
+an experimental SH-2 multiplication backend.
 
-# APIs
-- **Scalar** math operations, including faster `<math.h>` replacements
-- **Trigonometry** functions, inverse and hyperbolic trig functions
-- **Vector** types: 2D, 3D, 4D
-- **Matrix** types: 2x2, 3x2, 3x3, 3x4, 4x3, and 4x4
-- **Quaternion** math operations
-- **XMTRX** API for manipulating 4x4 back-bank of FP registers
-- **Complex** and imaginary math API, including accelerated FFT
-- **Memory** routines (memcpy(), memset(), memmove(), etc)
+**Original project credit:** SH4ZAM was created by **Falco Girgis and SH4ZAM
+Contributors**. Their Git history, copyright notices, and [MIT license](LICENSE)
+are preserved. SH2ZAM is not an official SH4ZAM release, and no endorsement by
+the upstream maintainers is implied.
 
-# Usage
+> **Status: experimental prototype.** Portable host tests exist. The SH-2
+> assembly path has not yet been cross-compiled or validated on a Saturn.
+> Full SH4ZAM feature parity, drop-in API compatibility, and performance gains
+> are not claimed.
 
-## C23
-For C code, include the header files with the `.h` extensions or `sh4zam/shz_sh4zam.h` to include everything.
+## Why a separate project?
+
+SH2ZAM has a different hardware target, numeric representation, API, build
+configuration, and validation path. Its goal is equivalent *math capabilities*
+implemented appropriately for Saturn, not a rename of Dreamcast code.
+
+The native API uses `sh2z_*` names and Q16.16 fixed-point values. Existing
+`shz_*` floating-point calls require an explicit port; simply replacing an
+include or library name is not sufficient.
+
+Keep Dreamcast projects on SH4ZAM. SH2ZAM is intended to have its own repository,
+release cycle, issues, and Saturn-focused documentation.
+
+## Implemented so far
+
+| Area | Prototype coverage |
+| --- | --- |
+| Scalars | Saturating Q16.16 arithmetic, division, and square root |
+| Trigonometry | Sine and cosine with a quarter-wave lookup table and interpolation |
+| Vectors | 2D/3D/4D dot products; 3D cross, length, normalization, add, and scale |
+| Matrices | Row-major affine 3x4 and 4x4 matrices, transforms, and multiplication |
+| Quaternions | Hamilton multiplication and normalization |
+| Integration | C11 API, C++ linkage, CMake target, portable tests, SH-2 toolchain configuration |
+
+The SH-2 multiply path uses `dmuls.l` and MACH/MACL. Hardware division,
+complex/FFT, advanced trigonometry, additional matrix types, optimized memory
+routines, and a C++ convenience API remain future work. XMTRX hardware-register
+compatibility is not provided.
+
+## Build and test on a host
+
+Run these commands from the repository root:
+
+```sh
+cmake -S saturn -B build/sh2zam-host \
+  -DSH2Z_BUILD_TESTS=ON -DSH2Z_FORCE_PORTABLE=ON
+cmake --build build/sh2zam-host --parallel
+ctest --test-dir build/sh2zam-host --output-on-failure
+```
+
+**Use `-S saturn`.** The inherited root CMake project still builds SH4ZAM;
+its presence preserves the upstream baseline, not a Saturn compatibility claim.
+
+## Integrate with a project
+
+```cmake
+set(SH2Z_BUILD_TESTS OFF CACHE BOOL "Build SH2ZAM host tests")
+add_subdirectory(external/SH2ZAM/saturn)
+target_link_libraries(your_game PRIVATE SH2ZAM::sh2zam)
+```
 
 ```c
-#include <sh4zam/shz_sh4zam.h>
+#include <sh2zam/sh2zam.h>
 
-int main(int argc, const char *argv[]) {
-    shz_vec4_t vec1 = shz_vec4_init(2.0f, 3.0f, 4.0f, 1.0f);
-    shz_vec4_t vec2 = shz_vec4_normalize(shz_vec4_scale(vec1, shz_sinf(SHZ_F_PI)));
-    shz_mat4x4_t mat = {};
-
-    shz_xmtrx_init_diagonal(vec2.x, vec2.y, vec2.z, vec2.w);
-    shz_xmtrx_apply_rotation_x(shz_vec4_dot(vec1, vec2));
-    shz_xmtrx_apply_translation(vec1.x, vec1.y, vec1.z);
-    shz_xmtrx_store_4x4(&mat);
-
-    shz_vec4_t vec3 = shz_xmtrx_transform_vec4(vec2);
-
+int main(void) {
+    sh2z_vec3_t position = {sh2z_from_int(3), sh2z_from_int(4), 0};
+    sh2z_vec3_t direction = sh2z_vec3_normalize(position);
+    sh2z_mat34_t world = sh2z_mat34_identity();
+    world.m[0][3] = sh2z_from_int(10);
+    sh2z_vec3_t transformed = sh2z_mat34_transform_point(&world, direction);
+    (void)transformed;
     return 0;
 }
 ```
 
-NOTE: <i>Where applicable, the C API also includes a variety of type-generic routines which will automatically resolve to calling the proper functions based on argument type. for example, `shz_vec_dot()` will automatically forward to the proper routine based on the type of vectors passed to it.</i>
+SH2ZAM supplies math, not a Saturn hardware SDK or renderer. Integration with a
+particular SDK must be built and tested rather than assumed.
 
-## C++23
-For C++ code, include the header files with the `.hpp` extensions or `sh4zam/shz_sh4zam.hpp` to include everything.
+## Experimental Saturn cross-build
 
-```cxx
-#include <sh4zam/shz_sh4zam.hpp>
+With `sh2eb-elf-gcc` and its matching toolchain programs installed:
 
-int main(int argc, const char* argv[]) {
-    shz::vec4 vec1(2.0f, 3.0f, 4.0f, 1.0f);
-    shz::vec4 vec2 = shz::vec4(vec1 * shz::sinf(shz::pi_f)).direction();
-    shz::mat4x4 mat {};
-
-    shz::xmtrx::init_diagonal(vec2.x, vec2.y, vec2.z, vec2.w);
-    shz::xmtrx::apply_rotation_x(vec1.dot(vec2));
-    shz::xmtrx::apply_translation(vec1.x, vec1.y, vec1.z);
-    shz::xmtrx::store(&mat);
-
-    shz::vec4 vec3 = shz::xmtrx::transform(vec2);
-
-    return 0;
-}
+```sh
+cmake -S saturn -B build/sh2zam-sh2 \
+  -DCMAKE_TOOLCHAIN_FILE="$PWD/saturn/toolchains/yaul-sh2.cmake" \
+  -DSH2Z_BUILD_TESTS=OFF
+cmake --build build/sh2zam-sh2 --parallel
 ```
 
-NOTE: <i>C++ can still use the C API by design, and every C++ type is also compatible with its corresponding C types and C API, so you can mix and match.</i>
+This configuration targets big-endian SH-2. It is a starting point, **not a
+verified cross-build or a hardware-tested release**. Portable host results do
+not validate the SH-2 assembly path.
 
-# Installation
+## Numerical and compatibility boundaries
 
-## KallistiOS
-SH4ZAM is now an official part of [kos-ports](https://github.com/KallistiOS/kos-ports), meaning that it is now directly integrated within the [KallistiOS](https://github.com/KallistiOS/KallistiOS) ecosystem and will be automatically set up as part of the regular KOS installation process. If you're following the standard community guide for [Setting up KallistiOS](https://dreamcast.wiki/Getting_Started_with_Dreamcast_development), SH4ZAM will be installed as part of the [Building KOS Ports](https://dreamcast.wiki/Getting_Started_with_Dreamcast_development#Building_kos-ports) step. If you're using [DreamSDK](https://dreamsdk.org/) to manage your KallistiOS development environment, SH4ZAM may be installed from the `KallistiOS Ports` tab.
+Q16.16 is not floating point. Read the
+[numeric contract](saturn/README.md#numeric-contract) before porting a caller:
+range, saturation, rounding, zero division, and scene scale all matter.
+SH2ZAM's row-major matrices also differ from SH4ZAM's documented column-major
+convention. There is no promise of bit-identical results or identical layouts.
 
-## CMake
-To quickly build the project with CMake in any environment, independently of KOS, run the following from the repo root:
-```
-mkdir build
-cd build
-cmake ..
-make
-make install
-```
-This will build and install the statically linked library as well as the public headers.
+## Development priorities
 
-If you would like to also build and run the unit tests, include `-DSHZ_ENABLE_TESTS=on` within the `cmake` command. Now a separate binary for the unit test executable should be built as well.
+1. Cross-compile and inspect the SH-2 machine code.
+2. Validate numerical behavior in an emulator and on a physical Saturn.
+3. Benchmark representative workloads before enabling further optimizations.
+4. Expand the API against an explicit SH4ZAM capability-parity checklist.
 
-NOTE: <i>For KOS users, use `kos-cmake` instead of your system `cmake` command!</i>
+See the [porting and qualification plan](saturn/PORTING_PLAN.md) and
+[Saturn implementation notes](saturn/README.md).
 
-# Examples
-Examples can be found within the `example` subdirectory. New examples are always welcome to be contributed!
+## Attribution and upstream relationship
 
-Example       | Description
---------------|------------
-Bruce's Balls | Pushes up to 4.5 million PPS, rendering Bruce's balls.
-PVR DMA       | Real-world, complex renderer using KOS's PVR DMA API.
+- **Falco Girgis and SH4ZAM Contributors:** original SH4ZAM library, design,
+  and inherited source/history. The original
+  [README and contributor acknowledgements](README.SH4ZAM.md) are preserved.
+- **Roberto Daniel Alves Duarte (SaturnMath++)** and **libyaul contributors:**
+  additional research references credited in the Saturn implementation notes.
 
-NOTE: <i>If you've installed SH4ZAM through KOS-ports, the examples should get installed to `kos-ports/examples/sh4zam`.</i>
+Retain copyright notices and license text with redistributed code. Keep the
+upstream history available, review upstream changes, and propose reusable fixes
+back to SH4ZAM. Changes here do not imply that the upstream project supports
+Saturn.
 
-# Showcase
-The following projects have been successfully accelerated with SH4ZAM and make great references:
-
-Project                                                   | Description
-----------------------------------------------------------|------------
-[SH4ZAM PVR](https://github.com/dfchil/sh4zam_pvr)        | Advanced PVR DR rendering examples with SH4ZAM acceleration.
-[Mario Kart 64 DC](https://github.com/jnmartin84/mk64-dc) | jnmartin's Mario Kart 64 DC port with SH4ZAM acceleration.
-[Star Fox 64 DC](https://github.com/jnmartin84/sf64-dc)   | jnmartin's Star Fox 64 DC port with SH4ZAM acceleration.
-[Super Mario 64 DC](https://github.com/jnmartin84/sm64-dc)| Super Mario 64 DC port with SH4ZAM acceleration.
-[FFFFTT](https://github.com/meisei4/fffftt)               | Audio signal visualizations, with SH4ZAM accelerated FFT and more.
-[Sonic Mania DC](https://github.com/michael-fadely/Sonic-Mania-Decompilation) | Sonic Mania DC port with SH4ZAM acceleration.
-[Simulant Engine](https://gitlab.com/simulant/simulant)   | General-purpose cross-platform engine backed by SH4ZAM math.
-[Meese Engine](https://meese4.github.io/)                 | Open-world voxel game built for the GC, using the SH4ZAM SW back-end.
-[Quake 2 DC](https://github.com/Bruceleeto/Quake2)        | Port of Quake 2 to the DC, with SH4ZAM accelerated matrix math.
-[DCSinge](https://github.com/GPF/DCSinge)                 | Singe API + FMV playback engine on DC using SH4ZAM memory routines.
-[Xash3D DC](https://github.com/maximqaxd/xash3d-fwgs_dc/tree/pvrrender) | SH4ZAM'd up DC port of the Half-Life compatible Xash3D engine.
-[Gael Force](https://mrtheplague1.itch.io/gael-force)     | Stylized tactical RPG with sprites, 3D worlds, and dynamic lighting effects.
-[DMS-Engine](https://github.com/Bruceleeto/DMS-Engine)    | Bruceleet's "Dreamcast Mesh Shit" Engine, SH4ZAM'd to hell with skinning.
-[The Cave](https://freakdave.itch.io/dreamcast-the-cave-tech-demo) | FreakDave's SH4ZAM-boosted DC tech demo with impressive lighting and effects.
-[Audio Visualizer](https://www.youtube.com/watch?v=2KR_PtF_33c) | Brielle Garcia's CD Audio Visualizer for Dreamcast, using SH4ZAM math routines.
-[DemoTek](https://youtu.be/GfbITGBcHHY?si=TwwZWQhc9E8sfbyi) | Crash Bandicoot-style 3D platformer, with SH4ZAM'd up 3D transform math.
-[QuakeSpasm DC](https://github.com/maximqaxd/quakespasm) | Sega Dreamcast port of QuakeSpasm, with native PVR renderer + SH4ZAM math.
-[Monkey Ball DC](https://www.youtube.com/watch?v=277AUBanFAQ) | Reimplementation of Monkey Ball using GameCube assets from Super MB.
-[Elias Daler Work](https://www.youtube.com/watch?v=8S58Di7aMEk) | Renowned PS1 homebrew dev uses SH4ZAM for his beautiful DC experiments.
-[Diddy Kong Racing DC](https://github.com/Bruceleeto/Diddy-Kong-Racing) | Rare's renowned N64 kart racer, ported to the DC. SH4ZAMed to all hell for gainz.
-[World of Warcraft DC](https://github.com/cypressru/WoWDC) | WoW DC port by CYPRESS, with SH4ZAM-based math gainz.
-[Resident Evil 4 DC](https://github.com/lamb2k/re4dc) | lamb2k's RE4 port to DC, features a build flag SH4ZAM-ing TnL.
-
-# Conventions
-The following conventions are used throughout the API by default, unless otherwise specified:
-
-Convention   | Description
--------------|------------
-Coordinates  | Right-handed for world/view space, Left-handed for screen/clip-space, as with GL.
-Matrices     | Stored in column-major order, as with GL.
-Quaternions  | Stored in `<W, X, Y, Z>` order.
-
-# Community
-The `#sh4zam` channel within the [Simulant Discord Server](https://discord.gg/G2Ay9kxec2) for Dreamcast development is the best place to ask questions, get help, give feedback, or discuss anything relating to SH4ZAM. Also, feel free to open tickets for any issues or feature requests!
-
-# Acknowledgements
-Special thanks to the following individuals who have either directly or indirectly contributed to SH4ZAM:
-- Falco Girgis
-- Paul Cercueil
-- Oleg Endo
-- jnmartin64
-- Stefanos Kornilios Mitsis Poiitidis
-- MoopTheHedgehog
-- Mikael Kalms
-- Twada
-- TapamN
-- UnknownShadow
-- yomboprime
-- David Reichelt
-- Luke Benstead
-- Ian Michael
-- HailToDodongo
-- Jesse Stojan
-- Jamie Hyland
-- Aleios
-- John Brooks
-- Daniel Fairchild
-- BruceLeet
-- Eric Fradella
-- Donald Haase
-- IANN (@meisei4)
-- Niels "Mouse's Mistake" Van Son
-- TechProGabe
-- LobotomyDC
-- Haikuno
+**License:** [MIT](LICENSE). Existing upstream copyright notices remain intact.

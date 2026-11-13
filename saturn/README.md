@@ -1,6 +1,6 @@
-# SH2ZAM — Sega Saturn math backend (experimental)
+# SH2ZAM — Saturn implementation notes (experimental)
 
-A **Saturn-native, fixed-point counterpart** to [SH4ZAM](https://github.com/gyrovorbis/sh4zam). This is a **separate SH-2 implementation on a branch of a real SH4ZAM fork**, not a claim of full API parity or a validated Saturn release. The original Dreamcast sources and MIT LICENSE remain unchanged in the repository.
+The **Saturn-native, fixed-point core** of [SH2ZAM](../README.md), an independent adaptation of the mathematical capabilities of [SH4ZAM](https://github.com/gyrovorbis/sh4zam). Full API parity and a validated Saturn release are not claimed. The inherited Dreamcast source baseline and MIT LICENSE are preserved; SH2ZAM builds from this directory.
 
 **Upstream credit:** SH4ZAM by **Falco Girgis and SH4ZAM Contributors**, MIT-licensed. SH2ZAM draws on its public functional goals and API categories; it does not copy SH4-specific optimized routines. SH4ZAM's maintainers prefer upstream changes; please keep this fork synchronized and propose any applicable improvements upstream. [Original source](https://github.com/gyrovorbis/sh4zam), [MIT license](../LICENSE), [upstream agent/contribution guidance](https://github.com/gyrovorbis/sh4zam/blob/master/AGENTS.md).
 
@@ -8,7 +8,7 @@ A **Saturn-native, fixed-point counterpart** to [SH4ZAM](https://github.com/gyro
 
 ## Why SH2ZAM differs
 
-Dreamcast SH-4 has a hardware FPU and XMTRX register bank. Saturn's dual SH-2 CPUs have no FPU, so direct `float` API / XMTRX instruction parity would regress performance. SH2ZAM instead uses a deterministic, zero-allocation Q16.16 math core, signed 16-bit turn angles, and an SH-2 `dmuls.l` backend selected only for SH-2 builds. No global mutable data makes the routines safe to call from either CPU (ordinary application synchronization still required for shared buffers).
+Dreamcast SH-4 has a hardware FPU and XMTRX register bank. Saturn's dual SH-2 CPUs have no FPU, so direct `float` API / XMTRX instruction parity would regress performance. SH2ZAM instead uses a deterministic, zero-allocation Q16.16 math core, unsigned 16-bit turn angles, and an SH-2 `dmuls.l` backend selected only for SH-2 builds. No global mutable data makes the routines safe to call from either CPU (ordinary application synchronization still required for shared buffers).
 
 ## Present features (prototype)
 
@@ -37,7 +37,7 @@ Requires `sh2eb-elf-gcc` on PATH. If using an existing libyaul make-based game, 
 
 ```bash
 cmake -S saturn -B build/sh2zam-sh2 \
-  -DCMAKE_TOOLCHAIN_FILE=saturn/toolchains/yaul-sh2.cmake \
+  -DCMAKE_TOOLCHAIN_FILE="$PWD/saturn/toolchains/yaul-sh2.cmake" \
   -DSH2Z_BUILD_TESTS=OFF
 cmake --build build/sh2zam-sh2 -j
 ```
@@ -57,11 +57,18 @@ sh2z_vec3_t moved = sh2z_mat34_transform_point(&world, unit);
 
 ### Numeric contract
 
-- `sh2z_fx_t` is **signed 16.16 fixed-point**, raw range −32768 to about +32768. Addition/subtraction/multiplication/division saturate at 32-bit bounds; multiplication uses floor for negative fractional products, division truncates toward zero. Division by zero returns the signed limit, with `0/0 = 0`. Square root of negative is zero.
+- `sh2z_fx_t` is **signed 16.16 fixed-point**, represented range −32768 to 32767 + 65535/65536. Addition/subtraction/multiplication/division saturate at 32-bit bounds; multiplication uses floor for negative fractional products, division truncates toward zero. Division by zero returns the signed limit, with `0/0 = 0`. Square root of negative is zero.
 - Repeated, per-product fixed-point rounding can introduce precision differences from a fused dot product. Existing SH4ZAM floats are **not bit-identical**. Angle input uses unsigned 0..65535 turns, with a quarter-turn = 16384. Long vectors can saturate in dot products; choose scene scale carefully.
 - Non-reentrant SH-2 hardware divider is **not yet enabled**; divide uses a correct baseline likely requiring a libgcc helper on hardware. Benchmark before enabling DIVU or SIMD-like techniques.
-- Prototype code is not yet licensed for a claim of faster-than-Yaul or production-ready performance. Measure cycles, generated assembly, and console behavior first.
+- No evidence yet supports a faster-than-Yaul or production-ready performance claim. Measure cycles, generated assembly, and console behavior first.
 
 ## Project relationship
 
-This branch preserves the original SH4ZAM git ancestry. Keep the original MIT notice. Proposed GitHub repository name: **SH2ZAM**, with description "Saturn-native fixed-point math inspired by SH4ZAM" and visible upstream attribution. Renaming the existing fork is a separate GitHub repository-settings action; **do not rename a fork other projects depend on without checking its users**.
+SH2ZAM is intended for a **separate `lamb2k/SH2ZAM` repository**, not a rename of
+the existing Dreamcast fork. Preserve the inherited Git ancestry, the original
+MIT notices, and the [upstream README and acknowledgements](../README.SH4ZAM.md).
+The [project README](../README.md) is the Saturn-facing entry point.
+
+Do not push Saturn work into the Dreamcast fork's default branch, rename that
+repository, or rewrite its existing branches. The separate project should have
+its own `main` branch, issues, releases, and qualification criteria.
