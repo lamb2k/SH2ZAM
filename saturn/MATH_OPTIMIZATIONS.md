@@ -153,8 +153,16 @@ For the recorded bounded 32-call batch, normalization's data accesses fall from
 from multiplication counts alone.
 
 Some routines grow: sqrt uses 256 bytes of target code versus 148 previously,
-and cross3 inlines work previously shared with cross2. The model cannot assess
-that instruction-cache tradeoff. It uses flat RAM with no cache, bus wait-state,
+and cross3 inlines work previously shared with cross2. Matrix/quaternion fast
+branches retain their general fallback, increasing static size. Quaternion
+multiply grows from 848 to 1,636 bytes and its own stack frame from 132 to 164
+bytes; several product halves still spill. Matrix 4×4 reloads two row
+coefficients from stack and uses a runtime copy for alias-safe output. Projection
+and both sphere functions are leaves with no arithmetic helper calls; projection's
+quotient loop has no stack accesses. These observations come from the archived
+native disassembly, not a prediction of physical elapsed time.
+
+The model cannot assess the instruction-cache tradeoff. It uses flat RAM with no cache, bus wait-state,
 pipeline, multiplier-contention, DMA, interrupt, peripheral or second-CPU model.
 Physical Saturn timing, alignment/batch-size tuning and dual-CPU scaling remain
 unmeasured. No browser timings, console milliseconds, FPS, or whole-game speedup
