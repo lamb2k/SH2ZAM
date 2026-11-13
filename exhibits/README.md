@@ -11,6 +11,10 @@ batch. The default comparison is **plain fixed-point C → native MAC.L**. The
 native kernel is an explicitly selected experimental API, not the default
 prepared dispatcher.
 
+Separate results sections cover 48 existing math APIs and 44 complete workloads,
+including quaternion rotation batches and sphere queries against static boxes.
+All performance figures use recorded SH-2 execution with exact-output checks.
+
 | Exhibit | Workload |
 |---|---|
 | Ring world | Low-poly planet and concentric rings |
@@ -61,7 +65,7 @@ remain separate and unmeasured until the
 
 ## Math library improvements
 
-The second results section compares **SH2ZAM at `10786b6` with optimized
+The math results section compares **SH2ZAM at `10786b6` with optimized
 SH2ZAM**, separately from the independent transform adoption baseline. Select
 one of 48 existing APIs to see bounded, tiny and full-range inputs together.
 The initial operation is 3D vector normalization.
@@ -80,6 +84,50 @@ than substituting measurements. Raw samples, frozen-source checksums, compiled
 ELF identity and model limitations are retained in the export. See
 [the suite and input profiles](../saturn/benchmarks/math-model/README.md) and
 [the implementation/results guide](../saturn/MATH_OPTIMIZATIONS.md).
+
+## Optimize the whole workload
+
+This section covers **44 cases with seven changing-input samples each**. Select
+quaternion rotation, sphere/box queries, normalization, `atan2` or `atan`, then
+choose the input profile, size, control and library path. The overview retains
+every case, including small batches and regressions. No universal 10× gain is
+assumed or required by the evidence validator.
+
+| Comparison | Controls retained |
+| --- | --- |
+| Quaternion rotation | Repeated prior scalar calls; one prior matrix plus the existing C batch; one prior matrix plus the existing prepared MAC.L path. |
+| Sphere queries | Prior public-predicate loop; independent inline C with packed output words; the same independent predicate with per-hit bit writes. |
+| Normalization and inverse tangent | Prior and current calls on identical inputs. |
+
+The default uses the fastest recorded control for the selected case. Rotation
+therefore compares against an application that already shares setup when that
+is fastest. Both independent geometry output strategies remain visible because
+their costs differ with hit density. The frozen prior library here is
+`3374d77`, the revision at the start of this work; the 48-operation historical
+math section keeps its separate `10786b6` baseline.
+
+Every path includes its required setup and output writes. Rotation includes
+quaternion normalization, matrix construction and any bound scan/qualification.
+Each spatial sample includes one complete index build and all 128 sphere
+queries against 128 or 512 boxes. Sparse, mixed, contained, crowded and full-range
+profiles exercise different pruning opportunities. Exact output masks and counts
+must agree across paths. Fixture generation and verification are outside the
+measured interval; setup is not amortized across the seven samples.
+
+The new [`sh2z_quat_rotate_vectors` API](../saturn/include/sh2zam/rotation_batch.h)
+shares quaternion setup and preserves scalar rotation results, including exact
+in-place use. Its experimental `_mac` alternative retains the ordinary exact
+fallback. The [static spatial API](../saturn/include/sh2zam/spatial.h) uses
+caller-owned nodes and scratch and returns original-index bitsets. Boxes and
+built nodes must remain unchanged until rebuilding. See the
+[workload guide](../saturn/benchmarks/workload-model/README.md) for examples,
+memory requirements, buffer contracts and adverse query patterns.
+
+`compile-workload-results.cjs` validates the capture before creating
+`workload-results.js`. Missing evidence produces an explicit unavailable state;
+invalid evidence is rejected. The section shows all path medians, the seven raw
+samples, exactness guards and build provenance. The same one-CPU instruction-model
+limits apply: these results do not establish physical Saturn timings or FPS.
 
 ## Live visuals and precision
 
@@ -119,6 +167,11 @@ the selected family/operation plus the complete validated 144-record dataset
 and every raw math sample. The math results and export work independently of
 WebAssembly and animation.
 
+When the workload capture is present, the combined export also includes
+`workloads`: the selected comparison and the full validated 44-case dataset.
+**Export all workload evidence** provides the workload selection, every raw
+sample and complete provenance independently of the animation or WebAssembly.
+
 The export contains model cycles, not browser wall time. It does not imply that
 changing the animation pose reruns the model. Full raw per-pose samples can be
 obtained from the evidence link.
@@ -143,6 +196,8 @@ python3 -m http.server --directory exhibits 8000
 
 Open `http://localhost:8000`. The build validates and packages the committed model
 evidence; it does not rerun the native CPU model or substitute browser timings.
+When a workload capture is present, validate it separately with
+`node saturn/benchmarks/workload-model/validate.cjs`.
 A self-contained base64 module supports the downloaded site over `file://` in
 browsers that allow local scripts. Generated assets are ignored by Git and built
 from source in CI.
@@ -164,6 +219,11 @@ The math checks exercise all 48 operation selectors, all three profiles,
 zero-change and cost-increase formatting, combined evidence export, keyboard
 navigation and mobile layout. Missing, incomplete or invalid math evidence
 must suppress its figures while leaving the vertex comparison usable.
+
+Workload checks cover the shared-setup and both independent geometry controls,
+all-case and raw-sample tables, model-derived comparisons, slower-result
+formatting, exactness guards, full evidence export, keyboard access and mobile
+layout. Unavailable workload evidence must leave the other sections usable.
 
 Run it with Playwright and Chromium installed:
 

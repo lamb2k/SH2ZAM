@@ -1,4 +1,6 @@
 #include <sh2zam/sh2zam.hpp>
+#include <sh2zam/rotation_batch.h>
+#include <sh2zam/spatial.h>
 #include <cstdio>
 static_assert(sh2z::fixed::from_raw(SH2Z_ONE).raw()==SH2Z_ONE,"constexpr raw constructor");
 int main() {
@@ -12,6 +14,9 @@ int main() {
     if((v-v).length().raw()!=0||(v+v).length().integer()!=10) return 4;
     if((v*fixed::from_int(2)).length().integer()!=10||v.dot(v).integer()!=25) return 5;
     if(v.direction().length().raw()<SH2Z_ONE-2) return 6;
+    if(!sh2z_quat_rotate_vectors(nullptr,sh2z_quat_identity(),nullptr,0)) return 7;
+    sh2z_aabb_index_t empty;
+    if(!sh2z_aabb_index_build(&empty,nullptr,0,nullptr,0,nullptr,0)) return 8;
     std::puts("C++11 facade and C linkage passed");
     return 0;
 }

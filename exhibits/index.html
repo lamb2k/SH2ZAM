@@ -5,8 +5,8 @@
 <meta name="color-scheme" content="dark">
 <meta name="description" content="Compare standalone C and SH2ZAM transforms compiled for Sega Saturn's SH-2, with modeled cycles, precision checks and reproducible evidence.">
 <title>SH2ZAM / Saturn math lab</title>
-<link rel="stylesheet" href="style.css?v=math-suite-1">
-<script defer src="math-module.js?v=math-suite-1"></script><script defer src="meshes.js?v=saturn-adoption-2"></script><script defer src="saturn-results.js?v=saturn-adoption-2"></script><script defer src="sh2-model-results.js?v=math-suite-1"></script><script defer src="math-results.js?v=math-suite-1"></script><script defer src="app.js?v=math-suite-1"></script>
+<link rel="stylesheet" href="style.css?v=workload-suite-2">
+<script defer src="math-module.js?v=workload-suite-2"></script><script defer src="meshes.js?v=saturn-adoption-2"></script><script defer src="saturn-results.js?v=saturn-adoption-2"></script><script defer src="sh2-model-results.js?v=math-suite-1"></script><script defer src="math-results.js?v=workload-suite-2"></script><script defer src="workload-results.js?v=workload-suite-2"></script><script defer src="app.js?v=workload-suite-2"></script>
 </head>
 <body>
 <header class="top"><a class="wordmark" href="https://github.com/lamb2k/SH2ZAM">SH<span>2</span>ZAM<span class="dot">·</span></a><span class="topnote">SEGA SATURN / MATH LAB</span><a class="source" href="https://github.com/lamb2k/SH2ZAM/tree/main/exhibits">View source ↗</a></header>
@@ -41,6 +41,34 @@
 <p class="visual-note">The preview runs in your browser. Performance figures above come from the recorded SH-2 model.</p>
 </section>
 <p id="failure" class="failure" role="alert" hidden></p>
+<section class="workload-lab" aria-labelledby="workload-title">
+<div class="section-heading"><h2 id="workload-title">Optimize the whole workload</h2><span class="status-tag" id="workload-status">Awaiting native capture</span></div>
+<p class="model-caption">Reuse one rotation across a mesh, index repeated spatial queries, and improve the existing scalar kernels. Every cost below includes setup and output writes on the same compiled SH-2 model.</p>
+<div class="workload-examples">
+<button type="button" class="workload-example" data-workload-example="rotation" disabled><span>512-vector rotation · bounded</span><strong id="workload-rotation-highlight">—</strong><span id="workload-rotation-control">Against the fastest existing rotation control</span><small id="workload-rotation-other">Repeated calls, matrix + C batch, and matrix + MAC.L stay visible.</small></button>
+<button type="button" class="workload-example" data-workload-example="spatial" disabled><span>512 boxes · 128 sparse queries</span><strong id="workload-spatial-highlight">—</strong><span id="workload-spatial-control">Against the fastest independent C control</span><small id="workload-spatial-other">Packed output and sparse hit writes stay visible. Index construction and all queries are included.</small></button>
+</div>
+<div class="workload-controls">
+<div><label for="workload-group">Operation</label><select id="workload-group" disabled><option>Awaiting capture</option></select></div>
+<div><label for="workload-profile">Input profile</label><select id="workload-profile" disabled><option>Awaiting capture</option></select></div>
+<div><label for="workload-size">Batch size</label><select id="workload-size" disabled><option>Awaiting capture</option></select></div>
+<div><label for="workload-baseline">Compare against</label><select id="workload-baseline" disabled><option>Awaiting capture</option></select></div>
+<div><label for="workload-kernel">New implementation</label><select id="workload-kernel" disabled><option>Awaiting capture</option></select></div>
+</div>
+<div class="metrics workload-metrics" aria-live="polite">
+<article><p id="workload-before-label">RECORDED CONTROL</p><strong id="workload-before-cycles">—</strong><span class="metric-unit">modeled cycles / workload</span><small id="workload-before-unit">Awaiting native evidence</small></article>
+<article class="with-library"><p id="workload-after-label">NEW IMPLEMENTATION</p><strong id="workload-after-cycles">—</strong><span class="metric-unit">modeled cycles / workload</span><small id="workload-after-unit">Setup included</small></article>
+<article class="gain-card"><p id="workload-savings-label">WORKLOAD COST SAVED</p><strong id="workload-savings">—</strong><small id="workload-speedup">Not measured</small></article>
+</div>
+<p id="workload-context" class="model-caption">No validated workload capture is available yet.</p>
+<p id="workload-baseline-note" class="scope-note"></p>
+<div class="table-scroll" role="region" aria-label="All implementations for the selected workload" tabindex="0"><table class="model-table workload-table"><caption id="workload-table-caption">Every recorded control and implementation</caption><thead><tr><th scope="col">Implementation</th><th scope="col">Cycles / workload</th><th scope="col" id="workload-unit-heading">Cycles / item</th><th scope="col">Selected control / path</th></tr></thead><tbody id="workload-paths"><tr><td colspan="4">Awaiting native capture</td></tr></tbody></table></div>
+<p id="workload-proof" class="math-proof" aria-live="polite">Only exact, validated native observations will appear here.</p>
+<p id="workload-scope" class="scope-note"></p>
+<p id="workload-coverage" class="workload-coverage"></p>
+<details class="workload-details"><summary>Every workload, including slower cases</summary><p class="scope-note">The overview uses each case’s fastest recorded control. Rotation uses the new optional MAC.L batch; spatial queries use the index. Scalar kernels compare against the latest prior revision, 3374d77.</p><div class="table-scroll" role="region" aria-label="All workload results" tabindex="0"><table class="model-table workload-all-table"><thead><tr><th scope="col">Workload</th><th scope="col">Profile / size</th><th scope="col">Fastest control</th><th scope="col">New cycles</th><th scope="col">Change</th></tr></thead><tbody id="workload-all-cases"><tr><td colspan="5">Not measured</td></tr></tbody></table></div></details>
+<details class="workload-details"><summary>Raw samples, precision &amp; build provenance</summary><p id="workload-samples-note" class="scope-note"></p><div class="table-scroll" role="region" aria-label="Selected workload raw cycle samples" tabindex="0"><table class="model-table workload-sample-table"><caption>All seven changing-input samples, in recorded order</caption><thead id="workload-samples-head"></thead><tbody id="workload-samples"></tbody></table></div><p id="workload-dispatch" class="scope-note"></p><p id="workload-provenance" class="scope-note"></p><pre id="workload-flags" class="workload-flags"></pre><p class="scope-note">One SH-2 CPU, flat RAM. The model excludes cache and bus delays, pipeline and multiplier contention, interrupts, peripherals, and second-CPU traffic. No browser timings, Saturn milliseconds, or FPS estimates are used.</p><div class="evidence-actions"><a id="workload-evidence" href="https://github.com/lamb2k/SH2ZAM/tree/main/saturn/benchmarks/workload-model">Native capture evidence ↗</a><a href="https://github.com/lamb2k/SH2ZAM/tree/main/saturn/benchmarks/workload-model">Workload source &amp; contracts ↗</a><button id="workload-export" class="button" type="button" disabled>Export all workload evidence</button></div></details>
+</section>
 <section class="math-library" aria-labelledby="math-title">
 <div class="section-heading"><h2 id="math-title">Math library improvements</h2><span class="status-tag" id="math-status">Awaiting native capture</span></div>
 <p class="model-caption">The existing math APIs, before and after optimization. Both versions are compiled for SH-2. This compares library revisions; the transform comparison above uses an independent baseline.</p>

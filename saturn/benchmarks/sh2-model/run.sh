@@ -40,6 +40,15 @@ if [ "${MODEL_SUITE:-vertex}" = math ]; then
     --evidence-url "${MODEL_EVIDENCE_URL:-https://github.com/lamb2k/SH2ZAM/actions/workflows/sh2-cross.yml}"
   exit 0
 fi
+if [ "${MODEL_SUITE:-vertex}" = workloads ]; then
+  "$model_build/harness" "$model_elf" "$model_symbols" --workloads > "$model_build/workload-raw.json"
+  python3 "$project_root/saturn/benchmarks/workload-model/collect.py" \
+    --raw "$model_build/workload-raw.json" --elf "$model_elf" --symbols "$model_symbols" \
+    --core "$model_core" --manifest "$project_root/saturn/benchmarks/workload-model/manifest.json" \
+    --output "$model_output" \
+    --evidence-url "${MODEL_EVIDENCE_URL:-https://github.com/lamb2k/SH2ZAM/actions/workflows/sh2-cross.yml}"
+  exit 0
+fi
 "$model_build/harness" "$model_elf" "$model_symbols" 15 21 > "$model_build/raw.json"
 python3 "$model_dir/collect.py" --raw "$model_build/raw.json" \
   --elf "$model_elf" --symbols "$model_symbols" --core "$model_core" \

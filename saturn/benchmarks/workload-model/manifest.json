@@ -1,0 +1,629 @@
+{
+  "schema": 1,
+  "samplesPerCase": 7,
+  "cases": [
+    {
+      "id": "rotation-bounded-1",
+      "group": "rotation",
+      "profile": "bounded",
+      "size": 1,
+      "queries": 0,
+      "outputWords": 3,
+      "paths": [
+        "scalar",
+        "composed",
+        "composed_mac",
+        "batch",
+        "mac"
+      ]
+    },
+    {
+      "id": "rotation-bounded-8",
+      "group": "rotation",
+      "profile": "bounded",
+      "size": 8,
+      "queries": 0,
+      "outputWords": 24,
+      "paths": [
+        "scalar",
+        "composed",
+        "composed_mac",
+        "batch",
+        "mac"
+      ]
+    },
+    {
+      "id": "rotation-bounded-32",
+      "group": "rotation",
+      "profile": "bounded",
+      "size": 32,
+      "queries": 0,
+      "outputWords": 96,
+      "paths": [
+        "scalar",
+        "composed",
+        "composed_mac",
+        "batch",
+        "mac"
+      ]
+    },
+    {
+      "id": "rotation-bounded-128",
+      "group": "rotation",
+      "profile": "bounded",
+      "size": 128,
+      "queries": 0,
+      "outputWords": 384,
+      "paths": [
+        "scalar",
+        "composed",
+        "composed_mac",
+        "batch",
+        "mac"
+      ]
+    },
+    {
+      "id": "rotation-bounded-512",
+      "group": "rotation",
+      "profile": "bounded",
+      "size": 512,
+      "queries": 0,
+      "outputWords": 1536,
+      "paths": [
+        "scalar",
+        "composed",
+        "composed_mac",
+        "batch",
+        "mac"
+      ]
+    },
+    {
+      "id": "rotation-tiny-1",
+      "group": "rotation",
+      "profile": "tiny",
+      "size": 1,
+      "queries": 0,
+      "outputWords": 3,
+      "paths": [
+        "scalar",
+        "composed",
+        "composed_mac",
+        "batch",
+        "mac"
+      ]
+    },
+    {
+      "id": "rotation-tiny-8",
+      "group": "rotation",
+      "profile": "tiny",
+      "size": 8,
+      "queries": 0,
+      "outputWords": 24,
+      "paths": [
+        "scalar",
+        "composed",
+        "composed_mac",
+        "batch",
+        "mac"
+      ]
+    },
+    {
+      "id": "rotation-tiny-32",
+      "group": "rotation",
+      "profile": "tiny",
+      "size": 32,
+      "queries": 0,
+      "outputWords": 96,
+      "paths": [
+        "scalar",
+        "composed",
+        "composed_mac",
+        "batch",
+        "mac"
+      ]
+    },
+    {
+      "id": "rotation-tiny-128",
+      "group": "rotation",
+      "profile": "tiny",
+      "size": 128,
+      "queries": 0,
+      "outputWords": 384,
+      "paths": [
+        "scalar",
+        "composed",
+        "composed_mac",
+        "batch",
+        "mac"
+      ]
+    },
+    {
+      "id": "rotation-tiny-512",
+      "group": "rotation",
+      "profile": "tiny",
+      "size": 512,
+      "queries": 0,
+      "outputWords": 1536,
+      "paths": [
+        "scalar",
+        "composed",
+        "composed_mac",
+        "batch",
+        "mac"
+      ]
+    },
+    {
+      "id": "rotation-full-range-1",
+      "group": "rotation",
+      "profile": "full-range",
+      "size": 1,
+      "queries": 0,
+      "outputWords": 3,
+      "paths": [
+        "scalar",
+        "composed",
+        "composed_mac",
+        "batch",
+        "mac"
+      ]
+    },
+    {
+      "id": "rotation-full-range-8",
+      "group": "rotation",
+      "profile": "full-range",
+      "size": 8,
+      "queries": 0,
+      "outputWords": 24,
+      "paths": [
+        "scalar",
+        "composed",
+        "composed_mac",
+        "batch",
+        "mac"
+      ]
+    },
+    {
+      "id": "rotation-full-range-32",
+      "group": "rotation",
+      "profile": "full-range",
+      "size": 32,
+      "queries": 0,
+      "outputWords": 96,
+      "paths": [
+        "scalar",
+        "composed",
+        "composed_mac",
+        "batch",
+        "mac"
+      ]
+    },
+    {
+      "id": "rotation-full-range-128",
+      "group": "rotation",
+      "profile": "full-range",
+      "size": 128,
+      "queries": 0,
+      "outputWords": 384,
+      "paths": [
+        "scalar",
+        "composed",
+        "composed_mac",
+        "batch",
+        "mac"
+      ]
+    },
+    {
+      "id": "rotation-full-range-512",
+      "group": "rotation",
+      "profile": "full-range",
+      "size": 512,
+      "queries": 0,
+      "outputWords": 1536,
+      "paths": [
+        "scalar",
+        "composed",
+        "composed_mac",
+        "batch",
+        "mac"
+      ]
+    },
+    {
+      "id": "rotation-identity-1",
+      "group": "rotation",
+      "profile": "identity",
+      "size": 1,
+      "queries": 0,
+      "outputWords": 3,
+      "paths": [
+        "scalar",
+        "composed",
+        "composed_mac",
+        "batch",
+        "mac"
+      ]
+    },
+    {
+      "id": "rotation-identity-8",
+      "group": "rotation",
+      "profile": "identity",
+      "size": 8,
+      "queries": 0,
+      "outputWords": 24,
+      "paths": [
+        "scalar",
+        "composed",
+        "composed_mac",
+        "batch",
+        "mac"
+      ]
+    },
+    {
+      "id": "rotation-identity-32",
+      "group": "rotation",
+      "profile": "identity",
+      "size": 32,
+      "queries": 0,
+      "outputWords": 96,
+      "paths": [
+        "scalar",
+        "composed",
+        "composed_mac",
+        "batch",
+        "mac"
+      ]
+    },
+    {
+      "id": "rotation-identity-128",
+      "group": "rotation",
+      "profile": "identity",
+      "size": 128,
+      "queries": 0,
+      "outputWords": 384,
+      "paths": [
+        "scalar",
+        "composed",
+        "composed_mac",
+        "batch",
+        "mac"
+      ]
+    },
+    {
+      "id": "rotation-identity-512",
+      "group": "rotation",
+      "profile": "identity",
+      "size": 512,
+      "queries": 0,
+      "outputWords": 1536,
+      "paths": [
+        "scalar",
+        "composed",
+        "composed_mac",
+        "batch",
+        "mac"
+      ]
+    },
+    {
+      "id": "rotation-zero-1",
+      "group": "rotation",
+      "profile": "zero",
+      "size": 1,
+      "queries": 0,
+      "outputWords": 3,
+      "paths": [
+        "scalar",
+        "composed",
+        "composed_mac",
+        "batch",
+        "mac"
+      ]
+    },
+    {
+      "id": "rotation-zero-8",
+      "group": "rotation",
+      "profile": "zero",
+      "size": 8,
+      "queries": 0,
+      "outputWords": 24,
+      "paths": [
+        "scalar",
+        "composed",
+        "composed_mac",
+        "batch",
+        "mac"
+      ]
+    },
+    {
+      "id": "rotation-zero-32",
+      "group": "rotation",
+      "profile": "zero",
+      "size": 32,
+      "queries": 0,
+      "outputWords": 96,
+      "paths": [
+        "scalar",
+        "composed",
+        "composed_mac",
+        "batch",
+        "mac"
+      ]
+    },
+    {
+      "id": "rotation-zero-128",
+      "group": "rotation",
+      "profile": "zero",
+      "size": 128,
+      "queries": 0,
+      "outputWords": 384,
+      "paths": [
+        "scalar",
+        "composed",
+        "composed_mac",
+        "batch",
+        "mac"
+      ]
+    },
+    {
+      "id": "rotation-zero-512",
+      "group": "rotation",
+      "profile": "zero",
+      "size": 512,
+      "queries": 0,
+      "outputWords": 1536,
+      "paths": [
+        "scalar",
+        "composed",
+        "composed_mac",
+        "batch",
+        "mac"
+      ]
+    },
+    {
+      "id": "normalize-bounded-32",
+      "group": "normalize",
+      "profile": "bounded",
+      "size": 32,
+      "queries": 0,
+      "outputWords": 96,
+      "paths": [
+        "prior",
+        "current"
+      ]
+    },
+    {
+      "id": "normalize-tiny-32",
+      "group": "normalize",
+      "profile": "tiny",
+      "size": 32,
+      "queries": 0,
+      "outputWords": 96,
+      "paths": [
+        "prior",
+        "current"
+      ]
+    },
+    {
+      "id": "normalize-full-range-32",
+      "group": "normalize",
+      "profile": "full-range",
+      "size": 32,
+      "queries": 0,
+      "outputWords": 96,
+      "paths": [
+        "prior",
+        "current"
+      ]
+    },
+    {
+      "id": "atan2-bounded-32",
+      "group": "atan2",
+      "profile": "bounded",
+      "size": 32,
+      "queries": 0,
+      "outputWords": 32,
+      "paths": [
+        "prior",
+        "current"
+      ]
+    },
+    {
+      "id": "atan2-tiny-32",
+      "group": "atan2",
+      "profile": "tiny",
+      "size": 32,
+      "queries": 0,
+      "outputWords": 32,
+      "paths": [
+        "prior",
+        "current"
+      ]
+    },
+    {
+      "id": "atan2-full-range-32",
+      "group": "atan2",
+      "profile": "full-range",
+      "size": 32,
+      "queries": 0,
+      "outputWords": 32,
+      "paths": [
+        "prior",
+        "current"
+      ]
+    },
+    {
+      "id": "atan-bounded-32",
+      "group": "atan",
+      "profile": "bounded",
+      "size": 32,
+      "queries": 0,
+      "outputWords": 32,
+      "paths": [
+        "prior",
+        "current"
+      ]
+    },
+    {
+      "id": "atan-tiny-32",
+      "group": "atan",
+      "profile": "tiny",
+      "size": 32,
+      "queries": 0,
+      "outputWords": 32,
+      "paths": [
+        "prior",
+        "current"
+      ]
+    },
+    {
+      "id": "atan-full-range-32",
+      "group": "atan",
+      "profile": "full-range",
+      "size": 32,
+      "queries": 0,
+      "outputWords": 32,
+      "paths": [
+        "prior",
+        "current"
+      ]
+    },
+    {
+      "id": "spatial-sparse-128",
+      "group": "spatial",
+      "profile": "sparse",
+      "size": 128,
+      "queries": 128,
+      "outputWords": 640,
+      "paths": [
+        "api_brute",
+        "inline_brute",
+        "inline_scatter",
+        "index"
+      ]
+    },
+    {
+      "id": "spatial-sparse-512",
+      "group": "spatial",
+      "profile": "sparse",
+      "size": 512,
+      "queries": 128,
+      "outputWords": 2176,
+      "paths": [
+        "api_brute",
+        "inline_brute",
+        "inline_scatter",
+        "index"
+      ]
+    },
+    {
+      "id": "spatial-mixed-128",
+      "group": "spatial",
+      "profile": "mixed",
+      "size": 128,
+      "queries": 128,
+      "outputWords": 640,
+      "paths": [
+        "api_brute",
+        "inline_brute",
+        "inline_scatter",
+        "index"
+      ]
+    },
+    {
+      "id": "spatial-mixed-512",
+      "group": "spatial",
+      "profile": "mixed",
+      "size": 512,
+      "queries": 128,
+      "outputWords": 2176,
+      "paths": [
+        "api_brute",
+        "inline_brute",
+        "inline_scatter",
+        "index"
+      ]
+    },
+    {
+      "id": "spatial-dense-128",
+      "group": "spatial",
+      "profile": "dense",
+      "size": 128,
+      "queries": 128,
+      "outputWords": 640,
+      "paths": [
+        "api_brute",
+        "inline_brute",
+        "inline_scatter",
+        "index"
+      ]
+    },
+    {
+      "id": "spatial-dense-512",
+      "group": "spatial",
+      "profile": "dense",
+      "size": 512,
+      "queries": 128,
+      "outputWords": 2176,
+      "paths": [
+        "api_brute",
+        "inline_brute",
+        "inline_scatter",
+        "index"
+      ]
+    },
+    {
+      "id": "spatial-crowded-128",
+      "group": "spatial",
+      "profile": "crowded",
+      "size": 128,
+      "queries": 128,
+      "outputWords": 640,
+      "paths": [
+        "api_brute",
+        "inline_brute",
+        "inline_scatter",
+        "index"
+      ]
+    },
+    {
+      "id": "spatial-crowded-512",
+      "group": "spatial",
+      "profile": "crowded",
+      "size": 512,
+      "queries": 128,
+      "outputWords": 2176,
+      "paths": [
+        "api_brute",
+        "inline_brute",
+        "inline_scatter",
+        "index"
+      ]
+    },
+    {
+      "id": "spatial-full-range-128",
+      "group": "spatial",
+      "profile": "full-range",
+      "size": 128,
+      "queries": 128,
+      "outputWords": 640,
+      "paths": [
+        "api_brute",
+        "inline_brute",
+        "inline_scatter",
+        "index"
+      ]
+    },
+    {
+      "id": "spatial-full-range-512",
+      "group": "spatial",
+      "profile": "full-range",
+      "size": 512,
+      "queries": 128,
+      "outputWords": 2176,
+      "paths": [
+        "api_brute",
+        "inline_brute",
+        "inline_scatter",
+        "index"
+      ]
+    }
+  ]
+}

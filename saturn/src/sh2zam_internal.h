@@ -93,10 +93,32 @@ static inline uint32_t sh2zi_fraction16(uint32_t value,uint32_t denominator) {
     if(value==denominator) return 65536;
     if(!value) return 0;
     uint32_t result=0;
+#if SH2Z_NATIVE_MUL
+    /* value < denominator, so the quotient needs exactly sixteen fractional
+     * bits and result never shifts a 1 out of its top bit. Each ROTCL therefore
+     * supplies the next zero numerator bit to DIV1 and keeps its quotient bit.
+     * One indivisible asm block owns Q/M/T throughout; DIV0U does not alter SR.S.
+     * See Renesas SH-1/SH-2/SH-DSP Software Manual 6.1.18/19 and 6.1.47.
+     * This uses CPU division steps, not the memory-mapped divider. */
+    /* Spell the steps out so GCC sees the real block length when choosing
+     * short SH-2 branches around the inlined sequence. */
+#define SH2ZI_FRACTION_STEP "rotcl %[quotient]\n\tdiv1 %[divisor], %[remainder]\n\t"
+    __asm__ volatile(
+        "div0u\n\t"
+        SH2ZI_FRACTION_STEP SH2ZI_FRACTION_STEP SH2ZI_FRACTION_STEP SH2ZI_FRACTION_STEP
+        SH2ZI_FRACTION_STEP SH2ZI_FRACTION_STEP SH2ZI_FRACTION_STEP SH2ZI_FRACTION_STEP
+        SH2ZI_FRACTION_STEP SH2ZI_FRACTION_STEP SH2ZI_FRACTION_STEP SH2ZI_FRACTION_STEP
+        SH2ZI_FRACTION_STEP SH2ZI_FRACTION_STEP SH2ZI_FRACTION_STEP SH2ZI_FRACTION_STEP
+        "rotcl %[quotient]"
+        : [remainder] "+&r"(value), [quotient] "+&r"(result)
+        : [divisor] "r"(denominator) : "t");
+#undef SH2ZI_FRACTION_STEP
+#else
     for(unsigned i=0;i<16;i++) {
         value<<=1; result<<=1;
         if(value>=denominator) { value-=denominator; result|=1u; }
     }
+#endif
     return result;
 }
 #endif

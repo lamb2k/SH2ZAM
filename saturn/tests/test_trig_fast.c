@@ -79,6 +79,33 @@ static void angular_boundaries(void) {
     }
 }
 
+static void quotient_bins(void) {
+    /* atan_octant[i] is generated as legacy_sh2z_atan2(i,256). Reconstruct
+     * those exact values, then prove the one-unit estimate bound at both
+     * inclusive endpoints of every Q16 ratio bin. The first-quadrant answer
+     * is monotonic, so these exact rational bounds cover every input ratio
+     * inside the bin, in both direct and reflected octants. */
+    uint32_t table[257];
+    for(uint32_t i=0;i<=256u;i++) table[i]=legacy_sh2z_atan2((int32_t)i,256);
+    for(uint32_t ratio=0;ratio<65536u;ratio++) {
+        const unsigned i=ratio>>8,f=ratio&255u;
+        const int32_t seed=(int32_t)(table[i]+(((table[i+1u]-table[i])*f+128u)>>8));
+        for(uint32_t endpoint=ratio;endpoint<=ratio+1u;endpoint++) {
+            const int32_t direct=legacy_sh2z_atan2((int32_t)endpoint,65536);
+            const int32_t reflected=legacy_sh2z_atan2(65536,(int32_t)endpoint);
+            const int32_t delta=direct-seed,reflected_delta=reflected-(16384-seed);
+            equal("atan2.direct_estimate_bound",(int32_t)ratio,(int32_t)endpoint,
+                  delta>=-1 && delta<=1,1);
+            equal("atan2.reflected_estimate_bound",(int32_t)ratio,(int32_t)endpoint,
+                  reflected_delta>=-1 && reflected_delta<=1,1);
+        }
+        /* Verify the actual implementation on each bin boundary in all
+         * quadrants and both octants, including tiny ratios and endpoints. */
+        quadrants(65536,(int32_t)ratio);
+        quadrants((int32_t)ratio,65536);
+    }
+}
+
 static uint32_t random_state=UINT32_C(0x6d2b79f5);
 static int32_t random_signed(void) {
     uint32_t u=random_state;
@@ -131,7 +158,7 @@ static void inverse_domain(void) {
 }
 
 int main(void) {
-    all_angles(); angular_boundaries(); full_range_inputs(); inverse_domain();
+    all_angles(); angular_boundaries(); quotient_bins(); full_range_inputs(); inverse_domain();
     printf("%" PRIu64 " exact trig checks passed against frozen pre-optimization source\n",checks);
     return EXIT_SUCCESS;
 }

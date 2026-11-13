@@ -1,6 +1,65 @@
 # Validation record — 2026-11-13
 
-## Exact math expansion: 48 APIs on the SH-2 model
+## Exact workload expansion and further SH-2 tuning
+
+[Native CI 43525421998](https://github.com/lamb2k/SH2ZAM/actions/runs/43525421998)
+passes all three instruction-model suites for source
+[`598a6247`](https://github.com/lamb2k/SH2ZAM/commit/598a6247fe5a75320f2648e716a21db48f0eaa4c).
+[Artifact 14084553596](https://github.com/lamb2k/SH2ZAM/actions/runs/43525421998/artifacts/14084553596)
+contains the ELF, symbols, raw observations and disassembly.
+ELF SHA-256: `4bed1cd10ee00f3e3b9db71ad454b136a5e24d1ef8823f47eb0b46ed43e9d3a8`.
+All three current datasets retain this source and binary identity.
+
+The [44-case workload record](benchmarks/workload-model/results.json) measures
+seven changing-input samples per case, with 1,281 path executions, **173,425
+reference output words and 585,060 exact comparisons**. Setup and output writes
+are included. ABI, immutable-input, padding and SR.S checks pass. Rotation keeps
+repeated calls, existing C composition and existing MAC composition as controls.
+Spatial queries retain the prior predicate API plus both independently written
+packed-output and scatter-output C controls; each reported adoption ratio uses
+the faster independent median.
+
+At 512 bounded vectors, the new MAC batch takes **47,134 modeled cycles**:
+**24.79× versus repeated scalar rotation**, **2.21× versus existing C
+composition**, and **1.0072× versus existing MAC composition**. At 512 boxes,
+index construction plus 128 dense/contained queries takes **626,075 cycles**
+versus **6,291,196** for the faster independent C control: **10.05×**. Sparse,
+mixed, crowded and full-range query medians are also faster, with smaller gains.
+The [complete workload guide](benchmarks/workload-model/README.md) gives all
+spatial costs, API contracts and the memory budget.
+
+The strongest-control overview retains **30 faster and 14 slower cases**; only
+one of 44 reaches 10× against its fastest control. The slow cases are optional
+rotation batch configurations; no claim of universal 10× speed or universal
+wins is made. Dense full-root acceptance, setup reuse and spatial pruning are
+explicit workload characteristics, not hidden changes to the reference inputs.
+
+The refreshed [48-operation record](benchmarks/math-model/results.json) checks
+**114,912 exact output words**. Against the frozen `10786b6` baseline, its 144
+profile medians remain 120 faster and 24 unchanged. Against the already
+optimized `3374d77` capture on identical fixtures, the new DIV1 quotient and
+exact-corrected atan seed improve **39 medians across 13 APIs**, with 105
+unchanged and no median regressions. See [the regenerated costs and proofs](MATH_OPTIMIZATIONS.md).
+The refreshed [vertex record](benchmarks/sh2-model/results.json) also passes all
+315 poses, 1,267,560 coordinates per fixed path and both fallback guards.
+
+[Host CI 43525422024](https://github.com/lamb2k/SH2ZAM/actions/runs/43525422024)
+passes all **17 CTest targets** in GCC Release, Clang Release and Clang
+ASan/UBSan, with installed-consumer checks for both Release compilers. The
+rotation and spatial suites add 1,015,148 and 12,445,504 exact/contract checks;
+the host workload driver checks all 1,281 paths and 29,400,875 output sentinels.
+[Interactive lab CI 43525422012](https://github.com/lamb2k/SH2ZAM/actions/runs/43525422012)
+passes native-data publication checks, actual WASM precision checks and Chromium
+controls/export/mobile/offline checks. Its presentation tests use an earlier
+four-path capture with the same schema; the final published data is revalidated
+independently before bundling.
+
+These are modeled instruction costs for one SH-2 CPU in flat RAM. No browser
+performance measurements, physical Saturn timing, frame-rate conversion or
+second-CPU speedup is inferred. Historical captures below retain their own
+provenance and comparison boundaries.
+
+## Historical: initial 48-API math expansion
 
 [Native CI 43518264229](https://github.com/lamb2k/SH2ZAM/actions/runs/43518264229) passes the new math suite and
 repeats the existing 315-pose vertex suite for source
@@ -9,7 +68,7 @@ repeats the existing 315-pose vertex suite for source
 contains the ELF, symbols, raw observations, validated datasets and disassembly.
 ELF SHA-256: `47acbcd28b46ffbdede2c61b4d88e3768434b9cc3901fe369e4e440911993ec6`.
 
-The [math record](benchmarks/math-model/results.json) compares frozen SH2ZAM
+The [math record from that capture](https://github.com/lamb2k/SH2ZAM/blob/3374d77c4625749cc932cafa4385ad18db811e9b/saturn/benchmarks/math-model/results.json) compares frozen SH2ZAM
 `10786b6` with the optimized library, using identical deterministic inputs and
 the same SH-2 compiler. It covers 48 operations × 3 profiles × 7 batches ×
 32 calls. **120 workload medians are faster, 24 are unchanged and none are
@@ -23,7 +82,7 @@ passes 14 targets in GCC Release, Clang Release and Clang ASan/UBSan. The three
 new test suites add independent arithmetic oracles, frozen-source differential
 checks, exhaustive trig domains, matrix aliasing and full-range/invalid cases.
 
-The [current vertex record](benchmarks/sh2-model/results.json) is refreshed from
+The [vertex record from that capture](https://github.com/lamb2k/SH2ZAM/blob/3374d77c4625749cc932cafa4385ad18db811e9b/saturn/benchmarks/sh2-model/results.json) is refreshed from
 this same successful native run. All 1,267,560 coordinates per fixed path and
 both fallback guards pass; the independent baseline comparison remains separate.
 The historical adoption capture below retains its original commit and binary

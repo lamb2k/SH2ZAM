@@ -145,6 +145,10 @@ int main(void) {
         uint64_t root=random_u32(),square=root*root;
         root_property(square); if(square) root_property(square-1);
         if(square<UINT64_MAX) root_property(square+1);
+        uint32_t denominator=(random_u32()&UINT32_C(0x7fffffff))+1u;
+        uint32_t numerator_fraction=random_u32()%denominator;
+        CHECK(sh2zi_fraction16(numerator_fraction,denominator)==
+            (uint32_t)(((uint64_t)numerator_fraction<<16)/denominator));
         int32_t va[4],vb[4];
         for(unsigned j=0;j<4;j++) {
             va[j]=random_i32(); vb[j]=random_i32();

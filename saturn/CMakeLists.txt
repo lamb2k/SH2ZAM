@@ -16,7 +16,7 @@ if(SH2Z_SANITIZE AND NOT CMAKE_CROSSCOMPILING)
   add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
   add_link_options(-fsanitize=address,undefined)
 endif()
-set(SH2Z_SOURCES src/sh2zam.c src/sh2zam_trig.c src/sh2zam_angles.c src/sh2zam_transform.c src/sh2zam_prepared.c src/sh2zam_reuse.c src/sh2zam_batch_sh2.c src/sh2zam_geometry.c)
+set(SH2Z_SOURCES src/sh2zam.c src/sh2zam_trig.c src/sh2zam_angles.c src/sh2zam_transform.c src/sh2zam_prepared.c src/sh2zam_reuse.c src/sh2zam_batch_sh2.c src/sh2zam_geometry.c src/sh2zam_rotation_batch.c src/sh2zam_spatial.c)
 add_library(sh2zam STATIC ${SH2Z_SOURCES})
 add_library(SH2ZAM::sh2zam ALIAS sh2zam)
 target_include_directories(sh2zam PUBLIC
@@ -65,6 +65,34 @@ if(SH2Z_BUILD_TESTS AND NOT CMAKE_CROSSCOMPILING)
   add_executable(sh2zam_batch_native_tests tests/test_batch_native.c)
   target_link_libraries(sh2zam_batch_native_tests PRIVATE sh2zam)
   add_test(NAME native_batch_host_models COMMAND sh2zam_batch_native_tests)
+  foreach(family rotation_batch spatial)
+    add_executable(sh2zam_${family}_tests tests/test_${family}.c)
+    target_link_libraries(sh2zam_${family}_tests PRIVATE sh2zam m)
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+      target_compile_options(sh2zam_${family}_tests PRIVATE -Wall -Wextra -Wconversion -Wshadow)
+      if(SH2Z_STRICT)
+        target_compile_options(sh2zam_${family}_tests PRIVATE -Werror -Wpedantic)
+      endif()
+    endif()
+    add_test(NAME ${family}_exact COMMAND sh2zam_${family}_tests)
+  endforeach()
+  add_library(sh2zam_workload_prior STATIC
+    benchmarks/workload-model/prior_sh2zam.c
+    benchmarks/workload-model/prior_sh2zam_trig.c
+    benchmarks/workload-model/prior_sh2zam_angles.c
+    benchmarks/workload-model/prior_sh2zam_transform.c
+    benchmarks/workload-model/prior_sh2zam_geometry.c)
+  target_include_directories(sh2zam_workload_prior PRIVATE include)
+  add_executable(sh2zam_workload_tests benchmarks/workload-model/test_workloads.c
+    benchmarks/workload-model/workload_bridge.c)
+  target_link_libraries(sh2zam_workload_tests PRIVATE sh2zam sh2zam_workload_prior m)
+  if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(sh2zam_workload_tests PRIVATE -Wall -Wextra -Wconversion -Wshadow)
+    if(SH2Z_STRICT)
+      target_compile_options(sh2zam_workload_tests PRIVATE -Werror -Wpedantic)
+    endif()
+  endif()
+  add_test(NAME workload_fixture_exact COMMAND sh2zam_workload_tests)
   # Exact previous implementation: comparison only, never installed or linked
   # into the shipping library. All five units use the legacy_ symbol prefix.
   add_library(sh2zam_math_legacy STATIC
