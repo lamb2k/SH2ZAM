@@ -85,7 +85,7 @@
     canvases.forEach((canvas,i)=>{canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);contexts[i].setTransform(dpr,0,0,dpr,0,0);});
     if(wasm) draw();
   }
-  function project(x,y,z) { const s=height*1.25/(8-z); return [width/2+x*s,height/2-y*s]; }
+  function project(x,y,z) { const s=Math.min(height,width)*(scene==='cubes'?0.95:1.25)/(8-z); return [width/2+x*s,height/2-y*s]; }
   function render(ctx,points,divisor) {
     ctx.clearRect(0,0,width,height);
     const gradient=ctx.createRadialGradient(width*.5,height*.46,0,width*.5,height*.46,width*.66);
