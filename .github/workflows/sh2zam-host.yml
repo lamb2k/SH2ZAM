@@ -1,0 +1,25 @@
+name: SH2ZAM portable host correctness
+on:
+  push:
+    branches:
+      - feature/sh2zam-saturn
+      - 'feature/sh2zam-*'
+  pull_request:
+    paths:
+      - 'saturn/**'
+      - '.github/workflows/sh2zam-host.yml'
+
+jobs:
+  host:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        compiler: [gcc, clang]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S saturn -B build/sh2zam-host -DCMAKE_C_COMPILER=${{ matrix.compiler }} -DSH2Z_FORCE_PORTABLE=ON -DSH2Z_BUILD_TESTS=ON
+      - name: Compile
+        run: cmake --build build/sh2zam-host -j2
+      - name: Test
+        run: ctest --test-dir build/sh2zam-host --output-on-failure
