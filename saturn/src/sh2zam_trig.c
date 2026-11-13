@@ -2,7 +2,7 @@
  * Values generated from the mathematical sin() definition; MIT, root LICENSE.
  * Copyright (c) 2026 SH2ZAM Contributors.
  */
-#include "sh2zam/sh2zam.h"
+#include "sh2zam_internal.h"
 
 /* Quarter turn = 16384 units. Linear interpolation between 64-unit steps. */
 static const int32_t sin_quarter[257] = {
@@ -93,44 +93,81 @@ void sh2z_sincos(sh2z_angle_t angle,sh2z_fx_t *s,sh2z_fx_t *c) {
     *s=sv; *c=cv;
 }
 
+/* First-octant estimates from the existing exact table decisions at i/256.
+ * This 514-byte table only nominates an angle. The two neighboring decision
+ * boundaries below restore the original answer, including lower-angle ties.
+ * Exhaustive ratio-bin tests prove the estimate is within one angle unit. */
+static const uint16_t atan_octant[257] = {
+    0, 41, 81, 122, 163, 204, 244, 285, 326, 367, 407, 448,
+    489, 529, 570, 610, 651, 692, 732, 773, 813, 854, 894, 935,
+    975, 1015, 1056, 1096, 1136, 1176, 1217, 1257, 1297, 1337, 1377, 1417,
+    1457, 1497, 1537, 1577, 1617, 1656, 1696, 1736, 1775, 1815, 1854, 1894,
+    1933, 1973, 2012, 2051, 2090, 2129, 2168, 2207, 2246, 2285, 2324, 2363,
+    2401, 2440, 2478, 2517, 2555, 2594, 2632, 2670, 2708, 2746, 2784, 2822,
+    2860, 2897, 2935, 2973, 3010, 3047, 3085, 3122, 3159, 3196, 3233, 3270,
+    3307, 3344, 3380, 3417, 3453, 3490, 3526, 3562, 3599, 3635, 3670, 3706,
+    3742, 3778, 3813, 3849, 3884, 3919, 3955, 3990, 4025, 4060, 4095, 4129,
+    4164, 4199, 4233, 4267, 4301, 4336, 4370, 4404, 4438, 4471, 4505, 4539,
+    4572, 4605, 4639, 4672, 4705, 4738, 4771, 4803, 4836, 4869, 4901, 4933,
+    4966, 4998, 5030, 5062, 5094, 5125, 5157, 5188, 5220, 5251, 5282, 5313,
+    5344, 5375, 5406, 5437, 5467, 5498, 5528, 5559, 5589, 5619, 5649, 5679,
+    5708, 5738, 5768, 5797, 5826, 5856, 5885, 5914, 5943, 5972, 6000, 6029,
+    6058, 6086, 6114, 6142, 6171, 6199, 6227, 6254, 6282, 6310, 6337, 6365,
+    6392, 6419, 6446, 6473, 6500, 6527, 6554, 6580, 6607, 6633, 6660, 6686,
+    6712, 6738, 6764, 6790, 6815, 6841, 6867, 6892, 6917, 6943, 6968, 6993,
+    7018, 7043, 7068, 7092, 7117, 7141, 7166, 7190, 7214, 7238, 7262, 7286,
+    7310, 7334, 7358, 7381, 7405, 7428, 7451, 7475, 7498, 7521, 7544, 7566,
+    7589, 7612, 7634, 7657, 7679, 7702, 7724, 7746, 7768, 7790, 7812, 7834,
+    7856, 7877, 7899, 7920, 7942, 7963, 7984, 8005, 8026, 8047, 8068, 8089,
+    8110, 8130, 8151, 8172, 8192,
+};
+
 sh2z_angle_t sh2z_atan2(sh2z_fx_t y,sh2z_fx_t x) {
     if(!y) return (sh2z_angle_t)(x<0 ? SH2Z_ANGLE_HALF : 0);
     if(!x) return y>0 ? SH2Z_ANGLE_QUARTER : (sh2z_angle_t)49152u;
-    const uint32_t ax=x<0 ? 0u-(uint32_t)x : (uint32_t)x;
-    const uint32_t ay=y<0 ? 0u-(uint32_t)y : (uint32_t)y;
-    unsigned lo=0,hi=256;
-    /* First find the table cell directly: eight comparisons, with no trig
-     * calls or interpolation. The strict comparison preserves which side
-     * contains an exactly represented direction, including table plateaus. */
-    while(hi-lo>1u) {
-        const unsigned mid=(lo+hi)>>1;
-        if((uint64_t)ay*(uint32_t)sin_quarter[256u-mid]>
-           (uint64_t)ax*(uint32_t)sin_quarter[mid]) lo=mid;
-        else hi=mid;
+    const uint32_t ax=sh2zi_magnitude(x),ay=sh2zi_magnitude(y);
+    unsigned a;
+    if(ax==ay) a=8192;
+    else {
+        const uint32_t ratio=ay<ax ? sh2zi_fraction16(ay,ax) : sh2zi_fraction16(ax,ay);
+        const unsigned index=ratio>>8,frac=ratio&255u;
+        const unsigned low=atan_octant[index],delta=(unsigned)atan_octant[index+1u]-low;
+        a=low+((delta*frac+128u)>>8);
+        if(ay>ax) a=16384u-a;
+        /* A result k changes to k+1 exactly when
+         * ay*(cos(k)+cos(k+1)) > ax*(sin(k)+sin(k+1)).
+         * The first-quadrant decision is monotonic. For every Q16 ratio bin,
+         * testing both inclusive endpoints proves that a is within one unit
+         * of the exact result; both original boundaries therefore suffice. */
+        if(!a) {
+            if((uint64_t)ay*131072u>(uint64_t)ax*6u) ++a;
+        } else if(a==16384u) {
+            if((uint64_t)ay*6u<=(uint64_t)ax*131072u) --a;
+        } else {
+            const unsigned cell=a>>6;
+            const int32_t f=(int32_t)(a&63u);
+            const int32_t s0=sin_quarter[cell],c0=sin_quarter[256u-cell];
+            const int32_t ds=sin_quarter[cell+1u]-s0;
+            const int32_t dc=c0-sin_quarter[255u-cell];
+            const int32_t ps=ds*f,pc=dc*f;
+            const uint32_t s=(uint32_t)(s0+((ps+32)>>6));
+            const uint32_t c=(uint32_t)(c0-((pc+31)>>6));
+            uint32_t previous_s,previous_c;
+            if(f) {
+                previous_s=(uint32_t)(s0+((ps-ds+32)>>6));
+                previous_c=(uint32_t)(c0-((pc-dc+31)>>6));
+            } else {
+                previous_s=(uint32_t)(s0-((s0-sin_quarter[cell-1u]+31)>>6));
+                previous_c=(uint32_t)(c0+((sin_quarter[257u-cell]-c0+32)>>6));
+            }
+            if((uint64_t)ay*(previous_c+c)<=(uint64_t)ax*(previous_s+s)) --a;
+            else {
+                const uint32_t next_s=(uint32_t)(s0+((ps+ds+32)>>6));
+                const uint32_t next_c=(uint32_t)(c0-((pc+dc+31)>>6));
+                if((uint64_t)ay*(c+next_c)>(uint64_t)ax*(s+next_s)) ++a;
+            }
+        }
     }
-    const unsigned base=lo<<6;
-    const int32_t s0=sin_quarter[lo],c0=sin_quarter[256u-lo];
-    const int32_t ds=sin_quarter[lo+1u]-s0;
-    const int32_t dc=c0-sin_quarter[255u-lo];
-    lo=0; hi=64;
-    /* Then resolve every original integer-angle candidate inside that cell.
-     * Reuse its four table values; all interpolations remain bit-exact. */
-    while(hi-lo>1u) {
-        const unsigned mid=(lo+hi)>>1;
-        const uint32_t sv=(uint32_t)(s0+((ds*(int32_t)mid+32)>>6));
-        const uint32_t cv=(uint32_t)(c0-((dc*(int32_t)mid+31)>>6));
-        if((uint64_t)ay*cv>(uint64_t)ax*sv) lo=mid;
-        else hi=mid;
-    }
-    const uint32_t slo=(uint32_t)(s0+((ds*(int32_t)lo+32)>>6));
-    const uint32_t shi=(uint32_t)(s0+((ds*(int32_t)hi+32)>>6));
-    const uint32_t clo=(uint32_t)(c0-((dc*(int32_t)lo+31)>>6));
-    const uint32_t chi=(uint32_t)(c0-((dc*(int32_t)hi+31)>>6));
-    /* F(a)=ay*cos(a)-ax*sin(a) is monotonic. F(lo)>0 and F(hi)<=0,
-     * so abs(F(lo))<=abs(F(hi)) iff F(lo)+F(hi)<=0. Comparing summed
-     * table values needs only two 32x32 products and keeps the lower tie.
-     * Even INT32_MIN magnitudes fit: each final product is at most 2^48. */
-    unsigned a=base+((uint64_t)ay*(clo+chi)<=(uint64_t)ax*(slo+shi) ? lo:hi);
     if(x<0) a=32768u-a;
     if(y<0) a=65536u-a;
     return (sh2z_angle_t)a;
