@@ -21,6 +21,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Docker writes its own build subdirectories as root. Reserve the
+          # host interpreter's output directory for the runner before that.
+          mkdir -p build/sh2-model
           docker run --rm -e BENCH_COMMIT="$GITHUB_SHA" -v "$PWD:/work" -w /work ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 /bin/bash -c '
             set -euo pipefail
             export PATH="$YAUL_INSTALL_ROOT/bin:$PATH"

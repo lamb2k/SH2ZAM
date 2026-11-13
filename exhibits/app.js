@@ -26,13 +26,14 @@
     if(strategy===shownStrategy)return;
     shownStrategy=strategy;
     $('after-label').textContent=strategy===2?'REUSED PRODUCTS':strategy===1?'PREPARED BATCH':'GENERAL FALLBACK';
-    $('stage-after-label').textContent=`${strategy===2?'Reused':'Prepared'} Q16.16 · Browser/WASM`;
-    $('optimized-code-title').textContent=strategy===2?'Shared products · Q16.16':'Prepared batch · Q16.16';
+    $('stage-after-label').textContent=`${strategy===2?'Reused':strategy===1?'Prepared':'General'} Q16.16 · Browser/WASM`;
+    $('optimized-code-title').textContent=strategy===2?'Shared products · Q16.16':strategy===1?'Prepared batch · Q16.16':'General fallback · Q16.16';
     $('optimized-code').textContent=strategy===2?
       '// Tables rebuilt for each matrix.\n// x_term includes raw translation.\nint64_t sum =\n    x_term[row] + yz_term[row];\nreturn (int32_t)\n    sh2zi_prepared_floor16(sum);':
-      '// Mesh bounds cached; matrix qualified.\nint64_t sum =\n    (int64_t)row[0] * x\n  + (int64_t)row[1] * y\n  + (int64_t)row[2] * z;\nreturn (int32_t)(\n    sh2zi_prepared_floor16(sum) + row[3]);';
-    $('optimized-source').href=`https://github.com/lamb2k/SH2ZAM/blob/main/saturn/src/${strategy===2?'sh2zam_reuse.c':'sh2zam_prepared.c'}`;
-    $('optimized-source').textContent=strategy===2?'Coordinate reuse source ↗':'Prepared batch source ↗';
+      strategy===1?'// Mesh bounds cached; matrix qualified.\nint64_t sum =\n    (int64_t)row[0] * x\n  + (int64_t)row[1] * y\n  + (int64_t)row[2] * z;\nreturn (int32_t)(\n    sh2zi_prepared_floor16(sum) + row[3]);':
+      '// Full-range overflow bookkeeping.\nint32_t xyz[3] = {x, y, z};\nreturn sh2zi_clamp(\n    sh2zi_dot(row, xyz, 3, 0, row[3]));';
+    $('optimized-source').href=`https://github.com/lamb2k/SH2ZAM/blob/main/saturn/src/${strategy===2?'sh2zam_reuse.c':strategy===1?'sh2zam_prepared.c':'sh2zam_transform.c'}`;
+    $('optimized-source').textContent=strategy===2?'Coordinate reuse source ↗':strategy===1?'Prepared batch source ↗':'General fallback source ↗';
   }
   function invalidate() {
     paths.forEach(path=>{liveSamples[path].length=0;liveIterations[path]=64;}); liveAt=-Infinity;
@@ -268,7 +269,7 @@
       if(!window.SH2ZAM_WASM_BASE64) throw new Error('Build the exhibit first with bash exhibits/build.sh, or use the ready-to-run CI artifact.');
       const bytes=Uint8Array.from(atob(window.SH2ZAM_WASM_BASE64),c=>c.charCodeAt(0));
       const module=await WebAssembly.instantiate(bytes,{});wasm=module.instance.exports;
-      $('backend').textContent='ACTUAL SH2ZAM C · PREPARED SCALAR BACKEND';
+      $('backend').textContent='ACTUAL SH2ZAM C · EXACT INTEGER BACKEND';
       $('play').disabled=$('benchmark').disabled=false;
       loadScene();resize();requestAnimationFrame(frame);
     } catch(error) { $('backend').textContent='EXHIBIT NOT LOADED';$('failure').hidden=false;$('failure').textContent=error.message;$('result').textContent='No fallback simulation is shown.';window.SH2ZAM_EXHIBIT_STATE={ready:false,error:error.message}; }
