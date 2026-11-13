@@ -6,9 +6,68 @@ functions. Each comparison includes the setup, validation, fallbacks and result
 writes required by that path. The benchmark is intended to identify useful
 workload gains with exact results; it does not assume a universal 10× speedup.
 
-The final native capture with both independent C output strategies is pending.
-Use the API and measurement contracts below to evaluate a capture; no speedup
-is established by the host tests or by adding a batch entry point.
+## Recorded results
+
+[Native SH-2 CI 43525421998](https://github.com/lamb2k/SH2ZAM/actions/runs/43525421998)
+executes source [`598a6247`](https://github.com/lamb2k/SH2ZAM/commit/598a6247fe5a75320f2648e716a21db48f0eaa4c).
+The [evidence artifact](https://github.com/lamb2k/SH2ZAM/actions/runs/43525421998/artifacts/14084553596)
+contains the target ELF, symbols, disassembly and raw observations. The
+[complete dataset](results.json) retains all 44 cases and all seven samples per
+case. ELF SHA-256: `4bed1cd10ee00f3e3b9db71ad454b136a5e24d1ef8823f47eb0b46ed43e9d3a8`.
+
+The 512-vector bounded rotation batch uses **47,134 modeled cycles**,
+including quaternion setup, input scanning and native qualification. This is
+**24.79×** faster than repeated prior scalar calls
+(1,168,257 cycles), **2.21×** versus an existing
+matrix-plus-C batch (104,382), and **1.0072×**
+versus the existing matrix-plus-MAC composition (47,475). The
+last comparison is only **0.72%** less cost.
+The large repeated-call gain comes from sharing setup; it does not establish
+that the underlying MAC kernel became 24× faster.
+
+Spatial results below include **one complete index build, all 128 distinct
+queries, and every result mask and hit count**. Each row compares against the
+faster of the two independent C output strategies in that same compiled ELF.
+All figures are medians of seven samples; ratios divide the displayed medians.
+
+| Profile | Boxes | Faster independent C | C cycles | Index + queries | Speedup |
+| --- | ---: | --- | ---: | ---: | ---: |
+| sparse | 128 | Scatter | 505,756 | 258,961 | 1.95× |
+| sparse | 512 | Scatter | 1,977,201 | 750,200 | 2.64× |
+| mixed | 128 | Packed | 563,641 | 367,307 | 1.53× |
+| mixed | 512 | Scatter | 2,192,272 | 926,749 | 2.37× |
+| dense | 128 | Packed | 1,581,743 | 168,536 | 9.39× |
+| dense | 512 | Packed | 6,291,196 | 626,075 | 10.05× |
+| crowded | 128 | Packed | 1,449,410 | 1,381,000 | 1.05× |
+| crowded | 512 | Packed | 5,762,615 | 5,434,385 | 1.06× |
+| full-range | 128 | Scatter | 498,541 | 253,712 | 1.96× |
+| full-range | 512 | Scatter | 1,947,715 | 668,186 | 2.91× |
+
+The **10.05×** result applies to the 512-box dense/contained fixture, where each
+sphere contains the entire scene and the index can accept the root. It is a
+median for that workload, not a minimum over every sample or a universal
+collision-query gain. Sparse, mixed, crowded and full-range cases remain in
+the record. All ten spatial medians improve on their faster independent C
+control, with substantially smaller gains in crowded partial-overlap scenes.
+
+Using the new MAC wrapper for rotation, the index for spatial queries, and the
+new scalar kernels, the site's strongest-control overview reports **30 faster
+cases and 14 slower cases**. Only **one of those 44 cases reaches 10× against
+its fastest recorded control**. The slower cases are rotation configurations
+where an existing composition or scalar call is cheaper; every ordinary-batch
+alternative also remains visible. For example, the full-range 512-vector
+ordinary batch takes 104,086 cycles, while the optional MAC wrapper's rejected
+qualification adds work and takes 118,986 cycles.
+
+Native comparison verifies **173,425 reference output words and 585,060 exact
+path comparisons**, with zero mismatches, unchanged inputs, preserved output
+padding, ABI checks and SR.S=1 fallback checks. The existing 48-operation math
+suite and 315-pose vertex suite also pass. [Host CI](https://github.com/lamb2k/SH2ZAM/actions/runs/43525422024)
+passes all 17 CTest targets under GCC, Clang and Clang ASan/UBSan.
+
+These are single-CPU, flat-RAM SH-2 instruction-model results. Physical Saturn
+performance, cache/bus effects, alignment and dual-CPU scaling remain unmeasured.
+No browser execution time or modeled-cycle-to-FPS conversion is used.
 
 ## Choose the API for the workload
 
