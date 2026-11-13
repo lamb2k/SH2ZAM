@@ -1,7 +1,7 @@
 name: SH-2 cross compile
 on:
   push:
-    paths: ['saturn/**', 'CMakeLists.txt', '.github/workflows/sh2-cross.yml']
+    paths: ['saturn/**', 'exhibits/bridge.c', 'CMakeLists.txt', '.github/workflows/sh2-cross.yml']
   pull_request:
   workflow_dispatch:
 permissions:
@@ -48,6 +48,10 @@ jobs:
             "$READELF" -h build/sh2/libsh2zam.a > sh2-elf.txt
             "$OBJDUMP" -d build/sh2/libsh2zam.a > sh2-disassembly.txt
             "$NM" -u build/sh2/libsh2zam.a > sh2-undefined.txt
+            "$OBJDUMP" -dr build/sh2/sh2zam_transform.o > sh2-batch-disassembly.txt
+            "$NM" -S --size-sort build/sh2/sh2zam_transform.o > sh2-batch-symbol-sizes.txt
+            grep -q "sh2z_mat34_transform_points_general" sh2-batch-symbol-sizes.txt
+            grep -q "sh2z_mat34_transform_points" sh2-batch-symbol-sizes.txt
             grep -q "big endian" sh2-elf.txt
             grep -q "dmuls.l" sh2-disassembly.txt
             cat sh2-elf.txt
@@ -60,6 +64,8 @@ jobs:
             grep -q __addsf3 sh2-benchmark-float-helpers.txt
             sha256sum saturn/benchmarks/yaul/*.iso > sh2-benchmark-image-sha256.txt
           '
+      - name: Inspect generated batch instructions
+        run: python3 saturn/benchmarks/audit-batch.py sh2-batch-disassembly.txt | tee sh2-batch-audit.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:

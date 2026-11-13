@@ -34,6 +34,7 @@
 - C11 API with optional C++11 conveniences and C/C++ interoperability.
 - Signed Q16.16 arithmetic with explicit saturation and rounding contracts.
 - An SH-2 `dmuls.l` multiplication path and a portable reference backend.
+- An exact batch-transform fast path with one rounding step per row and an automatic full-range fallback.
 - No heap allocation, runtime floating point or mutable global state in the math core.
 - Wide-intermediate products and normalization that handle small and large inputs.
 - Caller-owned transform stacks and batch transforms without hidden CPU scheduling.
@@ -105,6 +106,24 @@ cmake --install build --prefix /your/install/prefix
 
 The root build builds **SH2ZAM**, not the inherited Dreamcast library. For library-only builds, set `-DSH2Z_BUILD_TESTS=OFF -DSH2Z_BUILD_EXAMPLES=OFF`. `cmake -S saturn ...` is also supported. Installed consumers can use `find_package(SH2ZAM 0.2 CONFIG REQUIRED)` and `SH2ZAM::sh2zam`.
 
+## Transform a vertex batch
+
+```c
+sh2z_mat34_t world = sh2z_mat34_rotation_y(SH2Z_ANGLE_QUARTER);
+sh2z_vec3_t vertices[3] = {
+    {SH2Z_ONE, 0, 0}, {0, SH2Z_ONE, 0}, {0, 0, SH2Z_ONE}
+};
+sh2z_vec3_t transformed[3];
+sh2z_mat34_transform_points(transformed, &world, vertices, 3);
+```
+
+The batch API checks the matrix once, reuses its coefficients and accumulates each
+row directly before rounding. Its bound covers every Q16.16 input coordinate, so
+there is no vertex prescan or caller-supplied range promise. Matrices outside the
+bound use the general implementation. Both paths return identical fixed-point
+results, including saturation and negative rounding. Exact in-place transforms are
+supported. See [the bound, API contract and implementation](saturn/BATCH_TRANSFORMS.md).
+
 ## Git submodule
 
 ```sh
@@ -133,7 +152,7 @@ The library does not replace Yaul, SGL, Jo Engine or a renderer. SDK/runtime com
 
 | Example | Description |
 |---|---|
-| [Interactive math lab](exhibits/README.md) | Three looping 3D scenes with a before/after reveal slider, actual C-to-WASM math, precision comparison and browser timing export. |
+| [Interactive math lab](exhibits/README.md) | Three looping scenes, mesh-detail control, live float/general/optimized transform timings, precision checks and measurement export. |
 | [Sprite orbit](saturn/examples/orbit.c) | Integer-only orbit coordinates for driving a sprite. |
 | [Cube transforms](saturn/examples/cube.c) | Eight vertices through model, view, perspective and screen-coordinate transforms. |
 | [Batch jobs](saturn/examples/batch.c) | Two disjoint vertex jobs compared with serial execution; no slave-CPU launch. |
@@ -143,9 +162,17 @@ Host example commands and Saturn-disc build instructions are in [the examples gu
 
 # Showcase
 
-The browser lab includes **Ring world**, **Cube field** and **Twisted orbit**. Drag the divider to compare the same image before and after changing the math implementation. The “after” path executes SH2ZAM's actual portable C backend compiled to WebAssembly; the “before” path is a conventional float32 C reference, **not SH4ZAM**.
+The browser lab includes **Ring world**, **Cube field** and **Twisted orbit**. The
+float reference and optimized SH2ZAM images run together. A live table compares
+float32, the original general SH2ZAM transform and the optimized batch transform,
+with the math shown alongside. Mesh detail changes the number of vertices; every
+path receives the same vertices and quantized matrix.
 
-Both sides use the same scene, camera and renderer. Similar pictures are the desired outcome. Browser timings are measured, not scripted; a slower result is reported as slower. **They are not Saturn benchmarks.** See [how to run the exhibits and the measurement contract](exhibits/README.md).
+The two fixed-point paths must match bit for bit. Browser timings include the actual
+C kernels compiled to WebAssembly and report slower results honestly. **Browser
+timings are not Saturn benchmarks.** The separate [Saturn benchmark](saturn/benchmarks/README.md)
+compares SH-2 software float with both native fixed-point paths and leaves hardware
+results unmeasured until a console capture exists. See [the lab and measurement contract](exhibits/README.md).
 
 There are no independently verified production adopters or Saturn speedup claims listed yet. Share measured integrations through this repository's issues.
 

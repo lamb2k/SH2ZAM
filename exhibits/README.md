@@ -1,6 +1,10 @@
 # SH2ZAM interactive math lab
 
-Three looping 3D exhibits with a draggable before/after reveal, pause/play, timeline scrubbing, mesh-detail control, numeric error display, browser measurements and JSON export. The supplied GAINZ artwork appears in the lab and repository overview.
+Three looping 3D exhibits with live float32, general SH2ZAM and optimized SH2ZAM
+transform times. Float and optimized images run together; the mesh-detail slider
+changes the vertex count for every path. Pause/play, precision checks, source code
+panels and JSON measurement export are included. The supplied GAINZ artwork appears
+in the lab and repository overview.
 
 | Exhibit | Demonstration |
 |---|---|
@@ -22,27 +26,70 @@ python3 -m http.server --directory exhibits 8000
 
 Open `http://localhost:8000`. The build also emits a base64 JS module so the downloaded site can run without a local server, in browsers that allow local scripts. Build products are intentionally ignored by Git; CI builds them from the current library sources.
 
-## What before and after mean
+## The three paths
 
-**Before:** a conventional float32 C affine transform. It is not SH4ZAM and is not deliberately slowed down.
+| Path | Implementation |
+|---|---|
+| Float32 | Conventional C affine transform; browser floating point in WASM, compiler software-float helpers on SH-2. |
+| Current SH2ZAM | `sh2z_mat34_transform_points_general`: the original full-range implementation, preserving quotient/remainder accumulation for each product. |
+| Optimized SH2ZAM | `sh2z_mat34_transform_points`: checks the matrix bound once, reuses coefficients, unrolls all three rows and rounds once after direct raw-product accumulation. Outside the bound, it uses the general path. |
 
-**After:** this repository's actual `sh2z_mat34_rotation_x/y`, `sh2z_mat34_multiply` and `sh2z_mat34_transform_points` routines, linked into a WebAssembly module with `SH2Z_FORCE_PORTABLE=1`. This is not a JavaScript imitation and not an SH-2 emulator.
+The actual C kernels are linked into one WebAssembly module with
+`SH2Z_FORCE_PORTABLE=1`. No SH-2 emulation or JavaScript replacement is used.
+The float reference is not SH4ZAM. Both fixed-point outputs must match bit for bit;
+the live view checks that on every displayed pose.
 
-The input vertices, angle grid, camera, triangle colors, lighting and Canvas renderer are shared. Matching pictures are the point. The projected-difference metric measures the maximum per-vertex CSS-pixel displacement; it is not an image-difference metric. Projection itself is shared JavaScript, not the integer-pixel Saturn projection API.
+All paths receive the same quantized vertices **and matrix coefficients**. Matrix
+construction and conversion happen outside measurement. Consequently, the reported
+float error measures transform rounding, excluding common matrix/trigonometry
+quantization. This differs from the earlier lab's independently built float matrix;
+do not compare those earlier error figures as if the reference were unchanged.
+
+The camera, triangle colors, lighting and Canvas renderer are shared. The screen
+offset is the maximum per-vertex CSS-pixel displacement, not an image-difference
+metric. Projection is shared JavaScript, not the integer-pixel Saturn projection API.
+See [the optimized kernel's proof and contract](../saturn/BATCH_TRANSFORMS.md).
 
 ## Timing contract
 
-Both measured transform kernels are C compiled with the same compiler/optimization settings into the same WASM module. Neither allocates memory during measurement. Matrix construction, trigonometry, scene generation, output conversion and rendering are excluded from timing. Both paths receive the same Q16.16 source vertices; float conversion happens once during preparation.
+All three kernels use the same compiler and optimization settings. They allocate no
+memory during measurement. Matrix construction, trigonometry, input conversion,
+scene generation, rendering, checksums and precision checks are outside timing.
+The optimized matrix-bound check remains inside its measured call.
 
-The loop pauses for a benchmark. Each kernel is warmed for 32 calls, then measured in 21 samples of 64 calls, alternating which kernel is measured first. Displayed values are medians per batch, including call overhead. Exported JSON records all samples, the geometry, pose, browser user agent, module hash and measurement boundaries.
+Live timings update every 500 ms while the exhibit runs. Each update averages 64
+calls per path, and the display uses a rolling median of five updates. Measurement
+order rotates across the three paths to distribute first/second/third position.
+The ratio `current / optimized` isolates the batch optimization; `float / optimized`
+compares it with float. Above 1 means optimized is faster, below 1 means slower.
+These are transform batch times, not frame rate.
 
-**A desktop browser often favors native floating point. SH2ZAM may be slower here. The exhibit reports the result without artificially slowing the reference, changing animation rates, or implying Saturn FPS/performance.** Console performance requires separate SH-2 hardware measurements.
+**Capture benchmark** pauses at the current pose, warms all paths for 32 calls,
+then captures 21 samples of 64 calls per kernel with rotating order. Results include
+JS-to-WASM call overhead. Schema-2 JSON export records every distribution, medians,
+ratios, independent output checksums, precision checks, geometry, pose, browser user
+agent, module hash and measurement boundaries. **Play** resumes live sampling.
+
+Desktop browsers use their host floating-point facilities; SH2ZAM may still lose to
+float there. Browser results establish browser behavior only. The separate
+[Saturn benchmark](../saturn/benchmarks/README.md) runs the same shared bridge with
+SH-2 software float and native fixed-point kernels. Its results section stays
+unmeasured until an evidenced physical-console capture is recorded; emulator data
+is never displayed as physical-console speed.
 
 ## Accessibility and tests
 
-The reveal, detail and timeline controls are native keyboard-accessible sliders. The handle also supports mouse/touch dragging. Reduced-motion preferences start paused. Hidden tabs do not advance the simulation clock. Load failures show an error rather than substituting fake math.
+Mesh detail is the only slider and is keyboard accessible. Reduced-motion
+preferences start paused. Hidden tabs stop advancing the simulation clock and
+collecting live samples. Load failures show an error rather than substituting math.
 
-`test-math.cjs` checks buffer bounds, no imports, fixed-point identity and 737,280 component comparisons on bounded scene inputs. This is an exhibit regression suite, not a global numeric proof. `test-browser.py` covers scenes, high detail, reveal, scrubbing, pause, measurements, export, narrow layout and reduced motion in Chromium.
+`test-math.cjs` checks module imports, buffer isolation/bounds, exact identity,
+general/optimized equality and float precision. `test-browser.py` covers scene and
+detail changes, continued live sampling, one-slider layout, pause/play, capture,
+three-way export, narrow layout and reduced motion in Chromium. The shared native
+fixture suite checks all 15 scene/detail combinations at 21 poses and verifies
+full-batch versus chunked output identity. The library's separate batch oracle
+suite covers full-range inputs and fallback boundaries.
 
 ## GitHub Pages
 

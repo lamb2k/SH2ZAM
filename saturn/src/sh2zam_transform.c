@@ -170,10 +170,49 @@ bool sh2z_project_clip(sh2z_screen_t *out,sh2z_vec4_t v,uint16_t width,uint16_t 
     out->y=(int16_t)((((int64_t)v.w-v.y)*(height-1))/d);
     return true;
 }
-bool sh2z_mat34_transform_points(sh2z_vec3_t *out,const sh2z_mat34_t *m,const sh2z_vec3_t *in,size_t count) {
+bool sh2z_mat34_transform_points_general(sh2z_vec3_t *out,const sh2z_mat34_t *m,const sh2z_vec3_t *in,size_t count) {
     if(!count) return true;
     if(!out||!m||!in) return false;
     for(size_t i=0;i<count;i++) out[i]=sh2z_mat34_transform_point(m,in[i]);
+    return true;
+}
+/* Bound each row once, without scanning or restricting the input vertices.
+ * |coordinate| <= 2^31, so sum(|coefficient|) <= UINT32_MAX implies
+ * sum(|raw product|) <= 2^63-2^31. Every partial sum then fits int64_t,
+ * including products involving INT32_MIN. Translation is added AFTER the
+ * single floor16, where even the largest result has ample int64_t headroom.
+ * Use checked unsigned addition so the gate itself needs no 64-bit helpers. */
+static bool sh2zi_batch_rows_fit(const sh2z_mat34_t *m) {
+    for(unsigned row=0;row<3;row++) {
+        uint32_t a=sh2zi_magnitude(m->m[row][0]);
+        uint32_t b=sh2zi_magnitude(m->m[row][1]);
+        uint32_t c=sh2zi_magnitude(m->m[row][2]);
+        if(a>UINT32_MAX-b) return false;
+        a+=b;
+        if(a>UINT32_MAX-c) return false;
+    }
+    return true;
+}
+bool sh2z_mat34_transform_points(sh2z_vec3_t *out,const sh2z_mat34_t *m,const sh2z_vec3_t *in,size_t count) {
+    if(!count) return true;
+    if(!out||!m||!in) return false;
+    if(!sh2zi_batch_rows_fit(m)) return sh2z_mat34_transform_points_general(out,m,in,count);
+
+    /* Snapshot invariant coefficients once. The three rows are explicit so
+     * there is no row loop, temporary component array or scalar function call
+     * per vertex. Keep all three inputs before storing for exact in-place use. */
+    const int32_t m00=m->m[0][0],m01=m->m[0][1],m02=m->m[0][2],m03=m->m[0][3];
+    const int32_t m10=m->m[1][0],m11=m->m[1][1],m12=m->m[1][2],m13=m->m[1][3];
+    const int32_t m20=m->m[2][0],m21=m->m[2][1],m22=m->m[2][2],m23=m->m[2][3];
+    for(size_t i=0;i<count;i++) {
+        const int32_t x=in[i].x,y=in[i].y,z=in[i].z;
+        const int64_t row0=sh2zi_product(m00,x)+sh2zi_product(m01,y)+sh2zi_product(m02,z);
+        out[i].x=sh2zi_clamp(sh2zi_floor16(row0)+m03);
+        const int64_t row1=sh2zi_product(m10,x)+sh2zi_product(m11,y)+sh2zi_product(m12,z);
+        out[i].y=sh2zi_clamp(sh2zi_floor16(row1)+m13);
+        const int64_t row2=sh2zi_product(m20,x)+sh2zi_product(m21,y)+sh2zi_product(m22,z);
+        out[i].z=sh2zi_clamp(sh2zi_floor16(row2)+m23);
+    }
     return true;
 }
 bool sh2z_partition(size_t count,size_t worker,size_t workers,sh2z_range_t *out) {

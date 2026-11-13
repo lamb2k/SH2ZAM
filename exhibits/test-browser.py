@@ -4,6 +4,7 @@ from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from functools import partial
 from threading import Thread
 import hashlib
+import json
 import os
 from playwright.sync_api import sync_playwright
 root=Path(__file__).resolve().parent
@@ -22,15 +23,22 @@ with sync_playwright() as p:
     page.wait_for_function('Number(document.getElementById("before-time").dataset.samples) >= 2')
     assert page.evaluate('SH2ZAM_EXHIBIT_STATE.playing')
     assert page.locator('#before-time').inner_text() != '—'
+    assert page.locator('#general-time').inner_text() != '—'
     assert page.locator('#after-time').inner_text() != '—'
+    assert page.locator('#batch-ratio').inner_text() != '—'
     assert page.locator('#stage-before-time').inner_text()==page.locator('#before-time').inner_text()
     assert page.locator('#stage-after-time').inner_text()==page.locator('#after-time').inner_text()
     assert 'LIVE' in page.locator('#live-status').inner_text()
     assert page.locator('#saturn-status').inner_text()=='Not measured'
     assert page.locator('#saturn-reference').inner_text()=='—'
-    assert page.locator('.kernel-table pre code').count()==2
-    assert 'float_matrix' in page.locator('.kernel-table').inner_text()
-    assert 'sh2zi_dot' in page.locator('.kernel-table').inner_text()
+    assert page.locator('#saturn-general').inner_text()=='—'
+    assert page.locator('#saturn-optimized').inner_text()=='—'
+    assert page.locator('.kernel-table pre code').count()==3
+    assert 'float result' in page.locator('.kernel-table').inner_text()
+    assert 'p - q * 65536' in page.locator('.kernel-table').inner_text()
+    assert 'sh2zi_floor16(sum)' in page.locator('.kernel-table').inner_text()
+    assert page.evaluate('SH2ZAM_EXHIBIT_STATE.fixedMismatches')==0
+    assert 'bit-exact' in page.locator('#fixed-equality').inner_text()
     page.click('#play')
     assert not page.evaluate('SH2ZAM_EXHIBIT_STATE.playing')
     for scene in ['saturn','cubes','torus']:
@@ -40,6 +48,8 @@ with sync_playwright() as p:
         assert state['scene']==scene and state['count']<16384
         assert f"detail 5 · {state['count']} vertices" in page.locator('#saturn-workload').inner_text()
         assert state['maxError']<0.1,state
+        assert state['fixedMismatches']==0,state
+        assert state['maxWorldError']<2/65536,state
         assert page.locator('#before-canvas').evaluate('el=>getComputedStyle(el).clipPath')=='inset(0px 50% 0px 0px)'
         page.screenshot(path=str(root/f'screenshot-{scene}.png'),full_page=True)
     page.click('[data-scene=saturn]')
@@ -54,6 +64,16 @@ with sync_playwright() as p:
     with page.expect_download() as result:
         page.click('#export')
     result.value.save_as(root/'test-result.json')
+    data=json.loads((root/'test-result.json').read_text())
+    assert data['schema']==2 and data['kernelSet']=='float-general-batch-v1'
+    assert data['fixedMismatches']==0 and data['saturnBenchmark'] is False
+    assert data['outputChecksums']['general']==data['outputChecksums']['optimized']
+    assert all(len(value)==8 for value in data['outputChecksums'].values())
+    for path in ['reference','general','optimized']:
+        assert len(data['samplesMs'][path])==21
+        assert data['medianMs'][path]>=0
+    assert data['maximumWorldError']['general']==data['maximumWorldError']['optimized']
+    print('Browser capture:',json.dumps({key:data[key] for key in ['schema','scene','detail','vertices','medianMs','ratios','maximumWorldError','fixedMismatches','outputChecksums','wasmSHA256']}),flush=True)
     captured=page.locator('#before-time').inner_text()
     page.wait_for_timeout(650)
     assert page.locator('#before-time').inner_text()==captured
@@ -73,7 +93,26 @@ with sync_playwright() as p:
     # Downloaded artifact should also run without a web server.
     local=context.new_page(); local.goto((root/'index.html').as_uri())
     local.wait_for_function('window.SH2ZAM_EXHIBIT_STATE?.ready')
+    # A corrupt float result must not export timings, even when fixed paths agree.
+    invalid=context.new_page()
+    invalid.add_init_script('''
+      const instantiate=WebAssembly.instantiate;
+      WebAssembly.instantiate=async(...args)=>{
+        const result=await instantiate(...args),exports={...result.instance.exports};
+        const before=exports.before;
+        exports.before=()=>{before();new Float32Array(exports.memory.buffer,exports.before_ptr(),1)[0]=NaN;};
+        return {...result,instance:{exports}};
+      };
+    ''')
+    invalid.goto(url)
+    invalid.wait_for_function('window.SH2ZAM_EXHIBIT_STATE?.ready')
+    assert invalid.evaluate('SH2ZAM_EXHIBIT_STATE.fixedMismatches')==0
+    assert invalid.evaluate('SH2ZAM_EXHIBIT_STATE.outputsValid') is False
+    invalid.click('#benchmark')
+    assert invalid.locator('#export').is_disabled()
+    assert invalid.locator('#batch-ratio').inner_text()=='—'
+    assert 'precision checks' in invalid.locator('#result').inner_text()
     browser.close()
 server.shutdown()
-print('PASS: exact artwork, scenes, high detail, pause, fixed split, mesh keyboard, benchmark/export, mobile, reduced motion, offline HTML')
+print('PASS: three live paths, exact fixed outputs, artwork, scenes, detail, pause, split, keyboard, three-way export, mobile, reduced motion, offline HTML')
 

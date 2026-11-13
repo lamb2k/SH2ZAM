@@ -1,4 +1,4 @@
-/* SH2ZAM / float32 workload capture. MIT; SH2ZAM Contributors.
+/* Three-way SH2ZAM / float32 capture. MIT; SH2ZAM Contributors.
  * FRT APIs: yaul-org/libyaul, libyaul/scu/bus/cpu/cpu/frt.h.
  * Timed kernels are the SAME bridge.c used by the WebAssembly exhibit.
  */
@@ -11,9 +11,12 @@
 #endif
 #define CHUNK 32u
 #define DIVISOR 128u
+#define PAGE_SAMPLES 11u
+#define MAX_ERROR_LSB 66u
 static struct {
-    uint32_t ref[SAMPLE_COUNT],fixed[SAMPLE_COUNT],overhead[SAMPLE_COUNT];
-    uint32_t checksum,max_error_lsb;
+    uint32_t ref[SAMPLE_COUNT],general[SAMPLE_COUNT],optimized[SAMPLE_COUNT],overhead[SAMPLE_COUNT];
+    uint32_t checksum,reference_checksum,general_checksum,optimized_checksum;
+    uint32_t max_error_lsb,fixed_mismatches;
     bool invalid;
 } results[CASE_COUNT];
 static volatile uint32_t sink;
@@ -21,7 +24,8 @@ static void __attribute__((noinline)) empty(unsigned start,unsigned n) {
     (void)start;(void)n;__asm__ volatile("" ::: "memory");
 }
 /* Reset each chunk; reject ANY overflow instead of guessing wrap count.
- * Mask interrupts for both kernels. No display, conversion or checksum here.
+ * All three paths include their normal range wrapper and matrix dispatch.
+ * No display, conversion, equality check or checksum is inside timing.
  */
 static uint32_t timed(void (*fn)(unsigned,unsigned),unsigned count,bool *invalid) {
     volatile cpu_ioregs_t *regs=(volatile cpu_ioregs_t *)CPU_IOREG_BASE;
@@ -46,27 +50,38 @@ static void capture(unsigned c) {
     if(count>capacity()){results[c].invalid=true;return;}
     memcpy(input_ptr(),cases[c].vertices,count*sizeof(sh2z_vec3_t));
     if(!prepare(count)){results[c].invalid=true;return;}
+    void (*const kernels[3])(unsigned,unsigned)={before_range,general_range,after_range};
     for(unsigned s=0;s<SAMPLE_COUNT;s++) {
         setup(poses[s].ax,poses[s].ay,poses[s].sx,poses[s].cx,poses[s].sy,poses[s].cy);
-        /* Warm both paths at each sampled pose. */
-        before();after();before();after();
+        /* Every path occupies each timing position seven times over 21 poses. */
+        for(unsigned warm=0;warm<2;warm++) for(unsigned k=0;k<3;k++) kernels[(s+k)%3](0,count);
         results[c].overhead[s]=timed(empty,count,&results[c].invalid);
-        if(s&1) {
-            results[c].fixed[s]=timed(after_range,count,&results[c].invalid);
-            results[c].ref[s]=timed(before_range,count,&results[c].invalid);
-        } else {
-            results[c].ref[s]=timed(before_range,count,&results[c].invalid);
-            results[c].fixed[s]=timed(after_range,count,&results[c].invalid);
+        uint32_t ticks[3];
+        for(unsigned k=0;k<3;k++) {
+            unsigned path=(s+k)%3;
+            ticks[path]=timed(kernels[path],count,&results[c].invalid);
         }
-        /* Consume every output outside timing; no LTO in this build. */
+        results[c].ref[s]=ticks[0];results[c].general[s]=ticks[1];results[c].optimized[s]=ticks[2];
+        /* Consume all three outputs and require exact fixed-point equality.
+         * Nonfinite/implausible float errors invalidate before any integer cast.
+         */
         for(unsigned i=0;i<count;i++) {
-            sh2z_vec3_t v=after_ptr()[i];int32_t q[]={v.x,v.y,v.z};
+            sh2z_vec3_t v=after_ptr()[i],g=general_ptr()[i];
+            const int32_t q[]={v.x,v.y,v.z},old[]={g.x,g.y,g.z};
             for(unsigned j=0;j<3;j++) {
                 float f=before_ptr()[i*3+j];uint32_t bits;memcpy(&bits,&f,sizeof(bits));
-                results[c].checksum=results[c].checksum*33u+bits+(uint32_t)q[j];
+                results[c].reference_checksum=results[c].reference_checksum*33u+bits;
+                results[c].general_checksum=results[c].general_checksum*33u+(uint32_t)old[j];
+                results[c].optimized_checksum=results[c].optimized_checksum*33u+(uint32_t)q[j];
+                results[c].checksum=results[c].checksum*33u+bits+(uint32_t)q[j]+(uint32_t)old[j];
+                if(q[j]!=old[j]){results[c].fixed_mismatches++;results[c].invalid=true;}
                 double error=(double)f*65536.0-q[j];if(error<0)error=-error;
-                uint32_t ceil_lsb=(uint32_t)error;if(error>ceil_lsb)ceil_lsb++;
-                if(ceil_lsb>results[c].max_error_lsb)results[c].max_error_lsb=ceil_lsb;
+                if(!(error>=0&&error<=MAX_ERROR_LSB)) {
+                    results[c].invalid=true;results[c].max_error_lsb=UINT32_MAX;
+                } else {
+                    uint32_t ceil_lsb=(uint32_t)error;if(error>ceil_lsb)ceil_lsb++;
+                    if(ceil_lsb>results[c].max_error_lsb)results[c].max_error_lsb=ceil_lsb;
+                }
             }
         }
         sink=results[c].checksum;
@@ -82,22 +97,25 @@ void main(void) {
     cpu_intc_mask_set(0);dbgio_init();dbgio_dev_default_init(DBGIO_DEV_VDP2_ASYNC);dbgio_dev_font_load();
     cpu_frt_init(CPU_FRT_CLOCK_DIV_128);
     for(unsigned c=0;c<CASE_COUNT;c++) {
-        dbgio_printf("\x1b[H\x1b[2JSH2ZAM hardware benchmark\nCapturing %u/15: %s detail %u\nDo not use emulator time as hardware.\n",c+1,cases[c].scene,cases[c].detail);present();
+        dbgio_printf("\x1b[H\x1b[2JSH2ZAM three-way benchmark\nCapturing %u/%u: %s detail %u\n",c+1,CASE_COUNT,cases[c].scene,cases[c].detail);present();
         capture(c);
     }
     unsigned page=0,frame=0;
     while(true) {
         if(frame==0) {
-            dbgio_printf("\x1b[H\x1b[2JSH2ZAM capture %u/15\n%.8s / fixture %.8s\n%s d%u n%u %s\n%s FRT /128 chunk32\nchecksum %08lx err %lu LSB\nraw ref/fixed ticks (21 poses)\n",
-                page+1,BENCH_COMMIT,FIXTURE_SHA,cases[page].scene,cases[page].detail,cases[page].count,
-                results[page].invalid?"INVALID":"OK",sh2z_backend(),(unsigned long)results[page].checksum,(unsigned long)results[page].max_error_lsb);
-            for(unsigned s=0;s<SAMPLE_COUNT;s++) {
-                dbgio_printf("%02u %lu/%lu%s",s,(unsigned long)results[page].ref[s],(unsigned long)results[page].fixed[s],s%2||s==20?"\n":"  ");
+            const unsigned c=page/2,first=(page%2)*PAGE_SAMPLES;
+            unsigned last=first+PAGE_SAMPLES;if(last>SAMPLE_COUNT)last=SAMPLE_COUNT;
+            dbgio_printf("\x1b[H\x1b[2JSH2ZAM capture %u/%u schema2\n%.8s / fixture %.8s\n%s d%u n%u %s\n%s FRT /128 chunk32\nerr %lu LSB mismatches %lu\npose   float general optimized  empty\n",
+                page+1,CASE_COUNT*2,BENCH_COMMIT,FIXTURE_SHA,cases[c].scene,cases[c].detail,cases[c].count,
+                results[c].invalid?"INVALID":"OK",sh2z_backend(),(unsigned long)results[c].max_error_lsb,(unsigned long)results[c].fixed_mismatches);
+            for(unsigned s=first;s<last;s++) {
+                dbgio_printf("%02u %7lu %7lu %7lu %5lu\n",s,(unsigned long)results[c].ref[s],(unsigned long)results[c].general[s],
+                    (unsigned long)results[c].optimized[s],(unsigned long)results[c].overhead[s]);
             }
-            dbgio_printf("overhead ticks per pose:\n");
-            for(unsigned s=0;s<SAMPLE_COUNT;s++) dbgio_printf("%lu%s",(unsigned long)results[page].overhead[s],s%7==6?"\n":" ");
-            dbgio_printf("\nPhoto all 15 pages; auto-advance.\nCPU cycles = ticks x 128\n");
+            dbgio_printf("checksums float %08lx\ngeneral %08lx optimized %08lx\ncombined %08lx\nPhoto all %u pages; auto-advance.\ncycles = (ticks - empty) x %u\n",
+                (unsigned long)results[c].reference_checksum,(unsigned long)results[c].general_checksum,
+                (unsigned long)results[c].optimized_checksum,(unsigned long)results[c].checksum,CASE_COUNT*2,DIVISOR);
         }
-        present();if(++frame==600){frame=0;page=(page+1)%CASE_COUNT;}
+        present();if(++frame==600){frame=0;page=(page+1)%(CASE_COUNT*2);}
     }
 }

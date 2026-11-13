@@ -134,8 +134,17 @@ bool sh2z_mat44_perspective(sh2z_mat44_t *out,sh2z_angle_t fov,sh2z_fx_t aspect,
  *  Out unchanged on failure. */
 bool sh2z_project_clip(sh2z_screen_t *out,sh2z_vec4_t clip,uint16_t width,uint16_t height);
 /** Exact in-place operation allowed; other overlapping input/output forbidden.
- *  Zero count permits null pointers. No allocation, scheduling, cache or DMA work. */
+ *  Zero count permits null pointers. No allocation, scheduling, cache or DMA work.
+ *  Checks the matrix once and uses a fused batch kernel when each basis row's
+ *  sum of absolute RAW coefficients is <= UINT32_MAX. All Q16.16 input values
+ *  remain valid: no vertex prescan or caller-supplied bounds are required.
+ *  Other matrices use the full-range general path. Both paths floor each row
+ *  once, then add translation and saturate, with identical fixed-point results. */
 bool sh2z_mat34_transform_points(sh2z_vec3_t *out,const sh2z_mat34_t *m,const sh2z_vec3_t *in,size_t count);
+/** Full-range scalar batch implementation, also used as the automatic fallback.
+ *  Same pointer, overlap and numeric contracts as transform_points. Exposed for
+ *  direct baseline comparisons and applications that need this implementation. */
+bool sh2z_mat34_transform_points_general(sh2z_vec3_t *out,const sh2z_mat34_t *m,const sh2z_vec3_t *in,size_t count);
 /** Overflow-safe partition, including uneven and empty jobs. No CPU dispatch. */
 bool sh2z_partition(size_t count,size_t worker,size_t workers,sh2z_range_t *out);
 

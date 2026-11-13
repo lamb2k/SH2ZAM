@@ -1,4 +1,5 @@
 fixtures.h
+__pycache__/
 yaul/build/
 yaul/*.iso
 yaul/*.bin

@@ -1,15 +1,17 @@
 /* SH2ZAM interactive exhibit. MIT, Copyright (c) 2026 SH2ZAM Contributors. */
 'use strict';
 (() => {
-  const $ = id => document.getElementById(id), TAU = Math.PI * 2;
+  const $ = id => document.getElementById(id), TAU = Math.PI * 2, MAX_WORLD_ERROR = 0.001;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const canvases = [$('before-canvas'), $('after-canvas')];
   const contexts = canvases.map(c => c.getContext('2d'));
-  let wasm, mesh, input, before, after, width = 1000, height = 490;
+  let wasm, mesh, input, before, beforeBits, general, after, width = 1000, height = 490;
   let scene = 'saturn', detail = 3, seconds = 0, playing = !reduced.matches;
-  let busy = false, last = 0, report = null, maxError = 0;
+  let busy = false, last = 0, report = null, maxError = 0, maxWorldError = 0, maxGeneralWorldError = 0, fixedMismatches = 0;
+  let outputChecksums = {}, outputsValid = false;
   let liveAt = -Infinity, liveOrder = 0;
-  const liveBefore = [], liveAfter = [];
+  const paths = ['reference','general','optimized'];
+  const liveSamples = {reference:[],general:[],optimized:[]};
   const specs = {
     saturn: ['Ring world', 'A low-poly planet and concentric rings, transformed in lockstep.'],
     cubes: ['Cube field', 'A lattice of independent cubes sharing one batched transform.'],
@@ -17,10 +19,11 @@
   };
   const {makeMesh}=window.SH2ZAM_MESHES;
   function invalidate() {
-    liveBefore.length=liveAfter.length=0; liveAt=-Infinity;
+    paths.forEach(path=>{liveSamples[path].length=0;}); liveAt=-Infinity;
     $('live-status').textContent='Sampling…';
     $('stage-before-time').textContent=$('stage-after-time').textContent='—';
-    report=null; $('before-time').textContent=$('after-time').textContent='—';
+    report=null; $('before-time').textContent=$('general-time').textContent=$('after-time').textContent='—';
+    $('batch-ratio').textContent=$('float-ratio').textContent='—';
     $('export').disabled=true; $('result').textContent='Live · browser timings';
   }
   function loadScene() {
@@ -31,6 +34,8 @@
     input.set(mesh.vertices.map(v=>Math.round(v*65536)));
     if(!wasm.prepare(count)) throw new Error('The C bridge rejected the mesh.');
     before=new Float32Array(wasm.memory.buffer,wasm.before_ptr(),count*3);
+    beforeBits=new Uint32Array(wasm.memory.buffer,wasm.before_ptr(),count*3);
+    general=new Int32Array(wasm.memory.buffer,wasm.general_ptr(),count*3);
     after=new Int32Array(wasm.memory.buffer,wasm.after_ptr(),count*3);
     $('scene-title').textContent=specs[scene][0]; $('scene-caption').textContent=specs[scene][1];
     $('mesh-count').textContent=`${count.toLocaleString()} vertices / ${mesh.faces.length.toLocaleString()} triangles`;
@@ -40,20 +45,23 @@
     const data=window.SH2ZAM_SATURN_RESULTS,run=data?.run;
     const row=data?.records.find(r=>r.scene===scene&&r.detail===detail);
     $('saturn-workload').textContent=`${specs[scene][0]} · detail ${detail} · ${input.length/3} vertices · 21 sampled poses`;
-    for(const id of ['saturn-reference','saturn-fixed','saturn-ratio'])$(id).textContent='—';
-    $('saturn-reference-cycles').textContent=$('saturn-fixed-cycles').textContent='No console capture';
+    for(const id of ['saturn-reference','saturn-general','saturn-optimized','saturn-ratio','saturn-float-ratio'])$(id).textContent='—';
+    for(const id of ['saturn-reference-cycles','saturn-general-cycles','saturn-optimized-cycles'])$(id).textContent='No console capture';
     $('saturn-error').textContent='Unmeasured';$('saturn-evidence').hidden=true;
     $('saturn-status').textContent='Not measured';
     $('saturn-provenance').textContent='Recorded hardware results will appear here after a console run.';
     // Emulator captures are retained for correctness but never presented as hardware timing.
-    if(!row||run?.environment!=='physical-console')return;
+    if(!row||run?.environment!=='physical-console'||run?.kernelSet!=='float-general-batch-v1'||data.schema!==2)return;
     $('saturn-status').textContent='Recorded · physical console';
     $('saturn-reference').textContent=`${row.referenceMs.toFixed(3)} ms`;
-    $('saturn-fixed').textContent=`${row.fixedMs.toFixed(3)} ms`;
+    $('saturn-general').textContent=`${row.generalMs.toFixed(3)} ms`;
+    $('saturn-optimized').textContent=`${row.optimizedMs.toFixed(3)} ms`;
     $('saturn-reference-cycles').textContent=`${row.referenceCycles.toLocaleString()} cycles`;
-    $('saturn-fixed-cycles').textContent=`${row.fixedCycles.toLocaleString()} cycles`;
-    $('saturn-ratio').textContent=`${row.referenceOverFixed.toFixed(2)}×`;
-    $('saturn-error').textContent=`Max error ≤ ${row.maxErrorLSB} Q16 LSB`;
+    $('saturn-general-cycles').textContent=`${row.generalCycles.toLocaleString()} cycles`;
+    $('saturn-optimized-cycles').textContent=`${row.optimizedCycles.toLocaleString()} cycles`;
+    $('saturn-ratio').textContent=`${row.generalOverOptimized.toFixed(2)}×`;
+    $('saturn-float-ratio').textContent=`${row.referenceOverOptimized.toFixed(2)}×`;
+    $('saturn-error').textContent=`Current / optimized: bit-exact · Max float error ≤ ${row.maxErrorLSB} Q16 LSB`;
     $('saturn-provenance').textContent=`${run.console} · ${run.videoMode} · ${run.compiler} · ${run.sourceCommit.slice(0,8)} · ${run.capturedAt}`;
     $('saturn-evidence').href=run.evidenceUrl;$('saturn-evidence').hidden=false;
   }
@@ -85,17 +93,37 @@
     }
     return pts;
   }
+  function checkPrecision() {
+    maxWorldError=0;maxGeneralWorldError=0;fixedMismatches=0;
+    let refChecksum=0,generalChecksum=0,optimizedChecksum=0;
+    for(let i=0;i<after.length;i++) {
+      maxWorldError=Math.max(maxWorldError,Math.abs(before[i]-after[i]/65536));
+      maxGeneralWorldError=Math.max(maxGeneralWorldError,Math.abs(before[i]-general[i]/65536));
+      if(general[i]!==after[i])fixedMismatches++;
+      refChecksum=(Math.imul(refChecksum,33)+beforeBits[i])>>>0;
+      generalChecksum=(Math.imul(generalChecksum,33)+(general[i]>>>0))>>>0;
+      optimizedChecksum=(Math.imul(optimizedChecksum,33)+(after[i]>>>0))>>>0;
+    }
+    const hex=value=>value.toString(16).padStart(8,'0');
+    outputChecksums={reference:hex(refChecksum),general:hex(generalChecksum),optimized:hex(optimizedChecksum)};
+    outputsValid=fixedMismatches===0&&[maxError,maxWorldError,maxGeneralWorldError].every(Number.isFinite)
+      &&maxWorldError<=MAX_WORLD_ERROR&&maxGeneralWorldError<=MAX_WORLD_ERROR;
+    $('error').textContent=Number.isFinite(maxError)?`${maxError.toFixed(3)} px`:'Invalid';
+    $('world-error').textContent=Number.isFinite(maxWorldError)?`${maxWorldError.toFixed(7)}`:'Invalid';
+    $('fixed-equality').textContent=fixedMismatches?`${fixedMismatches} differing components`:'Current / optimized: bit-exact';
+    $('fixed-equality').classList.toggle('mismatch',fixedMismatches!==0);
+  }
   function draw() {
     if(!wasm||!mesh) return;
     const phase=seconds/12, ax=Math.round(5200+3000*Math.sin(phase*TAU))&65535,ay=Math.floor(phase*65536)&65535;
     const x=ax*TAU/65536,y=ay*TAU/65536;
     wasm.setup(ax,ay,Math.sin(x),Math.cos(x),Math.sin(y),Math.cos(y));
-    wasm.before(); wasm.after();
+    wasm.before(); wasm.general(); wasm.after();
     const a=render(contexts[0],before,1),b=render(contexts[1],after,65536);
     maxError=0; for(let i=0;i<a.length;i++) maxError=Math.max(maxError,Math.hypot(a[i][3]-b[i][3],a[i][4]-b[i][4]));
-    $('error').textContent=`${maxError.toFixed(3)} px`;
+    checkPrecision();
     $('play').textContent=playing?'Pause':'Play';$('play-state').textContent=playing?'12 SECOND LOOP':'PAUSED';
-    window.SH2ZAM_EXHIBIT_STATE={ready:true,scene,detail,count:input.length/3,maxError,seconds,playing,busy};
+    window.SH2ZAM_EXHIBIT_STATE={ready:true,scene,detail,count:input.length/3,maxError,maxWorldError,maxGeneralWorldError,fixedMismatches,outputChecksums,outputsValid,seconds,playing,busy};
   }
   function frame(now) {
     if(last&&playing&&!busy&&!document.hidden) { seconds=(seconds+Math.min((now-last)/1000,0.1))%12;draw(); }
@@ -103,44 +131,59 @@
     last=now; requestAnimationFrame(frame);
   }
   const median=xs=>[...xs].sort((a,b)=>a-b)[Math.floor(xs.length/2)];
-  function sampleLive() {
-    // Amortize timer resolution over 64 transforms, excluding setup and drawing.
-    const measure=fn=>{const start=performance.now();for(let i=0;i<64;i++)fn();return (performance.now()-start)/64;};
-    let a,b;
-    if(liveOrder++%2){b=measure(wasm.after);a=measure(wasm.before);}
-    else{a=measure(wasm.before);b=measure(wasm.after);}
-    liveBefore.push(a);liveAfter.push(b);
-    if(liveBefore.length>5){liveBefore.shift();liveAfter.shift();}
-    const format=xs=>{const ms=median(xs);return ms>0?`${ms.toFixed(4)} ms`:'< timer limit';};
-    $('before-time').textContent=format(liveBefore);
-    $('after-time').textContent=format(liveAfter);
-    $('before-time').dataset.samples=$('after-time').dataset.samples=String(liveOrder);
+  function measurePaths(order,iterations) {
+    const functions={reference:wasm.before,general:wasm.general,optimized:wasm.after},sample={};
+    // Rotate first/second/third position; all three see the same current pose.
+    for(let i=0;i<3;i++) {
+      const path=paths[(order+i)%3],fn=functions[path],start=performance.now();
+      for(let j=0;j<iterations;j++)fn();
+      sample[path]=(performance.now()-start)/iterations;
+    }
+    return sample;
+  }
+  function showTimings(times) {
+    const ids={reference:'before-time',general:'general-time',optimized:'after-time'};
+    if(!outputsValid) {
+      for(const id of [...Object.values(ids),'stage-before-time','stage-after-time','batch-ratio','float-ratio'])$(id).textContent='—';
+      return;
+    }
+    for(const path of paths)$(ids[path]).textContent=times[path]>0?`${times[path].toFixed(4)} ms`:'< timer limit';
     $('stage-before-time').textContent=$('before-time').textContent;
     $('stage-after-time').textContent=$('after-time').textContent;
+    $('batch-ratio').textContent=times.general>0&&times.optimized>0?`${(times.general/times.optimized).toFixed(2)}×`:'—';
+    $('float-ratio').textContent=times.reference>0&&times.optimized>0?`${(times.reference/times.optimized).toFixed(2)}×`:'—';
+  }
+  function sampleLive() {
+    if(!outputsValid) {showTimings({});$('live-status').textContent='PRECISION CHECK FAILED';$('result').textContent='Measurement failed: transform outputs did not pass precision checks.';return;}
+    // Amortize timer resolution over 64 transforms, excluding setup and drawing.
+    const sample=measurePaths(liveOrder++,64),times={};
+    for(const path of paths) {liveSamples[path].push(sample[path]);if(liveSamples[path].length>5)liveSamples[path].shift();times[path]=median(liveSamples[path]);}
+    showTimings(times);
+    for(const id of ['before-time','general-time','after-time'])$(id).dataset.samples=String(liveOrder);
     $('live-status').textContent=`LIVE · SAMPLE ${liveOrder}`;
   }
   const yieldFrame=()=>new Promise(resolve=>requestAnimationFrame(resolve));
   async function benchmark() {
-    if(busy||!wasm) return; busy=true; playing=false; draw();
+    if(busy||!wasm) return; busy=true; playing=false; report=null; draw();
     const controls=[...document.querySelectorAll('button,input')];controls.forEach(c=>c.disabled=true);
-    const a=[],b=[],iterations=64;
+    const samples={reference:[],general:[],optimized:[]},iterations=64;
     try {
-      for(let i=0;i<32;i++){wasm.before();wasm.after();}
-      const measure=fn=>{const start=performance.now();for(let i=0;i<iterations;i++)fn();return (performance.now()-start)/iterations;};
+      if(!outputsValid)throw new Error('Transform outputs did not pass precision checks.');
+      for(let i=0;i<32;i++){wasm.before();wasm.general();wasm.after();}
       for(let i=0;i<21;i++) {
-        $('result').textContent=`Measuring paired transform batches ${i+1}/21…`;await yieldFrame();
-        if(i%2){b.push(measure(wasm.after));a.push(measure(wasm.before));}else{a.push(measure(wasm.before));b.push(measure(wasm.after));}
+        $('result').textContent=`Measuring three transform paths ${i+1}/21…`;await yieldFrame();
+        const sample=measurePaths(i,iterations);
+        for(const path of paths)samples[path].push(sample[path]);
       }
-      const ta=median(a),tb=median(b);
-      $('before-time').textContent=ta>0?`${ta.toFixed(4)} ms`:'< timer limit';
-      $('after-time').textContent=tb>0?`${tb.toFixed(4)} ms`:'< timer limit';
-      $('stage-before-time').textContent=$('before-time').textContent;
-      $('stage-after-time').textContent=$('after-time').textContent;
+      checkPrecision();
+      if(!outputsValid)throw new Error('Transform outputs did not pass precision checks.');
+      const times=Object.fromEntries(paths.map(path=>[path,median(samples[path])]));
+      showTimings(times);
       $('live-status').textContent='CAPTURED';
-      const ratio=ta>0?tb/ta:null;
-      $('result').textContent=ratio===null?'Timer resolution is insufficient; increase mesh detail.':`Captured · SH2ZAM / reference: ${ratio.toFixed(2)}× · browser timings`;
-      report={schema:1,backend:'SH2ZAM portable C / WebAssembly',reference:'float32 C / WebAssembly',scene,detail,vertices:input.length/3,triangles:mesh.faces.length,loopSeconds:seconds,maximumScreenErrorPx:maxError,iterationsPerSample:iterations,sampleCount:21,medianMs:{before:ta,after:tb},samplesMs:{before:a,after:b},wasmSHA256:window.SH2ZAM_WASM_SHA256,userAgent:navigator.userAgent,measuredAt:new Date().toISOString(),excludes:['geometry generation','matrix setup','rendering','output conversion'],saturnBenchmark:false};
-    } catch(error) { $('result').textContent=`Measurement failed: ${error.message}`; }
+      const measurable=paths.every(path=>times[path]>0);
+      $('result').textContent=!measurable?'Timer resolution is insufficient; increase mesh detail.':`Captured · current / optimized: ${(times.general/times.optimized).toFixed(2)}× · browser timings`;
+      report={schema:2,kernelSet:'float-general-batch-v1',backend:'SH2ZAM portable C / WebAssembly',reference:'float32 C / WebAssembly (browser float)',scene,detail,vertices:input.length/3,triangles:mesh.faces.length,loopSeconds:seconds,maximumScreenErrorPx:maxError,maximumWorldError:{general:maxGeneralWorldError,optimized:maxWorldError},maximumAllowedWorldError:MAX_WORLD_ERROR,fixedMismatches,outputChecksums,iterationsPerSample:iterations,sampleCount:21,measurementOrder:'rotate reference/general/optimized',medianMs:times,samplesMs:samples,ratios:measurable?{generalOverOptimized:times.general/times.optimized,referenceOverOptimized:times.reference/times.optimized}:null,wasmSHA256:window.SH2ZAM_WASM_SHA256,userAgent:navigator.userAgent,measuredAt:new Date().toISOString(),excludes:['geometry generation','matrix setup and quantization','rendering','input conversion','precision checks'],saturnBenchmark:false};
+    } catch(error) {if(!outputsValid)showTimings({});$('live-status').textContent='CAPTURE FAILED';$('result').textContent=`Measurement failed: ${error.message}`; }
     finally { busy=false;controls.forEach(c=>c.disabled=false);$('export').disabled=!report;draw(); }
   }
   $('play').addEventListener('click',()=>{playing=!playing;if(playing&&report)invalidate();last=0;draw();});

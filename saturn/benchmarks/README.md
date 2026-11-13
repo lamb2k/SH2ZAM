@@ -1,24 +1,39 @@
-# Saturn float32 vs SH2ZAM benchmark
+# Saturn three-way transform benchmark
 
-Status: benchmark harness implemented; **no physical-console measurements recorded**.
-The interactive lab shows browser/WASM timing separately. Saturn values remain unmeasured
-until an evidenced capture is committed. No emulator result or estimated multiplier is
-substituted for hardware data.
+Status: the harness compares **software float → general SH2ZAM → optimized SH2ZAM**.
+**No physical-console measurements are recorded.** Browser/WASM timing is shown
+separately in the interactive lab. Saturn values remain unmeasured until an evidenced
+capture is committed.
 
-## Workload
+## Workload and kernels
 
-`exhibits/meshes.js` supplies the browser and the fixture generator: Ring world, Cube
-field and Twisted orbit, each at detail 1–5. `generate-fixtures.cjs` freezes the exact
-Q16.16 vertex inputs and 21 poses across the same 12-second loop. Its manifest records
-vertex counts and a SHA256 of the full inputs and poses. The reference converts these
-same input integers to float32 once before measurement.
+`exhibits/meshes.js` supplies both the browser and the fixture generator: Ring world,
+Cube field and Twisted orbit, each at detail 1–5. `generate-fixtures.cjs` freezes the
+exact Q16.16 vertex inputs and 21 poses across the same 12-second loop. Its manifest
+records vertex counts and a SHA256 of the complete inputs and poses.
 
-Both builds compile `exhibits/bridge.c`. On the browser it targets WebAssembly with the
-portable backend. On Saturn, the float32 kernel uses the compiler's software float
-helpers; SH2ZAM uses its native `dmuls.l` path. CI checks the reference object's
-`__mulsf3` and `__addsf3` dependencies and audits native multiplication instructions.
-This is not a claim that fixed point will win: the full safe arithmetic implementation
-is measured as it exists today.
+Both environments compile `exhibits/bridge.c`. All three transform kernels receive
+the same vertices and the same matrix coefficients. Setup constructs the Q16.16
+matrix once, then converts those exact coefficients and vertices to float32 outside
+timing. This isolates transform arithmetic; it does not compare different trig
+approximations or matrix construction methods.
+
+| Path | Function | What is measured |
+|---|---|---|
+| Software float | `before_range` | Float32 affine transform; SH-2 compiler software-float helpers |
+| General SH2ZAM | `general_range` | Existing full-range `sh2z_mat34_transform_points_general` |
+| Optimized SH2ZAM | `after_range` | Safe dispatch through `sh2z_mat34_transform_points`, including its matrix bound check |
+
+The general and optimized paths must match **bit for bit** at every output coordinate.
+The benchmark also measures their error against float32. Separate output buffers and
+checksums keep all three results observable. The optimized path retains the general
+fallback for matrices outside its proven accumulator bound.
+
+The browser uses WebAssembly hardware floating-point operations and the portable
+fixed-point backend. On Saturn, float32 uses software helpers; fixed point uses
+native `dmuls.l`. CI checks `__mulsf3` and `__addsf3` dependencies and exports native
+multiplication disassembly, relocations and symbol sizes for inspection. These checks
+do not establish a hardware speedup.
 
 ## Build and run
 
@@ -29,58 +44,73 @@ node saturn/benchmarks/generate-fixtures.cjs
 make -C saturn/benchmarks/yaul
 ```
 
-CI also builds the bootable `sh2zam-benchmark` image and uploads it in
-`sh2-compile-evidence`, along with the compiler version, image checksum, manifest,
-linked build outputs and instruction/helper audit. Build success does not mean the
-image has booted successfully on a console.
+CI builds the bootable `sh2zam-benchmark` image and uploads it in
+`sh2-compile-evidence`, with the compiler version, image checksum, manifest, linked
+outputs and instruction/helper audit. Build success does not establish that the image
+has booted on a console.
 
 Boot the ISO/CUE using your usual Saturn loader. The app captures all 15 workloads,
-then cycles through their result pages every 600 display frames. Photograph all pages,
-including the build/fixture identifiers, checksum, maximum error, 21 raw float/fixed
-sample pairs and 21 overhead samples. Pages repeat. Any `INVALID` result is unusable.
-Keep the original image digest, complete source commit and the photographs/log as
-public capture evidence. An emulator can test boot/correctness, but its timings must
-be marked `emulator` and are not shown as Saturn performance in the lab.
+then displays **30 result pages: two pages per workload**. Each page holds up to 11
+poses so four raw timing columns remain readable at 320×224. Pages advance every 600
+display frames and repeat. Photograph all pages, including build/fixture identifiers,
+all four checksums, maximum error, mismatch count, and all 21 float/general/optimized
+sample triples with their overhead samples. Any `INVALID` result is unusable.
+
+Keep the image digest, complete source commit and photographs/log as public capture
+evidence. An emulator can test boot and correctness; emulator timings must be marked
+`emulator` and are not shown as Saturn performance in the lab.
 
 Record console model, PAL/NTSC region, actual CPU clock, video mode (this app selects
 320 horizontal), compiler/flags, cache policy and memory placement. SDK startup cache
-settings are not automatically certified by this harness. The app warms both paths;
+settings are not automatically certified by this harness. The app warms all paths;
 it does not flush caches between samples. It does not start slave-CPU work. Inspect
 the SDK startup and linked map when documenting those settings. No clock is guessed
 by the browser or converter.
 
 ## Measurement
 
-- 21 deterministic poses, one sample per pose, alternating float/fixed order.
-- Both kernels warmed twice at each pose; identical inputs, output buffers and flags.
+- 21 deterministic poses, one sample per pose for each kernel. The three timing
+  orders rotate so every kernel occupies each position seven times.
+- All three kernels are warmed twice at each pose. Their inputs, matrix coefficients,
+  buffer layout, compiler flags and vertex counts match.
 - CPU FRT clock /128; 32-vertex chunks prevent long intervals from wrapping the
-  16-bit timer. Each chunk resets the count. The overflow flag invalidates the capture
-  rather than silently wrapping. FRT register control follows Yaul's `cpu/frt.h` and
+  16-bit timer. Each chunk resets the count. The overflow flag invalidates a capture
+  rather than silently wrapping. FRT control follows Yaul's `cpu/frt.h` and
   `cpu_frt.c` APIs. This timer integration still needs first-console qualification.
 - Interrupt mask 15 only during timed chunks, restored to 0 afterward. Rendering,
-  matrix construction, input conversion, checksums and error evaluation are outside
-  the measured interval. This measures isolated CPU work, not game-frame FPS.
-- Raw whole-mesh tick sums include chunk call/timer overhead. A matching empty-call
-  measurement is retained per pose. The converter subtracts each overhead sample,
-  then takes the median of 21 adjusted whole-mesh totals. It rejects nonpositive
-  adjusted samples. Instruction/data cache interactions are not removed by subtraction.
+  matrix construction, input conversion, checksums and precision checks are outside
+  the measured interval. This measures isolated CPU transform work, not game FPS.
+- Raw whole-mesh tick sums include the normal range wrapper and dispatch cost for
+  every chunk. The optimized matrix bound check is inside timing. A full-mesh call
+  amortizes that check over more vertices; the fixed 32-vertex chunks therefore do
+  not measure the best possible full-batch throughput. Keep chunk size in provenance.
+- A matching empty-call measurement is retained per pose. The converter subtracts
+  each overhead sample, then takes the median of 21 adjusted whole-mesh totals for
+  each kernel. Nonpositive adjusted samples are rejected. Cache effects are not
+  removed by subtraction.
 - Cycles = adjusted ticks × 128. Milliseconds = cycles / recorded CPU clock × 1000.
-  Float/fixed time >1 means SH2ZAM is faster; <1 means it is slower.
-- Maximum error is conservatively rounded up in Q16 LSB units, checked across all
-  vertices and poses, outside timing. It is world-coordinate error, not screen pixels.
-- Every output contributes to a retained checksum. Separate translation units,
-  memory barriers and `-fno-lto` prevent benchmark elimination. Hardware and browser
-  builds use different optimization levels (`-O2` and `-O3` respectively); compare
-  the paired kernels within each environment, not absolute times across environments.
+  `referenceOverGeneral`, `referenceOverOptimized` and `generalOverOptimized` are the
+  numerator's time divided by the denominator's time; values above 1 favor the
+  denominator. Slower optimized results remain valid measurements.
+- `fixedMismatches` counts general/optimized component differences and must be zero.
+  Both fixed-point checksums must also agree. `maxErrorLSB` is the maximum float32
+  error, rounded up to Q16 LSB units over every vertex and pose. Capture validation
+  requires at most 66 LSB (about 0.00101 world units). It is not a screen-pixel error.
+- Every output contributes to its kernel checksum and a combined checksum. Separate
+  translation units, memory barriers and `-fno-lto` prevent benchmark elimination.
+  Hardware and browser builds use `-O2` and `-O3` respectively; compare paired kernels
+  within each environment, not absolute times across environments.
 
 ## Publish a capture
 
 Edit `results/captures.json`. Leave `run: null` and `records: []` until evidence exists.
-For a real capture, `run` must contain:
+The data uses **schema 2**. Schema 1 two-kernel captures are rejected; they cannot be
+relabeled as measurements of the optimized path. A real `run` must contain:
 
-| Field | Value |
+| Field | Required value |
 |---|---|
 | environment | `physical-console` or `emulator` |
+| kernelSet | `float-general-batch-v1` |
 | backend | `sh2-dmuls` |
 | timerDivisor / chunkVertices | `128` / `32` |
 | sourceCommit / imageSHA256 | Full source SHA and boot ISO digest |
@@ -90,10 +120,12 @@ For a real capture, `run` must contain:
 | cachePolicy / memoryPlacement | Observed/configured cache and linked memory placement |
 | capturedAt / evidenceUrl | ISO timestamp and HTTPS capture evidence link |
 
-Each record identifies `scene`, `detail`, `vertices`, `invalid: false`, an eight-digit
-hex `checksum`, integer `maxErrorLSB`, and 21 integers in each of `referenceTicks`,
-`fixedTicks`, `overheadTicks`. Scene names are `saturn`, `cubes`, `torus`. Keep the
-manifest's `fixtureSHA256`; a change to geometry or poses invalidates old data.
+Each record identifies `scene`, `detail`, `vertices`, `invalid: false`,
+`fixedMismatches: 0`, integer `maxErrorLSB`, and four eight-digit hexadecimal checksums:
+`referenceChecksum`, `generalChecksum`, `optimizedChecksum`, and combined `checksum`.
+It also contains **21 integers in each** of `referenceTicks`, `generalTicks`,
+`optimizedTicks`, and `overheadTicks`. Scene names are `saturn`, `cubes`, `torus`.
+Keep the manifest's `fixtureSHA256`; changing geometry or poses invalidates old data.
 Partial captures are allowed: missing scene/detail combinations remain unmeasured.
 
 ```sh
@@ -102,12 +134,13 @@ node saturn/benchmarks/compile-results.cjs
 node saturn/benchmarks/test-results.cjs
 ```
 
-The generated `exhibits/saturn-results.js` is bundled by the site build, including the
-offline artifact. The UI only shows physical-console records and selects the record
-matching the active scene and mesh detail. Evidence is linked beside the measurements.
-The validator checks structure and consistency, not authenticity: review the raw
-capture, build and hardware provenance before publishing. A capture from older math
-code must be identified as that recorded build, never presented as a new measurement.
+The converter produces `referenceCycles`, `generalCycles`, `optimizedCycles`, their
+`*Ms` equivalents and the three time ratios. Generated `exhibits/saturn-results.js`
+is bundled by the site build and offline artifact. The UI shows only physical-console
+records matching the selected scene/detail, with evidence and recorded build provenance.
+The validator checks consistency, not authenticity: review capture evidence and source
+before publication. A measurement from older math code remains a measurement of that
+recorded build, never a new measurement.
 
 ## Correctness check
 
@@ -120,5 +153,6 @@ cc -O2 -std=c11 -Wall -Wextra -Werror -ffp-contract=off \
 /tmp/sh2zam-fixtures
 ```
 
-This runs all 315 mesh/pose combinations, validates chunk/full output identity and
-checks a 0.001 world-unit error bound. It produces correctness evidence only.
+This runs all 315 mesh/pose combinations, validates full-batch/chunk output identity
+for all three kernels, requires exact general/optimized equality and checks a 0.001
+world-unit error bound against float32. It produces correctness evidence only.
