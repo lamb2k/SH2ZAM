@@ -9,6 +9,11 @@ sh2z_vec3_t *general_ptr(void);
 sh2z_vec3_t *after_ptr(void);
 sh2z_vec3_t *mac_ptr(void);
 sh2z_vec3_t *dmuls_ptr(void);
+sh2z_vec3_t *plain_ptr(void);
+int plain_prepare(void);
+unsigned plain_available(void);
+int plain_range(unsigned start,unsigned n);
+int plain(void);
 int prepare(unsigned n);
 int plan_prepare(void);
 /* bit 0: prepared bound proved; bit 1: MAC.L active; bit 2: DMULS.L active. */

@@ -76,9 +76,9 @@ static int32_t oracle(u32 in,u32 matrix,unsigned row) {
  sum=(sum>=0?sum/65536:-1-((-1-sum)/65536))+signed_word(matrix+16*row+12);
  return sum>INT32_MAX?INT32_MAX:sum<INT32_MIN?INT32_MIN:(int32_t)sum;
 }
-static const char *kernels[]={"_before_range","_general_range","_after_range","_mac_range","_dmuls_range"};
-static const char *names[]={"float","safe","prepared","mac","dmuls"};
-static const char *outputs[]={"_float_output","_general_output","_fixed_output","_mac_output","_dmuls_output"};
+static const char *kernels[]={"_before_range","_general_range","_after_range","_mac_range","_dmuls_range","_plain_range"};
+static const char *names[]={"float","safe","prepared","mac","dmuls","plain"};
+static const char *outputs[]={"_float_output","_general_output","_fixed_output","_mac_output","_dmuls_output","_plain_output"};
 static void print_cost(struct cost c) {printf("{\"cycles\":%u,\"instructions\":%"PRIu64",\"dataReads\":%"PRIu64",\"dataWrites\":%"PRIu64",\"macInstructions\":%"PRIu64",\"dmulsInstructions\":%"PRIu64"}",c.cycles,c.instructions,c.reads,c.writes,c.mac_ops,c.dmuls_ops);}
 int main(int argc,char**argv) {
  if(argc<3){fprintf(stderr,"usage: harness benchmark.elf benchmark.sym [maxcases] [maxposes]\n");return 2;}
@@ -88,7 +88,7 @@ int main(int argc,char**argv) {
  for(unsigned i=0;i<65536;i++)cpu.opcodes[i]=decode(SHMT_SH2,(u16)i);for(unsigned i=0;i<256;i++)cpu.fetchlist[i]=fetch;
  u32 in=sym("_input"),matrix=sym("_fixed_matrix"),cases=sym("_cases"),poses=sym("_poses");
  uint64_t components=0;unsigned mismatches=0;double max_error=0;
- printf("{\"schema\":1,\"kind\":\"Yabause isolated SH2 interpreter flat-RAM model, not Saturn timing\",\"cases\":[");
+ printf("{\"schema\":2,\"kind\":\"Yabause isolated SH2 interpreter flat-RAM model, not Saturn timing\",\"cases\":[");
  for(unsigned ci=0;ci<case_count;ci++){
   u32 base=cases+16*ci,scene=rl(&cpu,base),detail=rl(&cpu,base+4),n=rl(&cpu,base+8),source=rl(&cpu,base+12);if(n>4096)fail("Case count",n);
   memcpy(ram+offset(in,n*12),ram+offset(source,n*12),n*12);struct cost initial=invoke("_prepare",n,0,0,0);if(initial.result!=1)fail("Input preparation failed",ci);
@@ -96,14 +96,15 @@ int main(int argc,char**argv) {
   for(unsigned pi=0;pi<pose_count;pi++){
    u32 pose=poses+24*pi,ax=rl(&cpu,pose),ay=rl(&cpu,pose+4);invoke("_setup",ax,ay,rl(&cpu,pose+8),rl(&cpu,pose+12));
    struct cost setup=invoke("_plan_prepare",0,0,0,0);if(setup.result!=1)fail("Plan failed",pi);u32 mask=invoke("_candidate_available",0,0,0,0).result;if(mask!=7)fail("Candidate not active",mask);
-   if(pi)putchar(',');printf("{\"ax\":%u,\"ay\":%u,\"availability\":%u,\"plan\":",ax,ay,mask);print_cost(setup);printf(",\"paths\":{");
-   for(unsigned k=0;k<5;k++){struct cost cost=invoke(kernels[k],0,n,0,0);if(k)putchar(',');printf("\"%s\":",names[k]);print_cost(cost);}
-   printf("},\"checksums\":[");u32 sums[5]={0};double pose_error=0;unsigned bad=0;
+   struct cost plain_setup=invoke("_plain_prepare",0,0,0,0);if(plain_setup.result!=1||invoke("_plain_available",0,0,0,0).result!=1)fail("Plain fixed baseline not bounded",pi);
+   if(pi)putchar(',');printf("{\"ax\":%u,\"ay\":%u,\"availability\":%u,\"plan\":",ax,ay,mask);print_cost(setup);printf(",\"plainAvailable\":true,\"plainPlan\":");print_cost(plain_setup);printf(",\"paths\":{");
+   for(unsigned k=0;k<6;k++){struct cost cost=invoke(kernels[k],0,n,0,0);if(k==5&&cost.result!=1)fail("Plain fixed execution failed",pi);if(k)putchar(',');printf("\"%s\":",names[k]);print_cost(cost);}
+   printf("},\"checksums\":[");u32 sums[6]={0};double pose_error=0;unsigned bad=0;
    for(unsigned i=0;i<n;i++)for(unsigned r=0;r<3;r++){
-    int32_t expected=oracle(in+12*i,matrix,r);for(unsigned k=0;k<5;k++){u32 raw=rl(&cpu,sym(outputs[k])+12*i+4*r);sums[k]=sums[k]*33+raw;if(k){int32_t v;memcpy(&v,&raw,4);if(v!=expected)bad++;}else{float f;memcpy(&f,&raw,4);double err=fabs((double)f-(double)expected/65536);if(!isfinite(err)||err>2.0/65536)fail("Float precision",i);if(err>pose_error)pose_error=err;}}
+    int32_t expected=oracle(in+12*i,matrix,r);for(unsigned k=0;k<6;k++){u32 raw=rl(&cpu,sym(outputs[k])+12*i+4*r);sums[k]=sums[k]*33+raw;if(k){int32_t v;memcpy(&v,&raw,4);if(v!=expected)bad++;}else{float f;memcpy(&f,&raw,4);double err=fabs((double)f-(double)expected/65536);if(!isfinite(err)||err>2.0/65536)fail("Float precision",i);if(err>pose_error)pose_error=err;}}
     components++;
    }
-   for(unsigned k=0;k<5;k++){if(k)putchar(',');printf("\"%08x\"",sums[k]);}printf("],\"fixedMismatches\":%u,\"maxFloatError\":%.17g}",bad,pose_error);mismatches+=bad;if(pose_error>max_error)max_error=pose_error;if(bad)fail("Fixed mismatch",pi);
+   for(unsigned k=0;k<6;k++){if(k)putchar(',');printf("\"%08x\"",sums[k]);}printf("],\"fixedMismatches\":%u,\"maxFloatError\":%.17g}",bad,pose_error);mismatches+=bad;if(pose_error>max_error)max_error=pose_error;if(bad)fail("Fixed mismatch",pi);
   }
   printf("]}");fflush(stdout);
  }
@@ -124,6 +125,13 @@ int main(int argc,char**argv) {
  u32 full_mask=invoke("_candidate_available",0,0,0,0).result;unsigned full_bad=0;uint64_t full_mac_ops=0;
  for(unsigned k=1;k<5;k++) {struct cost cost=invoke(kernels[k],0,9,0,0);full_mac_ops+=cost.mac_ops;for(unsigned i=0;i<9;i++)for(unsigned r=0;r<3;r++)if(signed_word(sym(outputs[k])+12*i+4*r)!=oracle(in+12*i,matrix,r))full_bad++;}
  if(full_mask||full_bad||full_mac_ops)fail("Full-range fallback",full_mask);
- printf(",\"guards\":{\"saturationMode\":{\"candidateMask\":%u,\"macInstructions\":%"PRIu64",\"fixedMismatches\":%u,\"sourceVertices\":%u,\"srSRetained\":true},\"fullRange\":{\"candidateMask\":%u,\"macInstructions\":%"PRIu64",\"fixedMismatches\":%u,\"sourceVertices\":9}}}\n",mask_s,saturated.mac_ops,bad_s,final_count,full_mask,full_mac_ops,full_bad);
+ /* The independent bounded baseline must reject this input without writing;
+  * its failure is not relabeled as a library fallback or a measured result. */
+ if(invoke("_plain_prepare",0,0,0,0).result||invoke("_plain_available",0,0,0,0).result)fail("Plain full-range proof accepted",0);
+ u32 plain_out=sym("_plain_output");for(unsigned i=0;i<27;i++)wl(&cpu,plain_out+4*i,UINT32_C(0x13579bdf));
+ struct cost plain_reject=invoke("_plain_range",0,9,0,0);
+ if(plain_reject.result||plain_reject.dmuls_ops||plain_reject.mac_ops)fail("Plain full-range execution accepted",0);
+ for(unsigned i=0;i<27;i++)if(rl(&cpu,plain_out+4*i)!=UINT32_C(0x13579bdf))fail("Plain rejection modified output",i);
+ printf(",\"guards\":{\"saturationMode\":{\"candidateMask\":%u,\"macInstructions\":%"PRIu64",\"fixedMismatches\":%u,\"sourceVertices\":%u,\"srSRetained\":true},\"fullRange\":{\"candidateMask\":%u,\"macInstructions\":%"PRIu64",\"fixedMismatches\":%u,\"sourceVertices\":9,\"plainAvailable\":false,\"plainRejectedWithoutWrites\":true}}}\n",mask_s,saturated.mac_ops,bad_s,final_count,full_mask,full_mac_ops,full_bad);
  return 0;
 }

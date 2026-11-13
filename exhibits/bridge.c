@@ -17,6 +17,14 @@
 #define CAPACITY SH2Z_EXHIBIT_CAPACITY
 static sh2z_vec3_t input[CAPACITY], general_output[CAPACITY], fixed_output[CAPACITY];
 static sh2z_vec3_t mac_output[CAPACITY],dmuls_output[CAPACITY];
+/* Independent, bounded plain-C baseline. The vector/matrix structs below are
+ * shared only as benchmark data containers: this path calls no SH2ZAM math,
+ * proof, or execution routine. Its immutable mesh scan and per-matrix proof
+ * are independent of the library's prepared plan. */
+static sh2z_vec3_t plain_output[CAPACITY];
+static sh2z_mat34_t plain_matrix;
+static uint32_t plain_max_abs[3];
+static bool plain_ready;
 static float float_input[CAPACITY][3], float_output[CAPACITY][3];
 static sh2z_mat34_t fixed_matrix;
 static sh2z_mesh_view_t mesh_view;
@@ -48,6 +56,26 @@ API("general_ptr") sh2z_vec3_t *general_ptr(void) { return general_output; }
 API("after_ptr") sh2z_vec3_t *after_ptr(void) { return fixed_output; }
 sh2z_vec3_t *mac_ptr(void) { return mac_output; }
 sh2z_vec3_t *dmuls_ptr(void) { return dmuls_output; }
+API("plain_ptr") sh2z_vec3_t *plain_ptr(void) { return plain_output; }
+static uint32_t plain_abs(int32_t value) {
+    return value<0 ? 0u-(uint32_t)value : (uint32_t)value;
+}
+API("plain_prepare") int plain_prepare(void) {
+    plain_ready=false;
+    /* Three products of magnitudes at most 2^31 plus translation fit uint64_t,
+     * including INT32_MIN. Requiring a raw absolute bound below 2^47 proves
+     * every signed intermediate and every final Q16.16 output representable. */
+    for(unsigned r=0;r<3;r++) {
+        uint64_t bound=(uint64_t)plain_abs(fixed_matrix.m[r][3])*UINT64_C(65536);
+        for(unsigned c=0;c<3;c++)
+            bound+=(uint64_t)plain_abs(fixed_matrix.m[r][c])*plain_max_abs[c];
+        if(bound>UINT64_C(140737488355327))return 0;
+    }
+    plain_matrix=fixed_matrix;
+    plain_ready=true;
+    return 1;
+}
+API("plain_available") unsigned plain_available(void) { return plain_ready?1u:0u; }
 API("plan_prepare") int plan_prepare(void) {
 #ifdef __wasm__
     if(reuse_mesh.reusable) {
@@ -98,7 +126,13 @@ API("prepare") int prepare(unsigned n) {
     if(!sh2z_mesh_view_init(&mesh_view,input,n)) return 0;
 #endif
     count=n;
+    plain_ready=false;
+    plain_max_abs[0]=plain_max_abs[1]=plain_max_abs[2]=0;
     for(unsigned i=0;i<n;i++) {
+        const uint32_t ax=plain_abs(input[i].x),ay=plain_abs(input[i].y),az=plain_abs(input[i].z);
+        if(ax>plain_max_abs[0])plain_max_abs[0]=ax;
+        if(ay>plain_max_abs[1])plain_max_abs[1]=ay;
+        if(az>plain_max_abs[2])plain_max_abs[2]=az;
         float_input[i][0]=(float)input[i].x/65536.0f;
         float_input[i][1]=(float)input[i].y/65536.0f;
         float_input[i][2]=(float)input[i].z/65536.0f;
@@ -118,7 +152,33 @@ API("setup") void setup(unsigned ax,unsigned ay,float sx,float cx,float sy,float
         for(unsigned col=0;col<4;col++)
             float_matrix[row][col]=(float)fixed_matrix.m[row][col]/65536.0f;
     (void)plan_prepare();
+    (void)plain_prepare();
 }
+/* GCC's SH-2 target defines signed right shift as arithmetic. Make that
+ * requirement explicit rather than silently changing negative rounding on a
+ * different compiler. This conventional C baseline needs no multiply helper
+ * supplied by SH2ZAM, and gets the same cached-matrix/unrolled-row treatment. */
+_Static_assert((INT64_C(-1)>>16)==INT64_C(-1),"Plain baseline requires arithmetic signed shift");
+int plain_range(unsigned start,unsigned n) {
+    if(!plain_ready||start>count||n>count-start)return 0;
+    const int32_t m00=plain_matrix.m[0][0],m01=plain_matrix.m[0][1];
+    const int32_t m02=plain_matrix.m[0][2],m03=plain_matrix.m[0][3];
+    const int32_t m10=plain_matrix.m[1][0],m11=plain_matrix.m[1][1];
+    const int32_t m12=plain_matrix.m[1][2],m13=plain_matrix.m[1][3];
+    const int32_t m20=plain_matrix.m[2][0],m21=plain_matrix.m[2][1];
+    const int32_t m22=plain_matrix.m[2][2],m23=plain_matrix.m[2][3];
+    for(unsigned i=start;i<start+n;i++) {
+        const int32_t x=input[i].x,y=input[i].y,z=input[i].z;
+        const int64_t a=(int64_t)m00*x+(int64_t)m01*y+(int64_t)m02*z;
+        plain_output[i].x=(int32_t)((a>>16)+m03);
+        const int64_t b=(int64_t)m10*x+(int64_t)m11*y+(int64_t)m12*z;
+        plain_output[i].y=(int32_t)((b>>16)+m13);
+        const int64_t c=(int64_t)m20*x+(int64_t)m21*y+(int64_t)m22*z;
+        plain_output[i].z=(int32_t)((c>>16)+m23);
+    }
+    return 1;
+}
+API("plain") int plain(void) { return plain_prepare()&&plain_range(0,count); }
 void before_range(unsigned start,unsigned n) {
     for(unsigned i=start;i<start+n;i++)
         for(unsigned j=0;j<3;j++)

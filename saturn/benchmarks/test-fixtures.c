@@ -15,9 +15,11 @@ int main(void) {
         for(unsigned s=0;s<SAMPLE_COUNT;s++) {
             setup(poses[s].ax,poses[s].ay,poses[s].sx,poses[s].cx,poses[s].sy,poses[s].cy);
             CHECK(plan_prepare());
+            CHECK(plain_prepare());CHECK(plain_available()==1u);
             const unsigned available=candidate_available();
             CHECK((available&1u)!=0);CHECK((available&~7u)==0);
             before();general();after();
+            CHECK(plain());
             mac_range(0,cases[c].count);dmuls_range(0,cases[c].count);
             sh2z_vec3_t expected[4096];float expected_float[4096*3];
             memcpy(expected,after_ptr(),cases[c].count*sizeof(sh2z_vec3_t));
@@ -25,18 +27,21 @@ int main(void) {
             CHECK(!memcmp(expected,general_ptr(),cases[c].count*sizeof(sh2z_vec3_t)));
             CHECK(!memcmp(expected,mac_ptr(),cases[c].count*sizeof(sh2z_vec3_t)));
             CHECK(!memcmp(expected,dmuls_ptr(),cases[c].count*sizeof(sh2z_vec3_t)));
+            CHECK(!memcmp(expected,plain_ptr(),cases[c].count*sizeof(sh2z_vec3_t)));
             CHECK(plan_prepare());after_kernel();
             CHECK(!memcmp(expected,after_ptr(),cases[c].count*sizeof(sh2z_vec3_t)));
             for(unsigned i=0;i<cases[c].count;i+=32) {
                 unsigned n=cases[c].count-i;if(n>32)n=32;
                 before_range(i,n);general_range(i,n);after_range(i,n);
                 mac_range(i,n);dmuls_range(i,n);
+                CHECK(plain_range(i,n));
             }
             CHECK(candidate_available()==available);
             CHECK(!memcmp(expected,after_ptr(),cases[c].count*sizeof(sh2z_vec3_t)));
             CHECK(!memcmp(expected,general_ptr(),cases[c].count*sizeof(sh2z_vec3_t)));
             CHECK(!memcmp(expected,mac_ptr(),cases[c].count*sizeof(sh2z_vec3_t)));
             CHECK(!memcmp(expected,dmuls_ptr(),cases[c].count*sizeof(sh2z_vec3_t)));
+            CHECK(!memcmp(expected,plain_ptr(),cases[c].count*sizeof(sh2z_vec3_t)));
             CHECK(!memcmp(expected_float,before_ptr(),cases[c].count*3*sizeof(float)));
             CHECK(!memcmp(input_ptr(),cases[c].vertices,cases[c].count*sizeof(sh2z_vec3_t)));
             for(unsigned i=0;i<cases[c].count;i++) {
@@ -49,5 +54,14 @@ int main(void) {
             }
         }
     }
-    printf("PASS: 15 shared meshes, 21 poses, five wrappers, chunk/full and four-way fixed bit parity; %u coordinates; max world error %.9f; host fallbacks do not execute SH-2 assembly\n",coordinates,maximum);
+    /* Invalid ranges and an unqualified full-range mesh cannot write output. */
+    sh2z_vec3_t unchanged=plain_ptr()[0];
+    CHECK(!plain_range(capacity()+1u,1));CHECK(!plain_range(0,capacity()+1u));
+    CHECK(!memcmp(&unchanged,plain_ptr(),sizeof(unchanged)));
+    input_ptr()[0]=(sh2z_vec3_t){INT32_MIN,INT32_MAX,INT32_MIN};
+    CHECK(prepare(1));CHECK(plain_available()==0u);
+    setup(0,0,0,1,0,1);
+    CHECK(!plain_prepare());CHECK(plain_available()==0u);CHECK(!plain_range(0,1));
+    CHECK(!memcmp(&unchanged,plain_ptr(),sizeof(unchanged)));
+    printf("PASS: 15 shared meshes, 21 poses, six wrappers, chunk/full and five-way fixed bit parity; %u coordinates; max world error %.9f; independent baseline rejects unbounded inputs without writing; host fallbacks do not execute SH-2 assembly\n",coordinates,maximum);
 }

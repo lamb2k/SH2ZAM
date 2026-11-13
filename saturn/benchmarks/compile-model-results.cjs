@@ -1,12 +1,17 @@
 /* Validate isolated SH-2 interpreter evidence. MIT; SH2ZAM Contributors.
  * These are guest instruction-model cycles, never physical-console timings. */
 const fs=require('node:fs'),path=require('node:path');
-const KERNEL_SET='float-safe-prepared-fused-sh2-model-v1';
-const PATHS=['reference','safe','prepared','mac','dmuls'],SAMPLES=21;
+const KERNEL_SET='float-plain-fixed-safe-prepared-fused-sh2-model-v2';
+const LEGACY_KERNEL_SET='float-safe-prepared-fused-sh2-model-v1';
+const LIBRARY_PATHS=['safe','prepared','mac','dmuls'];
+const PATHS=['reference',...LIBRARY_PATHS,'plain'],SAMPLES=21;
 const median=values=>[...values].sort((a,b)=>a-b)[Math.floor(values.length/2)];
 function validate(data,manifest){
   const fail=message=>{throw new Error(message);};
-  if(data?.schema!==1||data.kernelSet!==KERNEL_SET||data.fixtureSHA256!==manifest.fixtureSHA256)fail('Wrong SH-2 model schema, kernels or fixtures');
+  const hasPlain=data?.schema===2&&data.kernelSet===KERNEL_SET;
+  const legacy=data?.schema===1&&data.kernelSet===LEGACY_KERNEL_SET;
+  if((!hasPlain&&!legacy)||data.fixtureSHA256!==manifest.fixtureSHA256)fail('Wrong SH-2 model schema, kernels or fixtures');
+  const paths=hasPlain?PATHS:PATHS.filter(name=>name!=='plain');
   const run=data.run;
   if(run?.environment!=='isolated-sh2-interpreter'||run.memoryModel!=='flat RAM')fail('An isolated instruction model is required; never console timing');
   for(const key of ['sourceCommit','interpreterCommit'])if(!/^[a-f0-9]{40}$/.test(run[key]))fail('Missing source identity '+key);
@@ -16,6 +21,7 @@ function validate(data,manifest){
   const guards=data.guards;
   if(guards?.saturationMode?.candidateMask!==5||guards.saturationMode.macInstructions!==0||guards.saturationMode.fixedMismatches!==0||guards.saturationMode.srSRetained!==true)fail('SR.S fallback guard did not pass');
   if(guards?.fullRange?.candidateMask!==0||guards.fullRange.macInstructions!==0||guards.fullRange.fixedMismatches!==0)fail('Full-range fallback guard did not pass');
+  if(hasPlain&&(guards.fullRange.plainAvailable!==false||guards.fullRange.plainRejectedWithoutWrites!==true))fail('Independent bounded baseline must reject full-range inputs without writing');
   if(!Array.isArray(data.records)||data.records.length!==manifest.cases.length)fail('All shared workloads are required');
   const seen=new Set();
   const samples=(values,label)=>{
@@ -29,29 +35,38 @@ function validate(data,manifest){
     if(record.fixedMismatches!==0||!Number.isFinite(record.maximumWorldError)||record.maximumWorldError<0||record.maximumWorldError>2/65536)fail('Model precision did not pass');
     if(!Array.isArray(record.candidateMasks)||record.candidateMasks.length!==SAMPLES||record.candidateMasks.some(mask=>mask!==7))fail('This model dataset must execute every native candidate');
     const setup=samples(record.planPreparationCycles,'plan cycles'),setupInstructions=samples(record.planPreparationInstructions,'plan instructions');
+    const plainSetup=hasPlain?samples(record.plainPreparationCycles,'plain proof cycles'):null;
+    const plainSetupInstructions=hasPlain?samples(record.plainPreparationInstructions,'plain proof instructions'):null;
+    if(hasPlain&&(!Array.isArray(record.plainAvailable)||record.plainAvailable.length!==SAMPLES||record.plainAvailable.some(value=>value!==true)))fail('Independent fixed baseline must be bounded for every published pose');
     const cycles={},kernelCycles={},instructions={};
-    for(const name of PATHS){
+    for(const name of paths){
       const values=samples(record.kernelCycles?.[name],name+' cycles');
       const counts=samples(record.kernelInstructions?.[name],name+' instructions');
       const checks=record.outputChecksums?.[name];
       if(!Array.isArray(checks)||checks.length!==SAMPLES||checks.some(value=>!/^[a-f0-9]{8}$/.test(value)))fail('Invalid output checksum '+name);
       if(name!=='reference'&&checks.some((value,i)=>value!==record.outputChecksums.safe[i]))fail('Native output checksums disagree');
       const includesPlan=['prepared','mac','dmuls'].includes(name);
-      cycles[name]=median(values.map((value,i)=>value+(includesPlan?setup[i]:0)));
-      instructions[name]=median(counts.map((value,i)=>value+(includesPlan?setupInstructions[i]:0)));
+      cycles[name]=median(values.map((value,i)=>value+(includesPlan?setup[i]:name==='plain'?plainSetup[i]:0)));
+      instructions[name]=median(counts.map((value,i)=>value+(includesPlan?setupInstructions[i]:name==='plain'?plainSetupInstructions[i]:0)));
       kernelCycles[name]=median(values);
       if(record.medianCycles?.[name]!==cycles[name]||record.medianKernelCycles?.[name]!==kernelCycles[name]||record.medianInstructions?.[name]!==instructions[name])fail('Stored median omits setup or disagrees with raw samples '+name);
     }
     const referenceOver={};
-    for(const name of PATHS.slice(1)){
+    for(const name of paths.slice(1)){
       referenceOver[name]=cycles.reference/cycles[name];
       if(Math.abs(record.referenceOver?.[name]-referenceOver[name])>1e-10||!Number.isFinite(record.referenceOver?.[name]))fail('Stored ratio disagrees with raw samples');
     }
+    const plainOver={};
+    if(hasPlain)for(const name of LIBRARY_PATHS){
+      plainOver[name]=cycles.plain/cycles[name];
+      if(Math.abs(record.plainOver?.[name]-plainOver[name])>1e-10||!Number.isFinite(record.plainOver?.[name]))fail('Independent fixed baseline ratio disagrees with raw samples');
+    }
     return {scene:record.scene,detail:record.detail,vertices:record.vertices,sampleCount:SAMPLES,
       medianCycles:cycles,medianKernelCycles:kernelCycles,medianInstructions:instructions,referenceOver,
+      ...(hasPlain?{plainOver}:{}),
       fixedMismatches:0,maximumWorldError:record.maximumWorldError};
   });
-  return {schema:1,kernelSet:KERNEL_SET,fixtureSHA256:data.fixtureSHA256,run,guards,records};
+  return {schema:data.schema,kernelSet:data.kernelSet,hasPlainBaseline:hasPlain,fixtureSHA256:data.fixtureSHA256,run,guards,records};
 }
 if(require.main===module){
   const root=path.resolve(__dirname,'../..');
@@ -60,4 +75,4 @@ if(require.main===module){
   fs.writeFileSync(path.join(root,'exhibits/sh2-model-results.js'),'// Generated from validated isolated SH-2 instruction-model evidence.\nwindow.SH2ZAM_MODEL_RESULTS='+JSON.stringify(data)+';\n');
   console.log('Validated isolated SH-2 model workloads:',data.records.length);
 }
-module.exports={validate,KERNEL_SET,PATHS};
+module.exports={validate,KERNEL_SET,LEGACY_KERNEL_SET,PATHS};

@@ -60,6 +60,41 @@ cache coherency, startup settings or bus behavior.
 
 ## Results
 
+### Independent fixed-point adoption baseline
+
+Schema 2 adds a **plain C Q16.16** transform alongside software float and the
+four SH2ZAM paths. This is a separate implementation in `exhibits/bridge.c`:
+`plain_prepare()` and `plain_range()` call no SH2ZAM arithmetic, bounds-proof,
+or transform routine. The benchmark shares only vector/matrix data containers.
+It caches all 12 matrix coefficients, unrolls the three output rows, uses
+64-bit products and accumulation, floors each row once, and writes every
+coordinate. GCC's arithmetic signed right shift is explicitly required with
+a compile-time assertion. It uses the same SH-2 optimization flags as the
+library's C implementation.
+
+An independent immutable mesh scan caches the maximum coordinate magnitudes
+outside timing. Each measured batch includes a new independent per-matrix
+proof and matrix snapshot. The proof requires each row's sum of absolute
+products, including translation, to remain below `2^47`; this matches the
+bounded numerical domain of the library's prepared path. Full-range inputs
+are rejected without writing. They are **not** silently delegated to SH2ZAM
+and cannot become published plain-C timings. The SH2ZAM paths continue to
+exercise their general fallback independently.
+
+The baseline is intentionally competent: no deliberately repeated matrix
+setup, per-product rounding, avoidable general-range bookkeeping, or disabled
+compiler optimizations. Its wrapper specializes to the benchmark's known
+separate input/output arrays, while the library API retains its general
+argument and overlap checks. A ratio below 1 is a valid result and must remain
+visible; the experiment does not assume a library call beats bespoke C.
+
+Schema 2 records `plainPreparationCycles`, `plainPreparationInstructions`,
+`kernelCycles.plain`, exact plain output checksums, and inclusive
+`medianCycles.plain`. `plainOver` compares this independent baseline with each
+library path. The source and ELF hashes identify each capture. Historical
+schema 1 captures have no independent fixed-point baseline; their `safe` row
+is already SH2ZAM and must never be labeled "without SH2ZAM."
+
 The complete machine-readable evidence is [results.json](results.json). Values
 below are medians across the 21 poses, in **Yabause's modeled instruction-cycle
 units per complete batch**. Prepared, MAC and DMULS include one measured
