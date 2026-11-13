@@ -8,6 +8,8 @@
   let wasm, mesh, input, before, after, width = 1000, height = 490;
   let scene = 'saturn', detail = 3, seconds = 0, playing = !reduced.matches;
   let busy = false, last = 0, report = null, maxError = 0;
+  let liveAt = -Infinity, liveOrder = 0;
+  const liveBefore = [], liveAfter = [];
   const specs = {
     saturn: ['Ring world', 'A low-poly planet and concentric rings, transformed in lockstep.'],
     cubes: ['Cube field', 'A lattice of independent cubes sharing one batched transform.'],
@@ -63,8 +65,9 @@
     return {vertices,faces};
   }
   function invalidate() {
+    liveBefore.length=liveAfter.length=0; liveAt=-Infinity;
     report=null; $('before-time').textContent=$('after-time').textContent='—';
-    $('export').disabled=true; $('result').textContent='Ready to measure. Browser timings only; no Saturn performance claim.';
+    $('export').disabled=true; $('result').textContent='Live · browser timings';
   }
   function loadScene() {
     mesh=makeMesh(scene,detail);
@@ -122,6 +125,7 @@
   }
   function frame(now) {
     if(last&&playing&&!busy&&!document.hidden) { seconds=(seconds+Math.min((now-last)/1000,0.1))%12;draw(); }
+    if(wasm && !busy && !report && !document.hidden && now-liveAt>=500) { sampleLive(); liveAt=now; }
     last=now; requestAnimationFrame(frame);
   }
   function wipe(value) {
@@ -130,6 +134,19 @@
     $('before-canvas').style.clipPath=`inset(0 ${100-v}% 0 0)`;$('divider').style.left=`${v}%`;
   }
   const median=xs=>[...xs].sort((a,b)=>a-b)[Math.floor(xs.length/2)];
+  function sampleLive() {
+    // Amortize timer resolution over 64 transforms, excluding setup and drawing.
+    const measure=fn=>{const start=performance.now();for(let i=0;i<64;i++)fn();return (performance.now()-start)/64;};
+    let a,b;
+    if(liveOrder++%2){b=measure(wasm.after);a=measure(wasm.before);}
+    else{a=measure(wasm.before);b=measure(wasm.after);}
+    liveBefore.push(a);liveAfter.push(b);
+    if(liveBefore.length>5){liveBefore.shift();liveAfter.shift();}
+    const format=xs=>{const ms=median(xs);return ms>0?`${ms.toFixed(4)} ms`:'< timer limit';};
+    $('before-time').textContent=format(liveBefore);
+    $('after-time').textContent=format(liveAfter);
+    $('before-time').dataset.samples=$('after-time').dataset.samples=String(liveOrder);
+  }
   const yieldFrame=()=>new Promise(resolve=>requestAnimationFrame(resolve));
   async function benchmark() {
     if(busy||!wasm) return; busy=true; playing=false; draw();
@@ -146,7 +163,7 @@
       $('before-time').textContent=ta>0?`${ta.toFixed(4)} ms`:'< timer limit';
       $('after-time').textContent=tb>0?`${tb.toFixed(4)} ms`:'< timer limit';
       const ratio=ta>0?tb/ta:null;
-      $('result').textContent=ratio===null?'Timer resolution is insufficient; increase mesh detail.':`SH2ZAM takes ${ratio.toFixed(2)}× the float reference time in this browser. Not a Saturn result.`;
+      $('result').textContent=ratio===null?'Timer resolution is insufficient; increase mesh detail.':`Captured · SH2ZAM / reference: ${ratio.toFixed(2)}× · browser timings`;
       report={schema:1,backend:'SH2ZAM portable C / WebAssembly',reference:'float32 C / WebAssembly',scene,detail,vertices:input.length/3,triangles:mesh.faces.length,loopSeconds:seconds,maximumScreenErrorPx:maxError,iterationsPerSample:iterations,sampleCount:21,medianMs:{before:ta,after:tb},samplesMs:{before:a,after:b},wasmSHA256:window.SH2ZAM_WASM_SHA256,userAgent:navigator.userAgent,measuredAt:new Date().toISOString(),excludes:['geometry generation','matrix setup','rendering','output conversion'],saturnBenchmark:false};
     } catch(error) { $('result').textContent=`Measurement failed: ${error.message}`; }
     finally { busy=false;controls.forEach(c=>c.disabled=false);$('export').disabled=!report;draw(); }
@@ -155,7 +172,7 @@
   const drag=$('drag');
   drag.addEventListener('pointerdown',e=>{drag.setPointerCapture(e.pointerId);});
   drag.addEventListener('pointermove',e=>{if(drag.hasPointerCapture(e.pointerId)){const r=$('stage').getBoundingClientRect();wipe((e.clientX-r.left)/r.width*100);}});
-  $('play').addEventListener('click',()=>{playing=!playing;last=0;draw();});
+  $('play').addEventListener('click',()=>{playing=!playing;if(playing&&report)invalidate();last=0;draw();});
   $('time').addEventListener('input',e=>{playing=false;seconds=Number(e.target.value);invalidate();draw();});
   $('detail').addEventListener('input',e=>{detail=Number(e.target.value);$('detail-value').textContent=detail;if(wasm)loadScene();});
   document.querySelectorAll('[data-scene]').forEach(button=>button.addEventListener('click',()=>{

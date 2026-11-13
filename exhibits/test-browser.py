@@ -19,6 +19,10 @@ with sync_playwright() as p:
     page.on('pageerror',lambda e: errors.append(str(e)))
     page.goto(url)
     page.wait_for_function('window.SH2ZAM_EXHIBIT_STATE?.ready === true')
+    page.wait_for_function('Number(document.getElementById("before-time").dataset.samples) >= 2')
+    assert page.evaluate('SH2ZAM_EXHIBIT_STATE.playing')
+    assert page.locator('#before-time').inner_text() != '—'
+    assert page.locator('#after-time').inner_text() != '—'
     page.click('#play')
     assert not page.evaluate('SH2ZAM_EXHIBIT_STATE.playing')
     for scene in ['saturn','cubes','torus']:
@@ -52,6 +56,13 @@ with sync_playwright() as p:
     with page.expect_download() as result:
         page.click('#export')
     result.value.save_as(root/'test-result.json')
+    captured=page.locator('#before-time').inner_text()
+    page.wait_for_timeout(650)
+    assert page.locator('#before-time').inner_text()==captured
+    samples=int(page.locator('#before-time').get_attribute('data-samples'))
+    page.click('#play')
+    page.wait_for_function('(n)=>Number(document.getElementById("before-time").dataset.samples)>n',arg=samples)
+    assert page.locator('#export').is_disabled()
     page.screenshot(path=str(root/'screenshot-desktop.png'),full_page=True)
     page.set_viewport_size({'width':390,'height':844})
     page.screenshot(path=str(root/'screenshot-mobile.png'),full_page=True)
