@@ -1,76 +1,124 @@
-# SH2ZAM
+<div align="center">
+  <h1><strong>SH2ZAM!</strong></h1>
+  <p>
+    Fixed-point math for the Sega Saturn's SH-2 CPUs
+    <br />
+    <a href="saturn/README.md"><strong>Explore the docs »</strong></a>
+    · <a href="exhibits/README.md"><strong>Interactive math lab »</strong></a>
+    <br /><br />
+    Saturn-native · Fixed-point · Portable
+  </p>
+  <p>
+    <a href="https://github.com/lamb2k/SH2ZAM/actions/workflows/sh2zam-host.yml"><img src="https://github.com/lamb2k/SH2ZAM/actions/workflows/sh2zam-host.yml/badge.svg?branch=main" alt="Host correctness"></a>
+    <a href="https://github.com/lamb2k/SH2ZAM/actions/workflows/sh2-cross.yml"><img src="https://github.com/lamb2k/SH2ZAM/actions/workflows/sh2-cross.yml/badge.svg?branch=main" alt="SH-2 cross build"></a>
+    <a href="https://github.com/lamb2k/SH2ZAM/actions/workflows/exhibits.yml"><img src="https://github.com/lamb2k/SH2ZAM/actions/workflows/exhibits.yml/badge.svg?branch=main" alt="Interactive math lab"></a>
+  </p>
+</div>
+<hr>
 
-**A Saturn-native fixed-point math foundation inspired by SH4ZAM.**
+# Overview
 
-SH2ZAM 0.2 targets the Sega Saturn's SH-2 CPUs with a C11 Q16.16 core, an SH-2 multiplication backend, a portable reference path, and optional C++11 conveniences. It is a math library, not a renderer or a replacement for your Saturn SDK.
+<p align="center">
+  <img src="doc/sh2zam-gainz.webp" width="480" alt="Sega Saturn with turquoise flexing arms above GAINZ">
+</p>
 
-**Credit:** [SH4ZAM](https://github.com/gyrovorbis/sh4zam) by **Falco Girgis and SH4ZAM Contributors**. The original Git history, source, copyright notices, [MIT license](LICENSE), and [upstream README/acknowledgements](README.SH4ZAM.md) are preserved. This is an independent adaptation; no upstream or Sega endorsement is implied. See [NOTICE](NOTICE.md).
+`SH2ZAM` is a general-purpose fixed-point math and linear algebra library for the Sega Saturn. Inspired by [SH4ZAM](https://github.com/gyrovorbis/sh4zam), it brings the same emphasis on practical game mathematics to a different machine: Q16.16 arithmetic, turn-based angles, vectors, matrices and quaternions for the Saturn's SH-2 processors.
 
-> **Status: experimental Saturn foundation, not full SH4ZAM parity.** Host correctness and sanitizer tests are implemented, along with actual big-endian SH-2 cross-compilation and a Yaul diagnostic-disc build in CI. Compilation is not console execution. No physical-Saturn performance advantage or production qualification is claimed. [Recorded validation and build artifacts](saturn/VALIDATION.md).
+**Original project credit:** SH4ZAM by **Falco Girgis and SH4ZAM Contributors**. Their Git history, source, [MIT license](LICENSE), copyright notices and [acknowledgements](README.SH4ZAM.md#acknowledgements) are preserved. SH2ZAM is an independent adaptation, not an official SH4ZAM release or a claim of upstream/Sega endorsement.
 
-## What is implemented
+> [!IMPORTANT]
+> **Experimental Saturn foundation, not full SH4ZAM parity.** Host correctness tests, sanitizers, big-endian SH-2 cross-compilation and a Yaul diagnostic-disc build have passed. Compilation is not console execution: physical-Saturn performance and production qualification remain unverified. See the [validation record](saturn/VALIDATION.md).
 
-| Area | Saturn implementation |
-|---|---|
-| Scalar | Saturating add/subtract/multiply/divide, wide-intermediate muldiv, floor/ceil/round, reciprocal, square root, reciprocal square root, lerp and smoothstep |
-| Angles and trig | Unsigned 16-bit turns, sine/cosine table, sincos, tan, atan/atan2, asin/acos, shortest-angle interpolation |
-| Vectors | 2D/3D/4D arithmetic, dot, length, robust normalization, lerp; 2D/3D cross products |
-| Matrices | 2x2, 3x3, affine 3x4 and 4x4; alias-safe multiplication, transforms, transpose, translation/scale/axis rotations |
-| Camera | Right-handed look-at, validated rigid inverse, perspective and clip-space-to-screen projection |
-| Quaternions | Multiply, normalize, conjugate, axis-angle, shortest-path nlerp, matrix conversion and vector rotation |
-| Game helpers | AABB/sphere intersections, caller-owned transform stack, in-place batch transforms and overflow-safe work partitioning |
-| Integration | C11 API, small C++11 facade, CMake install/export, Yaul cross-toolchain file and diagnostic app |
+# Features
 
-The core does not allocate memory, use runtime floating point, or keep mutable global math state. Inverse trig and division prioritize correctness; they are not advertised as fastest-in-class kernels.
+- C11 API with optional C++11 conveniences and C/C++ interoperability.
+- Signed Q16.16 arithmetic with explicit saturation and rounding contracts.
+- An SH-2 `dmuls.l` multiplication path and a portable reference backend.
+- No heap allocation, runtime floating point or mutable global state in the math core.
+- Wide-intermediate products and normalization that handle small and large inputs.
+- Caller-owned transform stacks and batch transforms without hidden CPU scheduling.
+- Installable CMake targets, a Yaul cross-toolchain file and runnable examples.
+- Host regression/oracle tests, sanitizer checks and actual SH-2 build checks.
 
-### Fixes beyond the initial prototype
+# APIs
 
-Vector length no longer takes the square root of an already saturated dot product. Normalization handles one-LSB vectors as well as full-range inputs. Dot products and matrix/quaternion products retain cancellation and round once before final saturation, without requiring 128-bit arithmetic on SH-2. Regression checks run in Release builds too.
+- **Scalar:** add/subtract/multiply/divide, muldiv, rounding, reciprocal, square root, reciprocal square root, lerp and smoothstep.
+- **Trigonometry:** sine/cosine, sincos, tangent, atan/atan2, asin/acos and shortest-angle interpolation.
+- **Vectors:** 2D, 3D and 4D arithmetic, dot products, lengths, normalization and interpolation; 2D/3D cross products.
+- **Matrices:** 2×2, 3×3, affine 3×4 and 4×4, transformations, transpose and alias-safe multiplication.
+- **Camera:** right-handed look-at, rigid inverse, perspective and clip-to-screen helpers.
+- **Quaternions:** multiplication, normalization, conjugation, axis-angle, nlerp, matrix conversion and vector rotation.
+- **Game helpers:** AABB/sphere intersection, transform stacks and batch-work partitioning.
 
-## Build and run on a host
+Complex/FFT, a general libm replacement, accelerated memory routines and the SH-4 XMTRX register bank are **not** implemented. The C++ facade is smaller than the C API. See the [capability comparison](saturn/PARITY.md).
 
-Requires CMake 3.16+, a C11 compiler and a C++11 compiler for the optional interop test. The host oracle suite uses GCC/Clang's `__int128`; the library does not.
+# Usage
+
+## C11
+
+Include `sh2zam/sh2zam.h` and link the `sh2zam` library:
+
+```c
+#include <sh2zam/sh2zam.h>
+
+int main(void) {
+    sh2z_vec3_t position = {sh2z_from_int(3), sh2z_from_int(4), 0};
+    sh2z_vec3_t direction = sh2z_vec3_normalize(position);
+    sh2z_mat34_t world = sh2z_mat34_rotation_y(sh2z_angle_from_degrees(30));
+    world.m[0][3] = sh2z_from_int(10);
+    sh2z_vec3_t moved = sh2z_mat34_transform_point(&world, position);
+    (void)direction;
+    (void)moved;
+    return 0;
+}
+```
+
+## C++11
+
+Include `sh2zam/sh2zam.hpp` for the small fixed-point/vector facade. The full C API remains available:
+
+```cpp
+#include <sh2zam/sh2zam.hpp>
+
+int main() {
+    using sh2z::fixed;
+    sh2z::vec3 position(fixed::from_int(3), fixed::from_int(4), fixed{});
+    sh2z::vec3 direction = position.direction();
+    auto world = sh2z_mat34_rotation_y(sh2z_angle_from_degrees(30));
+    auto moved = position.transformed(world);
+    (void)direction;
+    (void)moved;
+    return 0;
+}
+```
+
+# Installation
+
+## CMake
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DSH2Z_STRICT=ON
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure
-./build/saturn/sh2zam_orbit
-./build/saturn/sh2zam_cube
-./build/saturn/sh2zam_batch
-./build/saturn/sh2zam_smoke_main
+cmake --install build --prefix /your/install/prefix
 ```
 
-The foundation test performs **1,073,727 checks**: full-range integer oracles, overflow/cancellation regressions, all 65,536 turn angles, the full representable asin domain, random vector/matrix cases, invalid inputs, and aliasing. These are checks within a suite, not a million independent test programs. Seven CTest targets also cover legacy regressions, C++ linkage and four examples.
+The root build builds **SH2ZAM**, not the inherited Dreamcast library. For library-only builds, set `-DSH2Z_BUILD_TESTS=OFF -DSH2Z_BUILD_EXAMPLES=OFF`. `cmake -S saturn ...` is also supported. Installed consumers can use `find_package(SH2ZAM 0.2 CONFIG REQUIRED)` and `SH2ZAM::sh2zam`.
 
-For sanitizers, use a separate host build with `-DSH2Z_SANITIZE=ON -DCMAKE_BUILD_TYPE=Debug`. For library-only integration set `-DSH2Z_BUILD_TESTS=OFF -DSH2Z_BUILD_EXAMPLES=OFF`. `cmake -S saturn ...` remains supported.
+## Git submodule
 
-## Use in a project
+```sh
+git submodule add https://github.com/lamb2k/SH2ZAM.git external/SH2ZAM
+```
 
 ```cmake
 add_subdirectory(external/SH2ZAM)
 target_link_libraries(your_game PRIVATE SH2ZAM::sh2zam)
 ```
 
-Or install with `cmake --install build --prefix <prefix>`, then use `find_package(SH2ZAM 0.2 CONFIG REQUIRED)`. Embedded builds default to library-only.
+## Sega Saturn / Yaul
 
-```c
-#include <sh2zam/sh2zam.h>
-
-void transform_actor(void) {
-    sh2z_vec3_t point = {sh2z_from_int(3), sh2z_from_int(4), 0};
-    sh2z_vec3_t direction = sh2z_vec3_normalize(point);
-    sh2z_mat34_t world = sh2z_mat34_rotation_y(sh2z_angle_from_degrees(30));
-    world.m[0][3] = sh2z_from_int(10);
-    sh2z_vec3_t moved = sh2z_mat34_transform_point(&world, point);
-    (void)direction;
-    (void)moved;
-}
-```
-
-## Saturn build and examples
-
-Use a **bare-metal SH-2** compiler such as Yaul's `sh2eb-elf-gcc`; Ubuntu's SH-4 Linux compiler is not a substitute.
+Use a bare-metal SH-2 toolchain such as Yaul's `sh2eb-elf-gcc`:
 
 ```sh
 cmake -S . -B build-sh2 \
@@ -79,18 +127,50 @@ cmake -S . -B build-sh2 \
 cmake --build build-sh2 --parallel
 ```
 
-[Examples and instructions](saturn/examples/README.md) include sprite-orbit coordinates, an eight-vertex model/view/projection pipeline, two disjoint batch jobs, and a Yaul app displaying a diagnostic bitmask. The batch example does **not** launch the slave CPU; the cube example does **not** submit VDP1 polygons or implement polygon clipping.
+The library does not replace Yaul, SGL, Jo Engine or a renderer. SDK/runtime compatibility outside the documented Yaul build must be checked separately. See [hardware integration](saturn/HARDWARE.md).
 
-See [hardware integration and qualification](saturn/HARDWARE.md), [capability comparison](saturn/PARITY.md), and [remaining work](saturn/PORTING_PLAN.md).
+# Examples
 
-## Numeric and integration contracts
+| Example | Description |
+|---|---|
+| [Interactive math lab](exhibits/README.md) | Three looping 3D scenes with a before/after reveal slider, actual C-to-WASM math, precision comparison and browser timing export. |
+| [Sprite orbit](saturn/examples/orbit.c) | Integer-only orbit coordinates for driving a sprite. |
+| [Cube transforms](saturn/examples/cube.c) | Eight vertices through model, view, perspective and screen-coordinate transforms. |
+| [Batch jobs](saturn/examples/batch.c) | Two disjoint vertex jobs compared with serial execution; no slave-CPU launch. |
+| [Yaul diagnostic](saturn/examples/yaul-smoke/) | Buildable Saturn diagnostic application and disc image. |
 
-Values are signed Q16.16: approximately -32768 to +32768, with 1/65536 resolution. Arithmetic saturates; multiply/dot round down, divide truncates toward zero. Division by zero returns the signed limit (`0/0 = 0`). A zero vector normalizes to zero; a zero quaternion normalizes to identity.
+Host example commands and Saturn-disc build instructions are in [the examples guide](saturn/examples/README.md). The cube example does not submit VDP1 polygons or clip polygons.
 
-Matrices are **row-major with column vectors**; `A*B` applies B first. Quaternions are **x,y,z,w**. Angles are turns, not radians. The camera looks down -Z; NDC depth is [-1,1]. These are not SH4ZAM's binary/layout/API contracts: port calls explicitly. Camera constructors reject invalid/unrepresentable results rather than silently returning unusable matrices.
+# Showcase
 
-Division currently uses integer compiler helpers, not the SH-2 DIVU. Applications retain responsibility for interrupt register preservation, shared-memory ownership, cache synchronization, VDP1 command lists and DMA. The library performs none of those operations behind the caller's back.
+The browser lab includes **Ring world**, **Cube field** and **Twisted orbit**. Drag the divider to compare the same image before and after changing the math implementation. The “after” path executes SH2ZAM's actual portable C backend compiled to WebAssembly; the “before” path is a conventional float32 C reference, **not SH4ZAM**.
 
-## Repository layout
+Both sides use the same scene, camera and renderer. Similar pictures are the desired outcome. Browser timings are measured, not scripted; a slower result is reported as slower. **They are not Saturn benchmarks.** See [how to run the exhibits and the measurement contract](exhibits/README.md).
 
-New Saturn work lives in `saturn/`. The root build now builds SH2ZAM. Inherited SH4ZAM sources remain as provenance/reference, not active Saturn dependencies. Original build files are retained as `CMakeLists.SH4ZAM.txt` and `Makefile.SH4ZAM`; Dreamcast users should use upstream SH4ZAM instead.
+There are no independently verified production adopters or Saturn speedup claims listed yet. Share measured integrations through this repository's issues.
+
+# Conventions
+
+| Convention | SH2ZAM default |
+|---|---|
+| Scalars | Signed Q16.16; one is 65536; saturating arithmetic |
+| Angles | Unsigned 16-bit turns; quarter-turn is 16384 |
+| Coordinates | Right-handed; camera looks along −Z; NDC depth [−1, 1] |
+| Matrices | Row-major, column vectors; `A * B` applies B first |
+| Quaternions | Stored in x, y, z, w order |
+| Rounding | Multiply/dot round down once; division truncates toward zero |
+| Edge cases | Division by zero saturates by sign; `0/0 = 0`; zero vector normalizes to zero; zero quaternion to identity |
+
+These differ from SH4ZAM's float types, layouts and API contracts. Port calls explicitly; changing an include path is not sufficient. The application owns interrupt preservation, shared-memory/cache synchronization, DMA and VDP1 command submission.
+
+# Community
+
+Use [SH2ZAM issues](https://github.com/lamb2k/SH2ZAM/issues) for Saturn-specific bugs, examples and hardware measurements. Read [CONTRIBUTING.md](CONTRIBUTING.md) before contributing. Dreamcast users should continue to use [upstream SH4ZAM](https://github.com/gyrovorbis/sh4zam); submit reusable upstream improvements there.
+
+# Acknowledgements
+
+- **Falco Girgis and SH4ZAM Contributors:** the original project, its mathematical scope and the inspiration for this library and README structure. The [full inherited acknowledgements](README.SH4ZAM.md#acknowledgements) remain intact.
+- **Roberto Daniel Alves Duarte / SaturnMath++** and **Israel Jacquez / Yaul:** research and tooling references for Saturn development; no claim that their routines were copied into SH2ZAM.
+- **SH2ZAM Contributors:** the independent Saturn implementation, tests, integration examples and interactive exhibit.
+
+Original MIT notices are preserved. See [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md). New Saturn code lives in `saturn/`; the inherited SH4ZAM sources remain as provenance/reference, not active Saturn dependencies.

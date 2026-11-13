@@ -1,0 +1,70 @@
+name: Interactive math lab
+on:
+  push:
+    paths: ['exhibits/**', 'saturn/**', 'doc/sh2zam-gainz.webp', '.github/workflows/exhibits.yml']
+  pull_request:
+    paths: ['exhibits/**', 'saturn/**', 'doc/sh2zam-gainz.webp', '.github/workflows/exhibits.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install WebAssembly compiler and browser test tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang lld
+          python3 -m venv /tmp/exhibit-test
+          /tmp/exhibit-test/bin/pip install playwright pillow
+          /tmp/exhibit-test/bin/playwright install --with-deps chromium
+      - name: Compile actual C library and compare kernels
+        run: |
+          bash exhibits/build.sh
+          node --check exhibits/app.js
+          node exhibits/test-math.cjs
+      - name: Check image and browser controls
+        run: |
+          sha256sum doc/sh2zam-gainz.webp
+          /tmp/exhibit-test/bin/python -c 'from PIL import Image; im=Image.open("doc/sh2zam-gainz.webp"); im.load(); print(im.size)'
+          /tmp/exhibit-test/bin/python exhibits/test-browser.py
+      - name: Save runnable lab and test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sh2zam-interactive-lab
+          path: exhibits/
+          if-no-files-found: error
+      - name: Stage static site
+        run: |
+          mkdir -p _site
+          cp exhibits/index.html exhibits/style.css exhibits/app.js exhibits/math-module.js exhibits/math.wasm exhibits/gainz.webp exhibits/LICENSE exhibits/NOTICE.md _site/
+          touch _site/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+  pages:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Configure Pages when permitted
+        id: pages
+        continue-on-error: true
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - name: Deploy interactive exhibit
+        if: steps.pages.outcome == 'success'
+        id: deploy
+        uses: actions/deploy-pages@v4
+      - name: Explain Pages setup requirement
+        if: steps.pages.outcome != 'success'
+        run: echo 'The tested lab artifact is ready. Enable Settings > Pages > GitHub Actions, then rerun this workflow to publish the site.' >> "$GITHUB_STEP_SUMMARY"
