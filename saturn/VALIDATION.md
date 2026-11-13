@@ -1,5 +1,64 @@
 # Validation record — 2026-11-13
 
+## Prepared bounds and fused native candidates
+
+Implementation and shared benchmark:
+[`8943e8297f41158796191527639ddc35510c6d4c`](https://github.com/lamb2k/SH2ZAM/commit/8943e8297f41158796191527639ddc35510c6d4c).
+This update compares the **prior safe batch** with the new prepared batch. The
+historical comparison below used the original full-range scalar implementation
+as its baseline; those ratios describe different changes.
+
+- [Host CI 43486731594](https://github.com/lamb2k/SH2ZAM/actions/runs/43486731594) passed GCC Release, Clang Release and Clang ASan/UBSan, with ten CTest targets per configuration and installed-consumer checks. Local strict GCC 14.2, Clang 14 and a GCC sanitizer build also passed all ten targets.
+- The prepared oracle executes **2,099,539 checks**. It covers the exact output bound and adjacent fallback, negative fractions, cancellation, saturation, immutable-source overlap rejection, source subranges, matrix snapshots and null/empty/failure contracts. Native instruction-model and wrapper tests execute **2,651,515 checks**; host execution uses portable fallbacks and does not execute SH-2 assembly.
+- [Interactive lab CI 43486731606](https://github.com/lamb2k/SH2ZAM/actions/runs/43486731606) passed WASM math, five-kernel capture-schema validation and Chromium UI tests. The WASM suite checked **737,280 coordinates** with no safe/prepared difference, plus identity, kernel-only/inclusive parity and full-range fallback selection. It has no host imports. The shared native-fixture suite checked **1,267,560 coordinates across 315 mesh/pose combinations**, including all five wrappers and full/chunk parity. Maximum float error in those suites remained **0.000015497207641601562 world units**.
+- Browser capture now retains **at least 5 ms per sample**, rotates timing order and includes matrix qualification once per prepared batch. Mesh scanning is excluded as one-time input preparation; inputs remain immutable. Separate component timings diagnose setup and kernel cost without constructing the inclusive result from separate medians. Browser tests also cover live updates, all scenes, one slider, mobile width, reduced motion, offline use and nonfinite-output rejection.
+- [SH-2 CI 43486731579](https://github.com/lamb2k/SH2ZAM/actions/runs/43486731579) compiled and linked the prepared library and five-kernel benchmark with the pinned Yaul GCC 13.2 toolchain. Both fused loops have **zero hot-loop stack references and zero helper calls**. The MAC kernel saves four registers (16 bytes); DMULS saves six (24 bytes); neither needs an additional local frame. Inspection removed the initial DMULS row-pointer spill. Full arithmetic and memory-load details are in [the fused-kernel audit](benchmarks/FUSED_SH2.md).
+- The [native evidence artifact](https://github.com/lamb2k/SH2ZAM/actions/runs/43486731579/artifacts/14067602856) contains disassembly, opcode/spill audits, compiler metadata and boot images. The float bridge still calls software-float helpers. Native candidates remain opt-in and unqualified by console execution. MAC checks SR.S and falls back when saturation mode is enabled; no SR write is introduced.
+
+### Prepared browser measurement
+
+The Chromium capture in run 43486731606 used Ring world detail 4, **1,584
+vertices**, and 21 adaptive samples at one paused pose. The three median batch
+times include JS-to-WASM calls; prepared includes matrix qualification:
+
+| Path | Median batch time | Meaning |
+| --- | ---: | --- |
+| Float32 C / WASM | 0.004167 ms | Same quantized inputs and coefficients |
+| Prior safe batch | 0.007227 ms | Existing automatic matrix-bound path |
+| Prepared batch | 0.005469 ms | New plan qualification + complete transform |
+
+This is **1.32× safe/prepared throughput**, or **24.3% less batch time** than the
+prior safe path. The prepared path is still **31.3% slower than float** in this
+capture. It has not beaten the browser float reference. These are observed
+results from one shared CI environment, not a timing guarantee, FPS result or
+Saturn speedup.
+
+The separately measured qualification median was 0.0000404 ms; the kernel-only
+median was 0.005469 ms. Independently measured medians need not add exactly to
+the inclusive median, particularly at this timer resolution. The full exported
+distributions and iteration counts are retained in the lab artifact.
+
+Safe/prepared checksums both were `cc6caa5f`; float was `4f4c1aa8`. Maximum
+float error in this capture was one Q16.16 LSB, **0.0000152587890625 world
+units**. Module SHA256:
+`a141942fe27b1751eed476aa70a7a80bb916a874dd211c873d4d904ac3d5cb55`.
+
+### SIMD experiments and remaining evidence
+
+Private [WASM experiments](benchmarks/wasm-experiments/) preserve three wide
+SIMD strategies and two packed signed-16 decomposition strategies. They use
+the same optimization flags for float and fixed paths and check exact outputs.
+None established a float win, so no experimental SIMD kernel is selected in
+the library or production lab. Their Node host distributions are noisy and
+are exploratory evidence only.
+
+**Still unmeasured:** execution/correctness and elapsed time on a physical
+Saturn, batch-size/alignment/cache effects and dual-CPU scaling. Native schema
+3 records software float, safe batch, prepared C, fused MAC and fused DMULS,
+adds measured plan qualification once per mesh, and suppresses candidate
+summary timings when an availability mask reports fallback. Hardware records
+remain empty until a genuine capture exists.
+
 ## Exact batch-transform update
 
 Implementation: [`31bbf95a6cb8d7562155e061759f346f428ee2fd`](https://github.com/lamb2k/SH2ZAM/commit/31bbf95a6cb8d7562155e061759f346f428ee2fd).

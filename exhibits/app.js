@@ -198,6 +198,7 @@
         const components={planPreparation:wasm.plan_prepare,kernelOnly:wasm.after_kernel};
         for(const path of (i%2?['planPreparation','kernelOnly']:['kernelOnly','planPreparation'])) {
           const component=measureAdaptive(components[path],targetSampleMs,componentIterations[path]);
+          if(component.elapsedMs<targetSampleMs)throw new Error('Timer resolution is insufficient for component timing.');
           componentSamples[path].push(component);
           componentIterations[path]=component.iterations;
         }

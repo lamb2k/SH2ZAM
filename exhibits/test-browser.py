@@ -81,6 +81,7 @@ with sync_playwright() as p:
     for component in ['planPreparation','kernelOnly']:
         assert len(data['components']['samples'][component])==21
         assert data['components']['medianMs'][component]>0
+        assert all(value['elapsedMs']>=5 for value in data['components']['samples'][component])
     assert 'one matrix bounds qualification per optimized batch' in data['includes']
     assert data['maximumWorldError']['general']==data['maximumWorldError']['optimized']
     print('Browser capture:',json.dumps({key:data[key] for key in ['schema','scene','detail','vertices','medianMs','components','ratios','maximumWorldError','fixedMismatches','outputChecksums','wasmSHA256']}),flush=True)

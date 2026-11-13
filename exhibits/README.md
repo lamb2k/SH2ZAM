@@ -1,7 +1,7 @@
 # SH2ZAM interactive math lab
 
-Three looping 3D exhibits with live float32, general SH2ZAM and optimized SH2ZAM
-transform times. Float and optimized images run together; the mesh-detail slider
+Three looping 3D exhibits with live float32, safe SH2ZAM and prepared SH2ZAM
+transform times. Float and prepared images run together; the mesh-detail slider
 changes the vertex count for every path. Pause/play, precision checks, source code
 panels and JSON measurement export are included. The supplied GAINZ artwork appears
 in the lab and repository overview.
@@ -31,12 +31,15 @@ Open `http://localhost:8000`. The build also emits a base64 JS module so the dow
 | Path | Implementation |
 |---|---|
 | Float32 | Conventional C affine transform; browser floating point in WASM, compiler software-float helpers on SH-2. |
-| Current SH2ZAM | `sh2z_mat34_transform_points_general`: the original full-range implementation, preserving quotient/remainder accumulation for each product. |
-| Optimized SH2ZAM | `sh2z_mat34_transform_points`: checks the matrix bound once, reuses coefficients, unrolls all three rows and rounds once after direct raw-product accumulation. Outside the bound, it uses the general path. |
+| Safe batch | `sh2z_mat34_transform_points`: the previous optimization, using one matrix bound check, direct raw-product sums, one floor and one clamp per output. |
+| Prepared batch | `sh2z_transform_plan_init` followed by `sh2z_transform_plan_execute_range`: cached mesh bounds prove that sums and outputs fit. The hot loop uses a defined branchless floor and omits clamps. Matrix qualification is included once per measured batch; failed proofs use the exact general fallback. |
 
 The actual C kernels are linked into one WebAssembly module with
 `SH2Z_FORCE_PORTABLE=1`. No SH-2 emulation or JavaScript replacement is used.
-The float reference is not SH4ZAM. Both fixed-point outputs must match bit for bit;
+The float reference is not SH4ZAM. The original full-range scalar function remains
+in the library and correctness tests; the displayed baseline is the prior safe
+batch, so improvements are not measured only against the oldest implementation.
+Both fixed-point outputs must match bit for bit;
 the live view checks that on every displayed pose.
 
 All paths receive the same quantized vertices **and matrix coefficients**. Matrix
@@ -48,32 +51,46 @@ do not compare those earlier error figures as if the reference were unchanged.
 The camera, triangle colors, lighting and Canvas renderer are shared. The screen
 offset is the maximum per-vertex CSS-pixel displacement, not an image-difference
 metric. Projection is shared JavaScript, not the integer-pixel Saturn projection API.
-See [the optimized kernel's proof and contract](../saturn/BATCH_TRANSFORMS.md).
+See [the prepared kernel's proof and contract](../saturn/BATCH_TRANSFORMS.md).
 
 ## Timing contract
 
 All three kernels use the same compiler and optimization settings. They allocate no
 memory during measurement. Matrix construction, trigonometry, input conversion,
-scene generation, rendering, checksums and precision checks are outside timing.
-The optimized matrix-bound check remains inside its measured call.
+the one-time mesh-bound scan, scene generation, rendering, checksums and precision
+checks are outside timing. Source meshes remain immutable after preparation.
+Changing a mesh requires rerunning preparation. The safe matrix gate and the
+prepared matrix qualification remain inside their respective measured calls.
 
-Live timings update every 500 ms while the exhibit runs. Each update averages 64
-calls per path, and the display uses a rolling median of five updates. Measurement
+Live timings update every 500 ms while the exhibit runs. Repetition counts adapt
+until each update spans at least 0.75 ms per path; the display uses a rolling
+median of five updates. Measurement
 order rotates across the three paths to distribute first/second/third position.
-The ratio `current / optimized` isolates the batch optimization; `float / optimized`
-compares it with float. Above 1 means optimized is faster, below 1 means slower.
+The ratio `safe / prepared` isolates this optimization; `float / prepared`
+compares it with float. Above 1 means prepared is faster, below 1 means slower.
 These are transform batch times, not frame rate.
 
 **Capture benchmark** pauses at the current pose, warms all paths for 32 calls,
-then captures 21 samples of 64 calls per kernel with rotating order. Results include
-JS-to-WASM call overhead. Schema-2 JSON export records every distribution, medians,
-ratios, independent output checksums, precision checks, geometry, pose, browser user
-agent, module hash and measurement boundaries. **Play** resumes live sampling.
+then captures 21 samples at that same pose with rotating order. Each retained
+sample spans at least 5 ms; the iteration count adapts separately for each path.
+Results include JS-to-WASM call overhead and **one matrix qualification per
+prepared batch**. Separate diagnostic samples report qualification alone and
+the already-qualified kernel. Their independently measured medians need not add
+up to the inclusive median; they are not used to construct the headline time.
+
+Schema-3 JSON export (`float-safe-prepared-v1`) records every distribution,
+iteration count and elapsed duration, component timings, medians, ratios,
+independent output checksums, precision checks, geometry, pose, browser user
+agent, module hash and measurement boundaries. Internal JSON keys `general` and
+`optimized` now mean safe batch and prepared batch, respectively. Schema 2 used
+different baselines and is not interchangeable. **Play** resumes live sampling.
 
 Desktop browsers use their host floating-point facilities; SH2ZAM may still lose to
 float there. Browser results establish browser behavior only. The separate
 [Saturn benchmark](../saturn/benchmarks/README.md) runs the same shared bridge with
-SH-2 software float and native fixed-point kernels. Its results section stays
+SH-2 software float and four fixed-point paths, including explicit fused
+`MAC.L`/`DMULS.L` candidates. The native capture samples 21 distinct poses, unlike
+the browser's 21 repetitions at one paused pose. Its results section stays
 unmeasured until an evidenced physical-console capture is recorded; emulator data
 is never displayed as physical-console speed.
 
@@ -84,12 +101,19 @@ preferences start paused. Hidden tabs stop advancing the simulation clock and
 collecting live samples. Load failures show an error rather than substituting math.
 
 `test-math.cjs` checks module imports, buffer isolation/bounds, exact identity,
-general/optimized equality and float precision. `test-browser.py` covers scene and
+safe/prepared equality, prepared fallback selection and float precision. `test-browser.py` covers scene and
 detail changes, continued live sampling, one-slider layout, pause/play, capture,
-three-way export, narrow layout and reduced motion in Chromium. The shared native
+adaptive capture, inclusive setup, three-way export, narrow layout and reduced motion in Chromium. The shared native
 fixture suite checks all 15 scene/detail combinations at 21 poses and verifies
-full-batch versus chunked output identity. The library's separate batch oracle
-suite covers full-range inputs and fallback boundaries.
+full-batch versus chunked output identity across all five wrappers. Host candidate
+wrappers use the portable fallback and do not execute SH-2 assembly. The library's
+separate prepared oracle suite covers full-range inputs, fallback boundaries,
+matrix snapshots, range and immutable-source overlap contracts.
+
+Manual WASM SIMD experiments are kept under
+[`saturn/benchmarks/wasm-experiments`](../saturn/benchmarks/wasm-experiments/).
+They compare identical compiler flags with float, retain exact-output checks,
+and are not selected by the production lab.
 
 ## GitHub Pages
 

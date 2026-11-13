@@ -35,6 +35,8 @@
 - Signed Q16.16 arithmetic with explicit saturation and rounding contracts.
 - An SH-2 `dmuls.l` multiplication path and a portable reference backend.
 - An exact batch-transform fast path with one rounding step per row and an automatic full-range fallback.
+- Prepared immutable meshes with cached coordinate bounds and a clamp-free batch kernel when the matrix proof succeeds.
+- Opt-in fused SH-2 `MAC.L` and `DMULS.L` candidates with audited loops and a five-kernel console benchmark.
 - No heap allocation, runtime floating point or mutable global state in the math core.
 - Wide-intermediate products and normalization that handle small and large inputs.
 - Caller-owned transform stacks and batch transforms without hidden CPU scheduling.
@@ -124,6 +126,26 @@ bound use the general implementation. Both paths return identical fixed-point
 results, including saturation and negative rounding. Exact in-place transforms are
 supported. See [the bound, API contract and implementation](saturn/BATCH_TRANSFORMS.md).
 
+For a mesh reused across frames, cache its coordinate bounds once and qualify
+each new matrix before executing the prepared batch:
+
+```c
+sh2z_mesh_view_t mesh;
+sh2z_transform_plan_t plan;
+if (sh2z_mesh_view_init(&mesh, vertices, 3) &&
+    sh2z_transform_plan_init(&plan, &mesh, &world)) {
+    sh2z_transform_plan_execute(transformed, &plan);
+}
+```
+
+Keep the source vertices immutable until the view and its plans are rebuilt.
+Prepared output must be separate from the entire source mesh. The plan snapshots
+the matrix; qualifying a new matrix does not rescan the vertices. Eligible plans
+prove that products, partial sums and outputs fit, so the hot loop can omit
+clamps. Other plans preserve the exact general fallback. Experimental native
+accumulator kernels are explicit alternatives, pending physical-console
+qualification; see [the fused-kernel audit](saturn/benchmarks/FUSED_SH2.md).
+
 ## Git submodule
 
 ```sh
@@ -152,7 +174,7 @@ The library does not replace Yaul, SGL, Jo Engine or a renderer. SDK/runtime com
 
 | Example | Description |
 |---|---|
-| [Interactive math lab](exhibits/README.md) | Three looping scenes, mesh-detail control, live float/general/optimized transform timings, precision checks and measurement export. |
+| [Interactive math lab](exhibits/README.md) | Three looping scenes, mesh-detail control, live float/safe/prepared transform timings, precision checks and measurement export. |
 | [Sprite orbit](saturn/examples/orbit.c) | Integer-only orbit coordinates for driving a sprite. |
 | [Cube transforms](saturn/examples/cube.c) | Eight vertices through model, view, perspective and screen-coordinate transforms. |
 | [Batch jobs](saturn/examples/batch.c) | Two disjoint vertex jobs compared with serial execution; no slave-CPU launch. |
@@ -163,15 +185,17 @@ Host example commands and Saturn-disc build instructions are in [the examples gu
 # Showcase
 
 The browser lab includes **Ring world**, **Cube field** and **Twisted orbit**. The
-float reference and optimized SH2ZAM images run together. A live table compares
-float32, the original general SH2ZAM transform and the optimized batch transform,
+float reference and prepared SH2ZAM images run together. A live table compares
+float32, the prior safe batch and the new prepared batch,
 with the math shown alongside. Mesh detail changes the number of vertices; every
 path receives the same vertices and quantized matrix.
 
 The two fixed-point paths must match bit for bit. Browser timings include the actual
 C kernels compiled to WebAssembly and report slower results honestly. **Browser
 timings are not Saturn benchmarks.** The separate [Saturn benchmark](saturn/benchmarks/README.md)
-compares SH-2 software float with both native fixed-point paths and leaves hardware
+compares SH-2 software float with the safe batch, portable prepared batch and two
+experimental fused accumulator kernels. Prepared times include matrix qualification
+once per batch. It leaves hardware
 results unmeasured until a console capture exists. See [the lab and measurement contract](exhibits/README.md).
 
 There are no independently verified production adopters or Saturn speedup claims listed yet. Share measured integrations through this repository's issues.
