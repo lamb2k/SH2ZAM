@@ -21,7 +21,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker run --rm -v "$PWD:/work" -w /work ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 /bin/bash -c '
+          docker run --rm -e BENCH_COMMIT="$GITHUB_SHA" -v "$PWD:/work" -w /work ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 /bin/bash -c '
             set -euo pipefail
             export PATH="$YAUL_INSTALL_ROOT/bin:$PATH"
             CC="${YAUL_ARCH_SH_PREFIX}-gcc"
@@ -54,7 +54,7 @@ jobs:
             cat sh2-undefined.txt
             make -C saturn/examples/yaul-smoke
             make -C saturn/benchmarks/yaul
-            "$CC" -m2 -mb -O2 -std=c11 -fno-fast-math -ffp-contract=off -fno-lto -DSH2Z_REQUIRE_SH2=1 -DSH2Z_EXHIBIT_CAPACITY=4096 -Isaturn/include -c exhibits/bridge.c -o build/sh2/benchmark-bridge.o
+            "$CC" -m2 -mb -O2 -ffreestanding -std=c11 -fno-fast-math -ffp-contract=off -fno-lto -DSH2Z_REQUIRE_SH2=1 -DSH2Z_EXHIBIT_CAPACITY=4096 -Isaturn/include -c exhibits/bridge.c -o build/sh2/benchmark-bridge.o
             "$NM" -u build/sh2/benchmark-bridge.o > sh2-benchmark-float-helpers.txt
             grep -q __mulsf3 sh2-benchmark-float-helpers.txt
             grep -q __addsf3 sh2-benchmark-float-helpers.txt

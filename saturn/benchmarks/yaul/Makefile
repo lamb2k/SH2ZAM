@@ -7,7 +7,10 @@ SH_PROGRAM := sh2zam-benchmark
 SH_SRCS := main.c ../../../exhibits/bridge.c \
   ../../src/sh2zam.c ../../src/sh2zam_trig.c \
   ../../src/sh2zam_angles.c ../../src/sh2zam_transform.c ../../src/sh2zam_geometry.c
-BENCH_COMMIT ?= $(shell git rev-parse HEAD)
+BENCH_COMMIT ?= $(shell git rev-parse HEAD 2>/dev/null)
+ifeq ($(strip $(BENCH_COMMIT)),)
+$(error Set BENCH_COMMIT to the full source commit when git is unavailable)
+endif
 SH_CFLAGS += -O2 -std=c11 -I../../include -I.. -DSH2Z_REQUIRE_SH2=1 \
   -DSH2Z_EXHIBIT_CAPACITY=4096 -fno-fast-math -ffp-contract=off -fno-lto \
   -DBENCH_COMMIT=\"$(BENCH_COMMIT)\"
