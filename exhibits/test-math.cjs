@@ -40,5 +40,27 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
   assert.equal(w.prepare(n),1);w.setup(8192,9216,0,0,0,0);
   assert.equal(w.candidate_available(),0,'full-range mesh fails the no-clamp proof');
   w.general();w.after();assert.deepEqual(b,g,'prepared fallback preserves full-range safe output');
-  console.log(JSON.stringify({checks,maximumWorldError:{general:generalMaximum,optimized:maximum},fixedMismatches:0,identity:'pass',imports:0}));
+  const {makeMesh}=require('./meshes.js');
+  let fixtureChecks=0,reusedPoses=0;
+  for(const scene of ['saturn','cubes','torus'])for(let detail=1;detail<=5;detail++){
+    const points=makeMesh(scene,detail).vertices.map(value=>Math.round(value*65536));
+    const count=points.length/3;
+    const source=new Int32Array(w.memory.buffer,w.input_ptr(),points.length);source.set(points);
+    assert.equal(w.prepare(count),1);
+    const ref=new Float32Array(w.memory.buffer,w.before_ptr(),points.length);
+    const safe=new Int32Array(w.memory.buffer,w.general_ptr(),points.length);
+    const optimized=new Int32Array(w.memory.buffer,w.after_ptr(),points.length);
+    for(let pose=0;pose<21;pose++){
+      const ax=(5200+Math.round(3000*Math.sin(pose/21*Math.PI*2)))&65535;
+      const ay=Math.floor(pose/21*65536)&65535;
+      w.setup(ax,ay,0,0,0,0);w.before();w.general();w.after();
+      assert.equal(w.optimized_path(),scene==='cubes'?2:1,'generic coordinate counts select the intended strategy');
+      if(w.optimized_path()===2)reusedPoses++;
+      for(let i=0;i<points.length;i++){
+        assert.equal(optimized[i],safe[i],'reused/prepared output preserves every component and original order');
+        assert.ok(Math.abs(ref[i]-optimized[i]/65536)<2/65536);fixtureChecks++;
+      }
+    }
+  }
+  console.log(JSON.stringify({checks,fixtureChecks,reusedPoses,maximumWorldError:{general:generalMaximum,optimized:maximum},fixedMismatches:0,identity:'pass',imports:0}));
 })().catch(e=>{console.error(e);process.exit(1);});

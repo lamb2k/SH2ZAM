@@ -13,6 +13,8 @@ int prepare(unsigned n);
 int plan_prepare(void);
 /* bit 0: prepared bound proved; bit 1: MAC.L active; bit 2: DMULS.L active. */
 unsigned candidate_available(void);
+/* 0=general fallback, 1=prepared scalar, 2=reused coordinate products. */
+unsigned optimized_path(void);
 void setup(unsigned ax,unsigned ay,float sx,float cx,float sy,float cy);
 void before_range(unsigned start,unsigned n);
 void general_range(unsigned start,unsigned n);

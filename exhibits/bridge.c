@@ -6,6 +6,7 @@
 #include "sh2zam/sh2zam.h"
 #include "sh2zam/batch_experimental.h"
 #ifdef __wasm__
+#include "sh2zam/reuse_experimental.h"
 #define API(name) __attribute__((export_name(name)))
 #else
 #define API(name)
@@ -20,6 +21,18 @@ static float float_input[CAPACITY][3], float_output[CAPACITY][3];
 static sh2z_mat34_t fixed_matrix;
 static sh2z_mesh_view_t mesh_view;
 static sh2z_transform_plan_t transform_plan;
+#ifdef __wasm__
+/* An optional immutable-mesh strategy. Its generic reuse gate selects from
+ * actual coordinate counts, never the scene name. Native candidate captures
+ * keep their original prepared executor so their kernel identity is stable. */
+#define REUSE_KEYS 256u
+static sh2z_reuse_mesh_t reuse_mesh;
+static sh2z_reuse_plan_t reuse_plan;
+static sh2z_reuse_index_t reuse_indices[CAPACITY];
+static int32_t reuse_x_keys[REUSE_KEYS];
+static sh2z_reuse_yz_t reuse_yz_keys[REUSE_KEYS];
+static sh2z_reuse_term_t reuse_x_terms[REUSE_KEYS],reuse_yz_terms[REUSE_KEYS];
+#endif
 static float float_matrix[3][4];
 static unsigned count;
 /* Freestanding compiler-generated structure copies. No host/libc imports. */
@@ -35,7 +48,23 @@ API("after_ptr") sh2z_vec3_t *after_ptr(void) { return fixed_output; }
 sh2z_vec3_t *mac_ptr(void) { return mac_output; }
 sh2z_vec3_t *dmuls_ptr(void) { return dmuls_output; }
 API("plan_prepare") int plan_prepare(void) {
+#ifdef __wasm__
+    if(reuse_mesh.reusable) {
+        const bool ok=sh2z_reuse_plan_init(&reuse_plan,&reuse_mesh,&fixed_matrix,
+            reuse_x_terms,REUSE_KEYS,reuse_yz_terms,REUSE_KEYS);
+        if(ok)transform_plan=reuse_plan.base;
+        return ok;
+    }
+    reuse_plan.enabled=false;
+#endif
     return sh2z_transform_plan_init(&transform_plan,&mesh_view,&fixed_matrix);
+}
+/* Browser labels and exports identify the actual strategy. */
+API("optimized_path") unsigned optimized_path(void) {
+#ifdef __wasm__
+    if(reuse_plan.enabled)return 2;
+#endif
+    return transform_plan.fast_path?1u:0u;
 }
 API("candidate_available") unsigned candidate_available(void) {
     return (transform_plan.fast_path?1u:0u)
@@ -44,7 +73,14 @@ API("candidate_available") unsigned candidate_available(void) {
 }
 API("prepare") int prepare(unsigned n) {
     if(n>CAPACITY) return 0;
+#ifdef __wasm__
+    if(!sh2z_reuse_mesh_init(&reuse_mesh,input,n,reuse_indices,CAPACITY,
+        reuse_x_keys,REUSE_KEYS,reuse_yz_keys,REUSE_KEYS))return 0;
+    mesh_view=reuse_mesh.view;
+    reuse_plan.enabled=false;
+#else
     if(!sh2z_mesh_view_init(&mesh_view,input,n)) return 0;
+#endif
     count=n;
     for(unsigned i=0;i<n;i++) {
         float_input[i][0]=(float)input[i].x/65536.0f;
@@ -78,6 +114,12 @@ void general_range(unsigned start,unsigned n) {
     (void)sh2z_mat34_transform_points(general_output+start,&fixed_matrix,input+start,n);
 }
 void after_range(unsigned start,unsigned n) {
+#ifdef __wasm__
+    if(reuse_plan.enabled) {
+        (void)sh2z_reuse_plan_execute_range(fixed_output+start,&reuse_plan,start,n);
+        return;
+    }
+#endif
     (void)sh2z_transform_plan_execute_range(fixed_output+start,&transform_plan,start,n);
 }
 void mac_range(unsigned start,unsigned n) {

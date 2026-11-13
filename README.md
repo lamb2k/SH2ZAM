@@ -27,7 +27,7 @@
 **Original project credit:** SH4ZAM by **Falco Girgis and SH4ZAM Contributors**. Their Git history, source, [MIT license](LICENSE), copyright notices and [acknowledgements](README.SH4ZAM.md#acknowledgements) are preserved. SH2ZAM is an independent adaptation, not an official SH4ZAM release or a claim of upstream/Sega endorsement.
 
 > [!IMPORTANT]
-> **Experimental Saturn foundation, not full SH4ZAM parity.** Host correctness tests, sanitizers, big-endian SH-2 cross-compilation and a Yaul diagnostic-disc build have passed. Compilation is not console execution: physical-Saturn performance and production qualification remain unverified. See the [validation record](saturn/VALIDATION.md).
+> **Experimental Saturn foundation, not full SH4ZAM parity.** Host correctness tests, sanitizers, big-endian SH-2 builds and isolated execution of the compiled SH-2 kernels have passed. Physical-Saturn performance and production qualification remain unverified. See the [validation record](saturn/VALIDATION.md).
 
 # Features
 
@@ -36,6 +36,7 @@
 - An SH-2 `dmuls.l` multiplication path and a portable reference backend.
 - An exact batch-transform fast path with one rounding step per row and an automatic full-range fallback.
 - Prepared immutable meshes with cached coordinate bounds and a clamp-free batch kernel when the matrix proof succeeds.
+- Opt-in exact coordinate reuse for repetitive meshes, with caller-owned tables rebuilt for each matrix.
 - Opt-in fused SH-2 `MAC.L` and `DMULS.L` candidates with audited loops and a five-kernel console benchmark.
 - No heap allocation, runtime floating point or mutable global state in the math core.
 - Wide-intermediate products and normalization that handle small and large inputs.
@@ -146,6 +147,14 @@ clamps. Other plans preserve the exact general fallback. Experimental native
 accumulator kernels are explicit alternatives, pending physical-console
 qualification; see [the fused-kernel audit](saturn/benchmarks/FUSED_SH2.md).
 
+Meshes with repeated coordinates can also opt into
+[`sh2zam/reuse_experimental.h`](saturn/include/sh2zam/reuse_experimental.h).
+It computes distinct coordinate contributions once per matrix and combines them
+for every original output vertex. The prepared proof preserves exact rounding
+and full-range fallback. This trades caller-owned table/index memory for less
+repeated multiplication; the [coordinate-reuse guide](saturn/COORDINATE_REUSE.md)
+documents selection, setup cost and lifetimes.
+
 ## Git submodule
 
 ```sh
@@ -174,7 +183,7 @@ The library does not replace Yaul, SGL, Jo Engine or a renderer. SDK/runtime com
 
 | Example | Description |
 |---|---|
-| [Interactive math lab](exhibits/README.md) | Three looping scenes, mesh-detail control, live float/safe/prepared transform timings, precision checks and measurement export. |
+| [Interactive math lab](exhibits/README.md) | Three looping scenes, live float/safe/optimized timings, precision checks, measurement export and a separate recorded SH-2 instruction-model table. |
 | [Sprite orbit](saturn/examples/orbit.c) | Integer-only orbit coordinates for driving a sprite. |
 | [Cube transforms](saturn/examples/cube.c) | Eight vertices through model, view, perspective and screen-coordinate transforms. |
 | [Batch jobs](saturn/examples/batch.c) | Two disjoint vertex jobs compared with serial execution; no slave-CPU launch. |
@@ -185,8 +194,8 @@ Host example commands and Saturn-disc build instructions are in [the examples gu
 # Showcase
 
 The browser lab includes **Ring world**, **Cube field** and **Twisted orbit**. The
-float reference and prepared SH2ZAM images run together. A live table compares
-float32, the prior safe batch and the new prepared batch,
+float reference and optimized SH2ZAM images run together. A live table compares
+float32, the prior safe batch and a prepared or coordinate-reuse batch,
 with the math shown alongside. Mesh detail changes the number of vertices; every
 path receives the same vertices and quantized matrix.
 
@@ -195,8 +204,12 @@ C kernels compiled to WebAssembly and report slower results honestly. **Browser
 timings are not Saturn benchmarks.** The separate [Saturn benchmark](saturn/benchmarks/README.md)
 compares SH-2 software float with the safe batch, portable prepared batch and two
 experimental fused accumulator kernels. Prepared times include matrix qualification
-once per batch. It leaves hardware
-results unmeasured until a console capture exists. See [the lab and measurement contract](exhibits/README.md).
+once per batch. An [isolated SH-2 instruction-model capture](saturn/benchmarks/sh2-model/README.md)
+executes the compiled target ELF across all 315 mesh/pose combinations. The
+recorded fused MAC path uses **70.67–73.80× fewer modeled cycles than software
+float**, with zero fixed-point mismatches. The model excludes cache, bus and
+pipeline effects; hardware results stay unmeasured until a console capture
+exists. See [the lab and measurement contract](exhibits/README.md).
 
 There are no independently verified production adopters or Saturn speedup claims listed yet. Share measured integrations through this repository's issues.
 
@@ -222,6 +235,10 @@ Use [SH2ZAM issues](https://github.com/lamb2k/SH2ZAM/issues) for Saturn-specific
 
 - **Falco Girgis and SH4ZAM Contributors:** the original project, its mathematical scope and the inspiration for this library and README structure. The [full inherited acknowledgements](README.SH4ZAM.md#acknowledgements) remain intact.
 - **Roberto Daniel Alves Duarte / SaturnMath++** and **Israel Jacquez / Yaul:** research and tooling references for Saturn development; no claim that their routines were copied into SH2ZAM.
+- **Yabause Contributors:** the unmodified, pinned SH-2 interpreter used by the separately licensed optional [instruction-model harness](saturn/benchmarks/sh2-model/README.md).
 - **SH2ZAM Contributors:** the independent Saturn implementation, tests, integration examples and interactive exhibit.
 
 Original MIT notices are preserved. See [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md). New Saturn code lives in `saturn/`; the inherited SH4ZAM sources remain as provenance/reference, not active Saturn dependencies.
+The optional `saturn/benchmarks/sh2-model/` harness is GPL-2.0-or-later and
+downloads Yabause separately. It is not linked into the MIT math library or
+browser module.

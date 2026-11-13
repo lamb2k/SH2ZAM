@@ -2,10 +2,11 @@
 
 The harness compares **software float → the prior safe batch → a prepared batch**,
 then measures two experimental SH-2 assembly candidates against the same inputs.
-**No physical-console measurements are recorded.** Browser/WASM timing remains
-separate. A cross-compiled image and instruction audit do not establish that the
-image has booted, that an assembly candidate has executed correctly, or that it is
-faster on a Saturn.
+**The compiled SH-2 kernels have executed and passed exact output checks in an
+isolated instruction model. No physical-console measurements are recorded.**
+The [model evidence](sh2-model/README.md), browser/WASM timing and console capture
+schema are separate. A successful model run checks target instruction behavior;
+boot, timer integration and elapsed time on a Saturn still require console evidence.
 
 ## Workload and kernels
 
@@ -54,6 +55,58 @@ and `__addsf3` dependencies and exports native disassembly, relocations, symbol
 sizes and fused-loop audits. Paired results within one environment are comparable;
 browser timings cannot establish a Saturn speedup.
 
+## Executed SH-2 instruction model
+
+[The reproducible model harness](sh2-model/README.md) executes the actual
+big-endian benchmark ELF, including libgcc software-float helpers, through
+unmodified Yabause SH-2 opcode handlers pinned at
+[`7e38821dbac265490f115e163c523a939acda759`](https://github.com/Yabause/yabause/tree/7e38821dbac265490f115e163c523a939acda759).
+The committed [results.json](sh2-model/results.json) uses the ELF from SH2ZAM
+commit [`26a935eea2c6fb9a7dfba6a81d273ab81562a2eb`](https://github.com/lamb2k/SH2ZAM/commit/26a935eea2c6fb9a7dfba6a81d273ab81562a2eb),
+[CI artifact 14068406384](https://github.com/lamb2k/SH2ZAM/actions/runs/43487712557/artifacts/14068406384),
+with ELF SHA256
+`38a7c875c749c0348f886405f30224d7e4ea8846c9e0f3341f173e7fe12a89a6`.
+
+All **315 mesh/pose combinations** executed, checking **1,267,560 coordinates per
+fixed path** against an independent `__int128` oracle with **zero mismatches**.
+The maximum software-float difference was **0.000015497207641601562 world units**
+(**1.015625 Q16.16 units**, within the two-unit comparison bound). Every ordinary
+pose selected availability mask 7, and opcode counts confirmed execution of the
+native candidates. Additional SR.S=1 and full-range checks verified exact fallback
+outputs; every target call checked the stack, callee-saved registers and SR.S.
+
+For Ring world detail 4, **1,584 vertices**, the inclusive medians across 21 poses
+were:
+
+| Path | Modeled instruction cycles per whole batch |
+| --- | ---: |
+| Software float | 6,751,532 |
+| Prior safe batch | 316,178 |
+| Prepared C, including plan | 152,597 |
+| Fused MAC.L, including plan | 93,956 |
+| Fused DMULS.L, including plan | 136,725 |
+
+Across the 15 workloads, the model reports **43.65–45.41× float/prepared**,
+**70.67–73.80× float/MAC**, and **48.71–50.68× float/DMULS**. Prepared and native
+samples include one plan preparation per full batch, added per pose before taking
+the median. Range wrappers and all output stores are included; one-time input
+conversion and mesh scanning, matrix construction, and precision checks are
+excluded. Raw guest instruction counts are retained separately from modeled cycles.
+
+This is a flat-RAM CPU interpreter model with **no cache, bus wait states, pipeline
+or multiplier contention, DMA, interrupts or peripheral integration**. It does not
+run BIOS startup or boot the display/timer application. Whole-batch calls also
+differ from the console harness's 32-vertex timing chunks. The model ratios are
+not physical Saturn speedups or full-system emulator timings and are not converted
+to console milliseconds or FPS. Keep this data in its separate model schema;
+physical-console captures remain empty until measured.
+
+The [cross workflow](../../.github/workflows/sh2-cross.yml) now runs this optional
+model harness against the freshly built ELF and uploads `raw.json` and validated
+`results.json` alongside native build evidence. Each capture records its own
+source, fixture, ELF, interpreter and harness provenance. Earlier compile-only CI
+results in [the validation record](../VALIDATION.md) retain their historical scope.
+
 ## Build and capture
 
 Use the Yaul SDK/toolchain pinned in `.github/workflows/sh2-cross.yml`:
@@ -65,8 +118,9 @@ make -C saturn/benchmarks/yaul
 
 CI builds the bootable `sh2zam-benchmark` image and uploads it in
 `sh2-compile-evidence`, with the compiler version, image digest, manifest, linked
-outputs and instruction/helper audits. The artifact remains unqualified until it
-has actually booted and produced valid output.
+outputs, instruction/helper audits and isolated-model results. The boot program
+and console timer integration remain unqualified until the image has actually
+booted and produced valid output on the recorded console or full-system emulator.
 
 Boot the ISO/CUE using your usual Saturn loader. The application captures all 15
 workloads, then shows **60 pages: four per workload**. The first two pages, marked

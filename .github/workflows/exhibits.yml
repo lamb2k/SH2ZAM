@@ -25,6 +25,7 @@ jobs:
           node --check exhibits/app.js
           node exhibits/test-math.cjs
           node saturn/benchmarks/test-results.cjs
+          node saturn/benchmarks/test-model-results.cjs
           cc -O2 -std=c11 -Wall -Wextra -Werror -ffp-contract=off -DSH2Z_FORCE_PORTABLE=1 -Isaturn/include saturn/benchmarks/test-fixtures.c exhibits/bridge.c saturn/src/*.c -lm -o /tmp/test-fixtures
           /tmp/test-fixtures
       - name: Check image and browser controls
@@ -42,7 +43,7 @@ jobs:
       - name: Stage static site
         run: |
           mkdir -p _site
-          cp exhibits/index.html exhibits/style.css exhibits/app.js exhibits/meshes.js exhibits/saturn-results.js exhibits/math-module.js exhibits/math.wasm exhibits/gainz.webp exhibits/LICENSE exhibits/NOTICE.md _site/
+          cp exhibits/index.html exhibits/style.css exhibits/app.js exhibits/meshes.js exhibits/saturn-results.js exhibits/sh2-model-results.js exhibits/math-module.js exhibits/math.wasm exhibits/gainz.webp exhibits/LICENSE exhibits/NOTICE.md _site/
           touch _site/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:

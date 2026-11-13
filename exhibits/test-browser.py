@@ -33,6 +33,10 @@ with sync_playwright() as p:
     assert page.locator('#saturn-reference').inner_text()=='—'
     assert page.locator('#saturn-general').inner_text()=='—'
     assert page.locator('#saturn-optimized').inner_text()=='—'
+    assert page.locator('#model-status').inner_text()=='Recorded · guest cycles'
+    assert page.locator('#model-reference').inner_text()!='—'
+    assert page.locator('#model-mac-ratio').inner_text()!='—'
+    assert 'Physical-console timings remain unmeasured' in page.locator('.model-recorded').inner_text()
     assert page.locator('.kernel-table pre code').count()==3
     assert 'float result' in page.locator('.kernel-table').inner_text()
     assert 'sh2zi_clamp(' in page.locator('.kernel-table').inner_text()
@@ -49,6 +53,8 @@ with sync_playwright() as p:
         state=page.evaluate('SH2ZAM_EXHIBIT_STATE')
         assert state['scene']==scene and state['count']<16384
         assert f"detail 5 · {state['count']} vertices" in page.locator('#saturn-workload').inner_text()
+        assert f"detail 5 · {state['count']} vertices" in page.locator('#model-workload').inner_text()
+        assert state['optimizedStrategy']==('coordinate-reuse' if scene=='cubes' else 'prepared-scalar')
         assert state['maxError']<0.1,state
         assert state['fixedMismatches']==0,state
         assert state['maxWorldError']<2/65536,state
@@ -67,7 +73,8 @@ with sync_playwright() as p:
         page.click('#export')
     result.value.save_as(root/'test-result.json')
     data=json.loads((root/'test-result.json').read_text())
-    assert data['schema']==3 and data['kernelSet']=='float-safe-prepared-v1'
+    assert data['schema']==4 and data['kernelSet']=='float-safe-mesh-v1'
+    assert data['optimizedStrategy']=='prepared-scalar'
     assert data['preparedFastPath'] is True
     assert data['minimumSampleDurationMs']==5
     assert data['fixedMismatches']==0 and data['saturnBenchmark'] is False
@@ -82,9 +89,28 @@ with sync_playwright() as p:
         assert len(data['components']['samples'][component])==21
         assert data['components']['medianMs'][component]>0
         assert all(value['elapsedMs']>=5 for value in data['components']['samples'][component])
-    assert 'one matrix bounds qualification per optimized batch' in data['includes']
+    assert 'matrix qualification and product-table rebuilding per optimized batch' in data['includes']
     assert data['maximumWorldError']['general']==data['maximumWorldError']['optimized']
     print('Browser capture:',json.dumps({key:data[key] for key in ['schema','scene','detail','vertices','medianMs','components','ratios','maximumWorldError','fixedMismatches','outputChecksums','wasmSHA256']}),flush=True)
+    # Check the actual adaptive strategy and full inclusive timing in every
+    # scene. A speedup is reported by measurements, never a pass/fail condition.
+    for extra_scene in ['cubes','torus']:
+        page.click(f'[data-scene={extra_scene}]')
+        page.locator('#detail').fill('4')
+        page.click('#benchmark')
+        page.wait_for_function('document.getElementById("export").disabled === false')
+        with page.expect_download() as extra_result:
+            page.click('#export')
+        target=root/f'test-result-{extra_scene}.json'
+        extra_result.value.save_as(target)
+        extra=json.loads(target.read_text())
+        assert extra['schema']==4 and extra['kernelSet']=='float-safe-mesh-v1'
+        assert extra['optimizedStrategy']==('coordinate-reuse' if extra_scene=='cubes' else 'prepared-scalar')
+        assert extra['fixedMismatches']==0
+        assert extra['outputChecksums']['general']==extra['outputChecksums']['optimized']
+        assert all(value>=5 for path in extra['sampleElapsedMs'].values() for value in path)
+        assert extra['maximumWorldError']['optimized']<2/65536
+        print('Additional browser capture:',json.dumps({key:extra[key] for key in ['scene','detail','vertices','optimizedStrategy','medianMs','ratios','fixedMismatches','maximumWorldError','wasmSHA256']}),flush=True)
     captured=page.locator('#before-time').inner_text()
     page.wait_for_timeout(650)
     assert page.locator('#before-time').inner_text()==captured
@@ -125,5 +151,5 @@ with sync_playwright() as p:
     assert 'precision checks' in invalid.locator('#result').inner_text()
     browser.close()
 server.shutdown()
-print('PASS: three live paths, inclusive prepared setup, adaptive capture, exact fixed outputs, artwork, scenes, detail, pause, split, keyboard, export, mobile, reduced motion, offline HTML')
+print('PASS: adaptive exact strategies, inclusive table rebuilding, all-scene capture, isolated SH-2 model labels, live paths, artwork, controls, export, mobile, reduced motion, offline HTML')
 

@@ -1,6 +1,71 @@
 # Validation record — 2026-11-13
 
-## Prepared bounds and fused native candidates
+## Executed SH-2 instruction-model evidence
+
+The actual compiled SH-2 software-float, safe, prepared, fused MAC.L and fused
+DMULS.L paths have now executed through the unmodified opcode handlers of
+[Yabause `7e38821dbac265490f115e163c523a939acda759`](https://github.com/Yabause/yabause/tree/7e38821dbac265490f115e163c523a939acda759).
+The isolated harness loads the benchmark ELF and invokes its target functions
+directly. **This is target instruction execution with modeled cycles; physical
+Saturn execution and elapsed time remain unmeasured.**
+
+The recorded ELF is from
+[`26a935eea2c6fb9a7dfba6a81d273ab81562a2eb`](https://github.com/lamb2k/SH2ZAM/commit/26a935eea2c6fb9a7dfba6a81d273ab81562a2eb),
+[SH-2 CI 43487712557](https://github.com/lamb2k/SH2ZAM/actions/runs/43487712557),
+[artifact 14068406384](https://github.com/lamb2k/SH2ZAM/actions/runs/43487712557/artifacts/14068406384).
+Its SHA256 is
+`38a7c875c749c0348f886405f30224d7e4ea8846c9e0f3341f173e7fe12a89a6`.
+[The model record](benchmarks/sh2-model/results.json) retains that provenance,
+fixture and harness hashes, all raw samples, opcode counts, output checksums,
+availability masks and precision checks.
+
+- All **15 workloads × 21 poses = 315 combinations** executed. Each of the four
+  fixed paths matched an independent `__int128` floor-and-saturation oracle at
+  **1,267,560 coordinates**, with **zero mismatches**. The maximum difference
+  from software float was **0.000015497207641601562 world units**, exactly
+  **1.015625 Q16.16 units**, within the two-unit comparison bound.
+- All ordinary poses had availability mask **7**. Fetched-opcode counts verified
+  nine native MAC.L or DMULS.L multiplications per vertex for the respective
+  assembly candidate. With SR.S=1, the MAC wrapper reported mask **5**, executed
+  zero MAC.L instructions, retained SR.S and produced exact output. A full-range
+  fixture reported mask **0** and all four fixed wrappers matched the oracle.
+- Every target call verified stack restoration, preservation of distinct nonzero
+  values in R8–R14, and preservation of SR.S.
+
+For Ring world detail 4 (**1,584 vertices**), the median modeled instruction-cycle
+counts across 21 poses were:
+
+| Path | Modeled cycles per whole batch |
+| --- | ---: |
+| Software float | 6,751,532 |
+| Prior safe batch | 316,178 |
+| Prepared C, including plan | 152,597 |
+| Fused MAC.L, including plan | 93,956 |
+| Fused DMULS.L, including plan | 136,725 |
+
+Across all 15 workloads, inclusive float/prepared ratios were **43.65–45.41×**,
+float/MAC **70.67–73.80×**, and float/DMULS **48.71–50.68×** in this model. Each
+prepared or native sample includes one measured plan preparation before its
+median is computed. Normal range wrappers and output writes are included;
+one-time input conversion and mesh scanning, matrix construction, and precision
+checks are excluded. These are full-mesh calls; the console FRT harness uses
+32-vertex chunks and has a separate measurement boundary.
+
+The model uses flat RAM and upstream per-opcode cycle increments. It has no
+cache, bus wait-state, pipeline or multiplier-contention model, DMA, interrupts,
+second CPU or peripheral execution. It does not boot the console image. These
+values are not physical-console timings, full-system emulator timings, browser
+timings or an FPS result, and are not entered in the console capture schema.
+See [the model method, limits and reproduction instructions](benchmarks/sh2-model/README.md).
+
+The [cross workflow](../.github/workflows/sh2-cross.yml) now reruns this optional
+model harness on its freshly built ELF and uploads both `raw.json` and validated
+`results.json` in the build evidence artifact. The committed capture above remains
+attributed to its recorded build; later CI captures have their own ELF and source
+hashes. The older CI records below retain their original provenance and describe
+the evidence available at that time.
+
+## Historical prepared bounds and fused native candidates
 
 Implementation and shared benchmark:
 [`8943e8297f41158796191527639ddc35510c6d4c`](https://github.com/lamb2k/SH2ZAM/commit/8943e8297f41158796191527639ddc35510c6d4c).
@@ -59,7 +124,7 @@ adds measured plan qualification once per mesh, and suppresses candidate
 summary timings when an availability mask reports fallback. Hardware records
 remain empty until a genuine capture exists.
 
-## Exact batch-transform update
+## Historical exact batch-transform update
 
 Implementation: [`31bbf95a6cb8d7562155e061759f346f428ee2fd`](https://github.com/lamb2k/SH2ZAM/commit/31bbf95a6cb8d7562155e061759f346f428ee2fd).
 
@@ -125,9 +190,15 @@ Implementation tested: `fbb6f3d67554316d13a3219ace3a6c3eae71c7b9`. Later documen
 
 Toolchain image used: `ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6`. The cross workflow is pinned to this observed digest for repeatability.
 
-## Not completed / not claimed
+## Not completed / not claimed in the foundation record
 
-No emulator or physical Saturn execution, hardware timing, master/slave concurrency stress, ISR register-preservation audit, or production game integration has been performed here. The diagnostic mask was zero on the host; no console mask is reported. No superiority to Yaul, SaturnMath++ or existing game code is asserted.
+At the time of this foundation record, no emulator or physical Saturn execution,
+hardware timing, master/slave concurrency stress, ISR register-preservation audit,
+or production game integration had been performed. The isolated SH-2 execution
+recorded above was added later. Physical console execution and timing, concurrency
+stress, ISR integration and production game integration remain unmeasured. The
+foundation diagnostic mask was zero on the host; no console mask is reported.
+No superiority to Yaul, SaturnMath++ or existing game code is asserted.
 
 ## Observed runtime helpers
 
