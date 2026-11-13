@@ -6,7 +6,8 @@ include $(YAUL_INSTALL_ROOT)/share/build.pre.mk
 SH_PROGRAM := sh2zam-benchmark
 SH_SRCS := main.c ../../../exhibits/bridge.c \
   ../../src/sh2zam.c ../../src/sh2zam_trig.c \
-  ../../src/sh2zam_angles.c ../../src/sh2zam_transform.c ../../src/sh2zam_geometry.c
+  ../../src/sh2zam_angles.c ../../src/sh2zam_transform.c ../../src/sh2zam_geometry.c \
+  ../../src/sh2zam_prepared.c ../../src/sh2zam_batch_sh2.c
 BENCH_COMMIT ?= $(shell git rev-parse HEAD 2>/dev/null)
 ifeq ($(strip $(BENCH_COMMIT)),)
 $(error Set BENCH_COMMIT to the full source commit when git is unavailable)

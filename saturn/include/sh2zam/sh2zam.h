@@ -32,6 +32,25 @@ typedef struct { sh2z_vec3_t min,max; } sh2z_aabb_t;
 typedef struct { sh2z_vec3_t center; sh2z_fx_t radius; } sh2z_sphere_t;
 typedef struct { int16_t x,y; } sh2z_screen_t;
 typedef struct { size_t begin,end; } sh2z_range_t; /**< Half-open range. */
+/** Prepared immutable mesh. Initialize with sh2z_mesh_view_init; all fields are
+ *  read-only implementation data after initialization. No storage is owned.
+ *  The positions array must remain alive and unchanged while this view or any
+ *  plan made from it is used. Reinitialize after changing the source vertices. */
+typedef struct {
+    const sh2z_vec3_t *positions;
+    size_t count;
+    uint32_t max_abs[3];
+} sh2z_mesh_view_t;
+/** Prepared transform. Initialize with sh2z_transform_plan_init; all fields are
+ *  read-only after initialization. The matrix is copied; the mesh is not.
+ *  fast_path reports whether the scanned mesh bounds prove that direct raw
+ *  accumulation and the final Q16.16 result fit without saturation checks. */
+typedef struct {
+    sh2z_mat34_t matrix;
+    const sh2z_vec3_t *positions;
+    size_t count;
+    bool fast_path;
+} sh2z_transform_plan_t;
 typedef struct {
     sh2z_mat34_t *storage;
     size_t size,capacity;
@@ -145,6 +164,33 @@ bool sh2z_mat34_transform_points(sh2z_vec3_t *out,const sh2z_mat34_t *m,const sh
  *  Same pointer, overlap and numeric contracts as transform_points. Exposed for
  *  direct baseline comparisons and applications that need this implementation. */
 bool sh2z_mat34_transform_points_general(sh2z_vec3_t *out,const sh2z_mat34_t *m,const sh2z_vec3_t *in,size_t count);
+/** Scans actual positions once to cache their per-axis raw magnitudes.
+ *  Zero count permits null positions. Returns false for null view, a nonempty
+ *  null input, an unrepresentable byte length, or view/input overlap; failure
+ *  leaves view unchanged. The positions are borrowed and must remain immutable
+ *  until every plan using them is discarded or rebuilt from a new view. */
+bool sh2z_mesh_view_init(sh2z_mesh_view_t *view,const sh2z_vec3_t *positions,size_t count);
+/** Copies matrix and mesh metadata, then checks the cached bounds once.
+ *  All pointers must be nonnull, including for an empty mesh. view must have
+ *  been initialized and its fields must not have been changed. Returns true
+ *  even if fast_path is false: those plans use the exact full-range fallback.
+ *  Changes to matrix or view after this call do not affect the plan. The source
+ *  positions must remain alive and unchanged. Failure leaves plan unchanged;
+ *  plan storage must not overlap the source positions. No allocation occurs. */
+bool sh2z_transform_plan_init(sh2z_transform_plan_t *plan,const sh2z_mesh_view_t *view,const sh2z_mat34_t *matrix);
+/** Executes the entire prepared mesh. Floors each row once and adds translation
+ *  exactly as transform_points; outputs match its saturation behavior bit for
+ *  bit. A valid initialized plan is required even when empty. Empty execution
+ *  accepts null out. Nonempty output must have count elements and be disjoint
+ *  from the ENTIRE source mesh and from plan storage; overlap is rejected before
+ *  any write. Prepared execution is deliberately out-of-place so cached bounds
+ *  remain valid. Use transform_points for ordinary in-place transforms. */
+bool sh2z_transform_plan_execute(sh2z_vec3_t *out,const sh2z_transform_plan_t *plan);
+/** Executes [first,first+count) from the prepared mesh into out[0..count).
+ *  The same immutable-source and overlap rules apply to the entire source mesh.
+ *  Invalid ranges and nonempty null pointers return false without writing.
+ *  A valid empty range permits null out. No bound rescan or matrix setup occurs. */
+bool sh2z_transform_plan_execute_range(sh2z_vec3_t *out,const sh2z_transform_plan_t *plan,size_t first,size_t count);
 /** Overflow-safe partition, including uneven and empty jobs. No CPU dispatch. */
 bool sh2z_partition(size_t count,size_t worker,size_t workers,sh2z_range_t *out);
 
