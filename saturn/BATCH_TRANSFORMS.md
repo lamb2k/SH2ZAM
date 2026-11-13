@@ -99,7 +99,7 @@ operation, odd batch tails, buffer boundaries, and pointer/count contracts.
 It runs as the CMake/CTest `batch_transform_oracles` test and is compatible with
 AddressSanitizer and UndefinedBehaviorSanitizer.
 
-The shared exhibit benchmark compares software float, the general SH2ZAM path,
+The Saturn build of the shared exhibit benchmark compares software float, the general SH2ZAM path,
 and this optimized path on the same inputs and matrix coefficients. Matrix
 construction and input conversion stay outside transform timing. Record both
 32-vertex chunks and useful whole-mesh sizes when checking setup overhead and
@@ -111,3 +111,9 @@ scheduling before considering additional assembly. Use the bootable benchmark
 and capture procedure in [benchmarks/README.md](benchmarks/README.md) for native
 measurements. Only console measurements can establish the Saturn speedup or
 justify subsequent alignment, cache, batching, or dual-CPU changes.
+
+The pinned GCC 13.2 SH-2 build has been inspected: the fast path has nine native
+multiplies and no helper calls, but stores the 12 matrix values in a 48-byte local
+stack area. It loads those values per vertex rather than keeping them all in
+registers; intermediate accumulators are not spilled to memory. The [validation record](VALIDATION.md) includes this audit and a measured
+three-way browser example; neither substitutes for console timing.

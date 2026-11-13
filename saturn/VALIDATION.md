@@ -1,5 +1,58 @@
 # Validation record — 2026-11-13
 
+## Exact batch-transform update
+
+Implementation: [`31bbf95a6cb8d7562155e061759f346f428ee2fd`](https://github.com/lamb2k/SH2ZAM/commit/31bbf95a6cb8d7562155e061759f346f428ee2fd).
+
+- [Host CI run 43482808025](https://github.com/lamb2k/SH2ZAM/actions/runs/43482808025): GCC Release, Clang Release and Clang Debug with ASan/UBSan passed. Each configuration executes eight CTest targets, including the new independent 128-bit batch oracle. Standalone/installed consumer checks passed. Local strict GCC 14.2 and Clang 14 Release builds, and a GCC sanitizer build, also passed all eight tests.
+- The dedicated batch suite executes **2,052,695 checks** against the independent oracle. The unchanged foundation suite executes **1,073,727 checks**. The new suite covers the exact matrix-bound threshold and one unit over it, full-range coordinates, extreme cancellation, negative fractional flooring, saturation, exact in-place operation, odd counts and buffer boundaries. These counts are checks, not coverage percentages.
+- [Interactive lab CI run 43482808208](https://github.com/lamb2k/SH2ZAM/actions/runs/43482808208): WASM math, capture-schema validation and Chromium browser tests passed. WASM checks compared **737,280 coordinates**, with zero general/optimized differences and zero module imports. The native shared-fixture test checked **1,267,560 coordinates across 315 mesh/pose combinations**, including full-batch/chunk parity.
+- Maximum float comparison error in both fixed-point paths was **0.000015497207641601562 world units** in the WASM suite. Inputs and matrix coefficients are now shared exactly; this is transform rounding error and excludes common matrix/trigonometry quantization. The two fixed-point paths were bit-identical.
+- The browser tests exercised continued live sampling, all scenes, detail changes, exact output agreement, the single-slider layout, capture/export, mobile width, reduced motion, offline HTML and rejection of a deliberately injected nonfinite float result.
+- [SH-2 CI run 43482808084](https://github.com/lamb2k/SH2ZAM/actions/runs/43482808084): pinned Yaul `sh2eb-elf-gcc 13.2.0`, `-m2 -mb -O2 -ffreestanding`, compiled the library and linked both the diagnostic and three-way benchmark ISO/CUE images. The float bridge retained `__mulsf3` and `__addsf3` dependencies. Existing RWX LOAD-segment linker warnings remain recorded.
+- [Native evidence artifact](https://github.com/lamb2k/SH2ZAM/actions/runs/43482808084/artifacts/14066480838) contains compiler metadata, object/archive outputs, disassembly, the static batch audit, float-helper audit and boot images. No boot or console timing is implied by build success.
+
+### Browser measurement example
+
+The Chromium CI capture above used Ring world, detail 4, **1,584 vertices**, 21
+samples of 64 batches per path. Median batch times include the JS-to-WASM call:
+
+| Kernel | Browser median per batch |
+|---|---:|
+| Float32 C / WASM | 0.003125 ms |
+| General SH2ZAM | 0.018750 ms |
+| Optimized SH2ZAM | 0.009375 ms |
+
+This capture reports **2.00× general/optimized** and **0.33× float/optimized**.
+Thus the optimization halved fixed-point transform time in this run, while browser
+float remained faster. It is one browser measurement on a shared CI runner, not a
+Saturn speedup, a timing guarantee or an FPS result. The live page measures its
+current environment rather than displaying these fixed values.
+
+General and optimized output checksums both were `7054995f`; float was `08e695c6`.
+Module SHA256: `37a6111ffd5e9064617bb7a30960ca46094254b71583286511e5eb9662c91749`.
+
+### Generated SH-2 code
+
+The specialized function contains the nine native `dmuls.l` instructions for its
+three unrolled rows, with **no function/helper calls in the fast path**. Its only
+external relocation is the tail fallback to the general batch implementation.
+The old implementation also performs nine products per vertex through loops; the
+optimization removes repeated quotient/remainder bookkeeping and scalar-call setup,
+not mathematical products.
+
+The compiler copies 12 matrix values into a **48-byte local stack area** and saves
+seven registers (76 bytes total stack adjustment). Coefficients are loaded from that
+area in the vertex loop. They are not all retained in registers. This is a concrete
+remaining register-allocation/memory cost to investigate with target measurements.
+Static instruction counts and stack references do not predict elapsed cycles.
+
+**Still unmeasured:** execution/correctness and timings on a physical Saturn,
+native batch-size/alignment/cache effects and dual-CPU scaling. Capture schema 2
+keeps all hardware times empty until evidenced measurements exist.
+
+## Original foundation validation
+
 Implementation tested: `fbb6f3d67554316d13a3219ace3a6c3eae71c7b9`. Later documentation/image-pin commits do not change these math sources.
 
 ## Completed
