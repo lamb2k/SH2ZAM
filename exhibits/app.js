@@ -121,19 +121,13 @@
     const a=render(contexts[0],before,1),b=render(contexts[1],after,65536);
     maxError=0; for(let i=0;i<a.length;i++) maxError=Math.max(maxError,Math.hypot(a[i][3]-b[i][3],a[i][4]-b[i][4]));
     $('error').textContent=`${maxError.toFixed(3)} px`;
-    $('time').value=seconds; $('time-value').textContent=`${seconds.toFixed(2)} s`;
-    $('play').textContent=playing?'Pause':'Play';$('play-state').textContent=playing?'12 SECOND LOOP':'PAUSED / SCRUB TO INSPECT';
+    $('play').textContent=playing?'Pause':'Play';$('play-state').textContent=playing?'12 SECOND LOOP':'PAUSED';
     window.SH2ZAM_EXHIBIT_STATE={ready:true,scene,detail,count:input.length/3,maxError,seconds,playing,busy};
   }
   function frame(now) {
     if(last&&playing&&!busy&&!document.hidden) { seconds=(seconds+Math.min((now-last)/1000,0.1))%12;draw(); }
     if(wasm && !busy && !report && !document.hidden && now-liveAt>=500) { sampleLive(); liveAt=now; }
     last=now; requestAnimationFrame(frame);
-  }
-  function wipe(value) {
-    const v=Math.max(0,Math.min(100,Number(value)));
-    $('wipe').value=v;$('wipe-value').textContent=`${Math.round(v)}%`;
-    $('before-canvas').style.clipPath=`inset(0 ${100-v}% 0 0)`;$('divider').style.left=`${v}%`;
   }
   const median=xs=>[...xs].sort((a,b)=>a-b)[Math.floor(xs.length/2)];
   function sampleLive() {
@@ -176,12 +170,7 @@
     } catch(error) { $('result').textContent=`Measurement failed: ${error.message}`; }
     finally { busy=false;controls.forEach(c=>c.disabled=false);$('export').disabled=!report;draw(); }
   }
-  $('wipe').addEventListener('input',e=>wipe(e.target.value));
-  const drag=$('drag');
-  drag.addEventListener('pointerdown',e=>{drag.setPointerCapture(e.pointerId);});
-  drag.addEventListener('pointermove',e=>{if(drag.hasPointerCapture(e.pointerId)){const r=$('stage').getBoundingClientRect();wipe((e.clientX-r.left)/r.width*100);}});
   $('play').addEventListener('click',()=>{playing=!playing;if(playing&&report)invalidate();last=0;draw();});
-  $('time').addEventListener('input',e=>{playing=false;seconds=Number(e.target.value);invalidate();draw();});
   $('detail').addEventListener('input',e=>{detail=Number(e.target.value);$('detail-value').textContent=detail;if(wasm)loadScene();});
   document.querySelectorAll('[data-scene]').forEach(button=>button.addEventListener('click',()=>{
     scene=button.dataset.scene;document.querySelectorAll('[data-scene]').forEach(b=>{const active=b===button;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});if(wasm)loadScene();
@@ -200,5 +189,5 @@
       loadScene();resize();requestAnimationFrame(frame);
     } catch(error) { $('backend').textContent='EXHIBIT NOT LOADED';$('failure').hidden=false;$('failure').textContent=error.message;$('result').textContent='No fallback simulation is shown.';window.SH2ZAM_EXHIBIT_STATE={ready:false,error:error.message}; }
   }
-  wipe(50);init();
+  init();
 })();

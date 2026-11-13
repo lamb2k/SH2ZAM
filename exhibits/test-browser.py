@@ -34,29 +34,18 @@ with sync_playwright() as p:
     for scene in ['saturn','cubes','torus']:
         page.click(f'[data-scene={scene}]')
         page.locator('#detail').fill('5')
-        page.locator('#time').fill('3.15')
         state=page.evaluate('SH2ZAM_EXHIBIT_STATE')
         assert state['scene']==scene and state['count']<16384
         assert state['maxError']<0.1,state
-        page.locator('#wipe').fill('25')
-        assert page.locator('#before-canvas').evaluate('el=>el.style.clipPath')=='inset(0px 75% 0px 0px)'
+        assert page.locator('#before-canvas').evaluate('el=>getComputedStyle(el).clipPath')=='inset(0px 50% 0px 0px)'
         page.screenshot(path=str(root/f'screenshot-{scene}.png'),full_page=True)
     page.click('[data-scene=saturn]')
     page.locator('#detail').fill('3')
-    page.locator('#wipe').fill('50')
-    page.locator('#time').fill('1.35')
-    # Pointer capture on the draggable divider and native keyboard control.
-    handle=page.locator('#drag').bounding_box()
-    stage=page.locator('#stage').bounding_box()
-    page.mouse.move(handle['x']+handle['width']/2,handle['y']+handle['height']/2)
-    page.mouse.down()
-    page.mouse.move(stage['x']+stage['width']*.7,handle['y']+handle['height']/2,steps=8)
-    page.mouse.up()
-    assert abs(float(page.locator('#wipe').input_value())-70)<1
-    page.locator('#wipe').focus()
+    assert page.locator('input[type=range]').count()==1
+    assert page.locator('input[type=range]').get_attribute('id')=='detail'
+    page.locator('#detail').focus()
     page.keyboard.press('ArrowRight')
-    assert float(page.locator('#wipe').input_value())>70
-    page.locator('#wipe').fill('50')
+    assert page.evaluate('SH2ZAM_EXHIBIT_STATE.detail')==4
     page.click('#benchmark')
     page.wait_for_function('document.getElementById("export").disabled === false')
     with page.expect_download() as result:
@@ -83,4 +72,4 @@ with sync_playwright() as p:
     local.wait_for_function('window.SH2ZAM_EXHIBIT_STATE?.ready')
     browser.close()
 server.shutdown()
-print('PASS: exact artwork, scenes, high detail, pause, scrub, reveal, pointer/keyboard, benchmark/export, mobile, reduced motion, offline HTML')
+print('PASS: exact artwork, scenes, high detail, pause, fixed split, mesh keyboard, benchmark/export, mobile, reduced motion, offline HTML')
