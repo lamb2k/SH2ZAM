@@ -35,6 +35,8 @@
 - Signed Q16.16 arithmetic with explicit saturation and rounding contracts.
 - An SH-2 `dmuls.l` multiplication path and a portable reference backend.
 - An exact batch-transform fast path with one rounding step per row and an automatic full-range fallback.
+- Exact quaternion rotation batches that share normalization and matrix construction across all vectors.
+- Caller-owned static AABB indexes for exact moving-sphere queries, with conservative pruning and bulk acceptance.
 - Prepared immutable meshes with cached coordinate bounds and a clamp-free batch kernel when the matrix proof succeeds.
 - Opt-in exact coordinate reuse for repetitive meshes, with caller-owned tables rebuilt for each matrix.
 - A checked eight-vertex loop that shares coordinate-table loads while preserving original output order.
@@ -53,8 +55,8 @@
 - **Vectors:** 2D, 3D and 4D arithmetic, dot products, lengths, normalization and interpolation; 2D/3D cross products.
 - **Matrices:** 2×2, 3×3, affine 3×4 and 4×4, transformations, transpose and alias-safe multiplication.
 - **Camera:** right-handed look-at, rigid inverse, perspective and clip-to-screen helpers.
-- **Quaternions:** multiplication, normalization, conjugation, axis-angle, nlerp, matrix conversion and vector rotation.
-- **Game helpers:** AABB/sphere intersection, transform stacks and batch-work partitioning.
+- **Quaternions:** multiplication, normalization, conjugation, axis-angle, nlerp, matrix conversion, vector rotation and exact rotation batches.
+- **Game helpers:** AABB/sphere intersection, static AABB indexes for sphere queries, transform stacks and batch-work partitioning.
 
 Complex/FFT, a general libm replacement, accelerated memory routines and the SH-4 XMTRX register bank are **not** implemented. The C++ facade is smaller than the C API. See the [capability comparison](saturn/PARITY.md).
 
@@ -157,6 +159,23 @@ and full-range fallback. This trades caller-owned table/index memory for less
 repeated multiplication; the [coordinate-reuse guide](saturn/COORDINATE_REUSE.md)
 documents selection, setup cost and lifetimes.
 
+## Share rotation setup and index static geometry
+
+[`sh2zam/rotation_batch.h`](saturn/include/sh2zam/rotation_batch.h) adds
+`sh2z_quat_rotate_vectors`: apply one quaternion to a complete vector batch,
+sharing normalization and matrix construction while preserving every scalar
+rotation result. Exact in-place operation is supported. The explicit `_mac`
+alternative includes input scanning and qualification for the existing optional
+native kernel, with the ordinary exact batch as its fallback.
+
+[`sh2zam/spatial.h`](saturn/include/sh2zam/spatial.h) adds
+`sh2z_aabb_index_build` and `sh2z_aabb_index_query_sphere`. Build into caller-owned
+storage, then query unchanged boxes with different spheres to obtain exact
+original-index hit bitsets. Keep boxes and built nodes immutable until rebuilding;
+build scratch can be reused afterward. Pruning and bulk acceptance depend on
+the query pattern, and index construction must be included when evaluating cost.
+See the [API examples, memory budget and workload comparisons](saturn/benchmarks/workload-model/README.md).
+
 ## Git submodule
 
 ```sh
@@ -223,12 +242,24 @@ are included in the lab's downloadable evidence. See [the measurement
 contract](exhibits/README.md) and [validation record](saturn/VALIDATION.md).
 
 The **Math library improvements** section covers 48 existing APIs across bounded,
-tiny and full-range inputs. It compares the frozen prior SH2ZAM implementation
+tiny and full-range inputs. It compares SH2ZAM at the historical `10786b6` baseline
 with the optimized library, using the same SH-2 compiler, fixtures and output
 checks. This is a separate library-revision comparison; it does not relabel the
 old library as independent engine code. Select a math family and operation to
 inspect all three profiles, then export the raw samples and provenance. See
 [the exact math changes and results](saturn/MATH_OPTIMIZATIONS.md).
+
+The **Optimize the whole workload** section covers 44 cases with seven changing
+input samples each. Rotation comparisons include repeated scalar calls, an
+existing matrix batch that already shares setup, and the existing prepared
+MAC.L composition. Spatial comparisons include the prior predicate API and two
+independent C loops: packed output words and per-hit bit writes. The default
+comparison uses each case's fastest recorded control. Quaternion setup, scans
+and qualification, or a complete index build plus all 128 sphere queries are
+included in their respective totals. Exact outputs, small cases and slower
+results remain visible; a 10× goal is not a universal performance promise.
+This suite uses request-start `3374d77` separately from the historical math
+baseline. See the [workload contracts and reproduction guide](saturn/benchmarks/workload-model/README.md).
 
 There are no independently verified production adopters or Saturn speedup claims listed yet. Share measured integrations through this repository's issues.
 
@@ -259,6 +290,6 @@ Use [SH2ZAM issues](https://github.com/lamb2k/SH2ZAM/issues) for Saturn-specific
 
 Original MIT notices are preserved. See [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md). New Saturn code lives in `saturn/`; the inherited SH4ZAM sources remain as provenance/reference, not active Saturn dependencies.
 The optional `saturn/benchmarks/sh2-model/` harness and the GPL-marked
-`math-model/capture.h` and `math-model/collect.py` extensions are GPL-2.0-or-later
-and download Yabause separately. They are not linked into the MIT math library
-or browser module.
+`capture.h` / `collect.py` extensions under `saturn/benchmarks/math-model/` and
+`saturn/benchmarks/workload-model/` are GPL-2.0-or-later and download Yabause
+separately. They are not linked into the MIT math library or browser module.

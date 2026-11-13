@@ -163,7 +163,19 @@ static void spatial_build_node(sh2z_aabb_node_t *nodes,size_t node,
     const unsigned axis=y>x?(z>y?2u:1u):(z>x?2u:0u);
     const size_t middle=count/2;
     spatial_select(ids,count,middle,boxes,axis);
-    spatial_build_node(nodes,node+1,ids,middle,boxes);
+    /* Selection has already fixed each child's IDs. A singleton needs only
+     * its source bounds, original ID and escape index; avoid entering the
+     * builder's large recursive frame for that eight-word write. The right
+     * child can be a singleton only when count==2. */
+    if(middle==1) {
+        const uint32_t left=ids[0];
+        nodes[node+1]=(sh2z_aabb_node_t){boxes[left],(uint32_t)(node+2),left};
+        if(count==2) {
+            const uint32_t right=ids[1];
+            nodes[node+2]=(sh2z_aabb_node_t){boxes[right],(uint32_t)(node+3),right};
+            return;
+        }
+    } else spatial_build_node(nodes,node+1,ids,middle,boxes);
     spatial_build_node(nodes,node+middle+middle,ids+middle,count-middle,boxes);
 }
 
