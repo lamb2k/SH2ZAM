@@ -19,7 +19,7 @@ const LIMITATIONS=[
 ];
 const HASH_KEYS=['elfSHA256','symbolSHA256','rawCaptureSHA256','interpreterSourceSHA256',
   'bridgeSourceSHA256','workloadsSourceSHA256','casesSourceSHA256','suiteSourceSHA256',
-  'harnessSourceSHA256','collectorSourceSHA256','validatorSourceSHA256','baselineRenameSHA256'];
+  'harnessSourceSHA256','captureSourceSHA256','collectorSourceSHA256','validatorSourceSHA256','baselineRenameSHA256'];
 const CASES=[...fs.readFileSync(path.join(__dirname,'cases.inc'),'utf8').matchAll(/\{"([a-z0-9_]+)",(\d+)u\}/g)]
   .map(match=>({operation:match[1],outputWords:Number(match[2])}));
 const median=values=>[...values].sort((a,b)=>a-b)[Math.floor(values.length/2)];
