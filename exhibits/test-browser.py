@@ -79,6 +79,64 @@ def assert_math_comparison(page, family, operation):
     return state
 
 
+def assert_workload_comparison(page, group, profile, size, baseline, kernel):
+    state = page.evaluate('SH2ZAM_WORKLOAD_STATE')
+    assert state['ready'], state
+    assert (state['group'], state['profile'], state['size'], state['baselineChoice'], state['kernel']) == (group, profile, size, baseline, kernel), state
+    record = page.evaluate('([group,profile,size]) => SH2ZAM_WORKLOAD_MODEL.records.find(r => r.group === group && r.profile === profile && r.size === size)', [group, profile, size])
+    assert state['record'] == record
+    if baseline == 'strongest':
+        controls = ['scalar', 'composed', 'composed_mac'] if group == 'rotation' else ['api_brute', 'inline_brute'] if group == 'spatial' else ['prior']
+        selected = min(controls, key=lambda name: record['medianCycles'][name])
+    else:
+        selected = baseline
+    assert state['baseline'] == selected
+    before, after = record['medianCycles'][selected], record['medianCycles'][kernel]
+    assert state['beforeCycles'] == before and state['afterCycles'] == after
+    assert math.isclose(state['speedup'], before / after, rel_tol=1e-12)
+    assert math.isclose(state['savedPercent'], (1 - after / before) * 100, abs_tol=1e-10)
+    assert int(page.locator('#workload-before-cycles').inner_text().replace(',', '')) == before
+    assert int(page.locator('#workload-after-cycles').inner_text().replace(',', '')) == after
+    if after > before:
+        assert 'EXTRA' in page.locator('#workload-savings-label').inner_text()
+        assert 'control cost' in page.locator('#workload-speedup').inner_text()
+    path_rows = page.locator('#workload-paths tr')
+    assert path_rows.count() == len(record['paths'])
+    for i, name in enumerate(record['paths']):
+        assert int(path_rows.nth(i).locator('td').nth(0).inner_text().replace(',', '')) == record['medianCycles'][name]
+    raw_rows = page.locator('#workload-samples tr')
+    assert raw_rows.count() == 7
+    for i, sample in enumerate(record['samples']):
+        assert sample['inputChecksum'] in raw_rows.nth(i).locator('th').inner_text()
+        cells = raw_rows.nth(i).locator('td')
+        for j, name in enumerate(record['paths']):
+            assert int(cells.nth(j).inner_text().replace(',', '')) == sample['paths'][name]['cycles']
+        assert cells.last.inner_text() == sample['paths'][record['paths'][0]]['checksum']
+    assert record['setupIncluded'] and record['guards']['srSRetained'] and record['guards']['srSOutputMatch']
+    assert 'Bit-exact' in page.locator('#workload-proof').inner_text()
+    assert page.locator('#workload-all-cases tr').count() == 44
+    return state
+
+
+def export_workloads(page):
+    details = page.locator('details.workload-details').nth(1)
+    if details.get_attribute('open') is None:
+        details.locator('summary').click()
+    with page.expect_download() as result:
+        page.click('#workload-export')
+    download = result.value
+    assert download.suggested_filename.startswith('sh2zam-workload-evidence-')
+    target = root / 'test-result.json'
+    download.save_as(target)
+    data = json.loads(target.read_text())
+    assert data == page.evaluate('SH2ZAM_WORKLOAD_MODEL'), 'Dedicated export must retain all 44 cases and raw evidence'
+    assert len(data['records']) == 44 and data['mismatches'] == 0
+    assert data['run']['setupIncluded'] and data['run']['hardwareMeasured'] is False
+    assert data['run']['browserTimingUsed'] is False
+    details.locator('summary').click()
+    return data
+
+
 def export_model(page):
     if not page.locator('#export').is_visible():
         page.locator('details.evidence > summary').click()
@@ -115,6 +173,14 @@ def export_model(page):
         assert data['mathLibrary']['evidence']['mismatches'] == 0
     else:
         assert 'mathLibrary' not in data
+    if page.evaluate('SH2ZAM_WORKLOAD_STATE.ready'):
+        workload_state = page.evaluate('SH2ZAM_WORKLOAD_STATE')
+        selection = {key: workload_state[key] for key in ['group', 'profile', 'size', 'kernel']}
+        selection['baseline'] = workload_state['baselineChoice']
+        assert data['workloads']['selection'] == selection
+        assert data['workloads']['evidence'] == page.evaluate('SH2ZAM_WORKLOAD_MODEL')
+    else:
+        assert 'workloads' not in data
     # Model provenance may contain its recorded capture date; this download must
     # not add browser benchmarking distributions or imply new target execution.
     serialized = json.dumps(data)
@@ -189,6 +255,30 @@ try:
             assert page.locator('#math-family').is_disabled()
             assert 'Awaiting' in page.locator('#math-status').inner_text()
 
+        # Focus on the controls most likely to misstate the adoption gain.
+        # The Node suite covers all 44 cases; these exercise the real DOM,
+        # native select controls, displayed raw samples, and the actual download.
+        workload_available = page.evaluate('!!window.SH2ZAM_WORKLOAD_MODEL')
+        if workload_available:
+            assert_workload_comparison(page, 'rotation', 'bounded', 512, 'strongest', 'mac')
+            assert 'matrix + C batch' in page.locator('#workload-paths').inner_text()
+            assert 'matrix + existing MAC.L' in page.locator('#workload-paths').inner_text()
+            page.click('[data-workload-example="spatial"]')
+            page.select_option('#workload-profile', 'crowded')
+            page.select_option('#workload-size', '512')
+            assert_workload_comparison(page, 'spatial', 'crowded', 512, 'inline_brute', 'index')
+            page.select_option('#workload-group', 'atan2')
+            assert_workload_comparison(page, 'atan2', 'bounded', 32, 'prior', 'current')
+            export_workloads(page)
+            page.click('[data-workload-example="rotation"]')
+            assert_workload_comparison(page, 'rotation', 'bounded', 512, 'strongest', 'mac')
+            page.locator('.workload-lab').screenshot(path=str(root / 'screenshot-workload-desktop.png'))
+        else:
+            assert not page.evaluate('SH2ZAM_WORKLOAD_STATE.ready')
+            assert page.locator('#workload-group').is_disabled()
+            assert page.locator('#workload-before-cycles').inner_text() == '—'
+            assert 'Awaiting' in page.locator('#workload-status').inner_text()
+
         # Target costs remain the same while the live visual advances.
         initial = page.evaluate('({model: SH2ZAM_MODEL_STATE, seconds: SH2ZAM_EXHIBIT_STATE.seconds, calls: __visualCalls})')
         page.wait_for_function('(seconds) => SH2ZAM_EXHIBIT_STATE.seconds > seconds + 0.1', arg=initial['seconds'])
@@ -240,7 +330,8 @@ try:
         page.set_viewport_size({'width': 390, 'height': 844})
         page.screenshot(path=str(root / 'screenshot-mobile.png'), full_page=True)
         page.locator('.math-library').screenshot(path=str(root / 'screenshot-math-mobile.png'))
-        assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+        page.locator('.workload-lab').screenshot(path=str(root / 'screenshot-workload-mobile.png'))
+        assert page.evaluate('document.documentElement.scrollWidth <= innerWidth && document.body.scrollWidth <= innerWidth')
         assert not errors, errors
 
         context = browser.new_context(reduced_motion='reduce', viewport={'width': 800, 'height': 900})
@@ -393,4 +484,4 @@ try:
 finally:
     server.shutdown()
 
-print('PASS: 15 native transform workloads, optional 48-operation math capture with three profiles, honest losses, exactness guards, combined export, keyboard/mobile, offline HTML, and WebAssembly-independent evidence')
+print('PASS: 15 native transform workloads, optional 48-operation math capture, focused workload controls/raw samples/full export, honest losses, exactness guards, keyboard/mobile, offline HTML, and WebAssembly-independent evidence')

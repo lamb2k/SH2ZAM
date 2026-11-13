@@ -14,10 +14,10 @@ extern "C" {
  *  full-range quaternions, full-range vectors, flooring and saturation.
  *
  *  Quaternion normalization and matrix construction happen once per call.
- *  The ordinary implementation is the existing exact composition
- *  quat_to_mat34(q) followed by mat34_transform_points; the generated matrix
- *  has zero translation. This API makes that shared setup explicit, rather
- *  than promising a faster arithmetic kernel than the existing composition.
+ *  A single vector calls quat_rotate directly. Larger batches use the existing
+ *  exact composition quat_to_mat34(q) followed by mat34_transform_points; the
+ *  generated matrix has zero translation. This API makes that shared setup
+ *  explicit; the existing composition remains a performance baseline.
  *
  *  Exact in-place operation (out==in) is supported. Other input/output overlap,
  *  a byte count overflowing size_t, and nonempty null buffers return false
@@ -27,11 +27,13 @@ bool sh2z_quat_rotate_vectors(sh2z_vec3_t *out,sh2z_quat_t q,
     const sh2z_vec3_t *in,size_t count);
 
 /** Explicit experimental SH-2 MAC.L alternative with the same exact numeric
- *  and buffer contracts. Matrix construction, input-bound scanning and plan
- *  qualification are included in this call, once per whole batch.
+ *  and buffer contracts. Batches below eight vectors use the ordinary path,
+ *  skipping native input-bound scanning and plan qualification. A single
+ *  vector calls quat_rotate directly. When native qualification is attempted,
+ *  its matrix construction, scan and plan setup are included in the call.
  *
- *  Out-of-place batches use the existing fused native kernel only when its
- *  range proof succeeds and the current CPU's SR.S bit is clear. In-place
+ *  Out-of-place batches of at least eight vectors use the existing fused native
+ *  kernel only when its range proof succeeds and the current CPU's SR.S bit is clear. In-place
  *  batches, unproved output ranges, SR.S=1, non-SH-2 builds and forced-portable
  *  builds use the ordinary matrix batch. SR is read and never modified.
  *  This is not the default entry point or physical-console qualification.

@@ -26,6 +26,17 @@
   let outputChecksums = {}, outputsValid = false, visualError = null;
   let modelRow = null, modelData = null;
   let mathData = null, mathFamily = 'vector', mathOperation = 'vec3_normalize';
+  let workloadData = null, workloadGroup = 'rotation', workloadProfile = 'bounded', workloadSize = 512;
+  let workloadBaseline = 'strongest', workloadKernel = 'mac';
+  const workloadSpecs = {
+    rotation: {label: 'Quaternion rotation', sizes: [1, 8, 32, 128, 512], profiles: ['bounded', 'tiny', 'full-range', 'identity', 'zero'], paths: ['scalar', 'composed', 'composed_mac', 'batch', 'mac'], baselines: ['scalar', 'composed', 'composed_mac'], kernels: ['batch', 'mac']},
+    spatial: {label: 'Sphere / box queries', sizes: [128, 512], profiles: ['sparse', 'mixed', 'dense', 'crowded', 'full-range'], paths: ['api_brute', 'inline_brute', 'index'], baselines: ['api_brute', 'inline_brute'], kernels: ['index']},
+    normalize: {label: 'Vec3 normalization', sizes: [32], profiles: ['bounded', 'tiny', 'full-range'], paths: ['prior', 'current'], baselines: ['prior'], kernels: ['current']},
+    atan2: {label: 'atan2', sizes: [32], profiles: ['bounded', 'tiny', 'full-range'], paths: ['prior', 'current'], baselines: ['prior'], kernels: ['current']},
+    atan: {label: 'atan', sizes: [32], profiles: ['bounded', 'tiny', 'full-range'], paths: ['prior', 'current'], baselines: ['prior'], kernels: ['current']}
+  };
+  const workloadPathNames = {scalar: 'Prior quat_rotate · repeated calls', composed: 'Prior matrix + C batch', composed_mac: 'Prior matrix + existing MAC.L', batch: 'New quaternion batch', mac: 'New quaternion batch + optional MAC.L', api_brute: 'Prior predicate API loop', inline_brute: 'Independent inline C', index: 'New spatial index', prior: 'Prior SH2ZAM · 3374d77', current: 'Current SH2ZAM'};
+  const workloadProfileNames = {bounded: 'Bounded', tiny: 'Tiny', 'full-range': 'Full range', identity: 'Identity quaternion', zero: 'Zero quaternion', sparse: 'Sparse', mixed: 'Mixed', dense: 'Dense / contained', crowded: 'Crowded / partial overlap'};
   const mathFamilies = {scalar: 'Scalar arithmetic', vector: 'Vectors', matrix: 'Matrices', quaternion: 'Quaternions', trig: 'Trigonometry', geometry: 'Geometry'};
   const mathProfiles = ['bounded', 'tiny', 'full-range'];
   const positive = value => Number.isSafeInteger(value) && value > 0;
@@ -116,7 +127,7 @@
         + ' · ELF ' + run.elfSHA256.slice(0, 12) + ' · ' + data.records.length + ' shared workloads'
       : '';
     $('model-evidence').href = valid ? run.evidenceUrl : 'https://github.com/lamb2k/SH2ZAM/tree/main/saturn/benchmarks/sh2-model';
-    $('export').disabled = !valid && !mathData;
+    $('export').disabled = !valid && !mathData && !workloadData;
     for (const name of modelPaths) {
       const cycles = valid && positive(row.medianCycles?.[name]) ? row.medianCycles[name] : null;
       $('model-' + name).textContent = cycles === null ? 'Not measured' : number(cycles);
@@ -234,7 +245,7 @@
       } catch (_) { /* A malformed link cannot override the fixed source URL. */ }
     }
     $('math-evidence').href = evidence;
-    $('export').disabled = !mathData && !modelData;
+    $('export').disabled = !mathData && !modelData && !workloadData;
   }
 
   function loadMathResults() {
@@ -247,6 +258,228 @@
       $('math-family').disabled = false; $('math-operation').disabled = false;
     }
     showMathResults();
+  }
+
+  function validatedWorkloads(data) {
+    const run = data?.run, prior = '3374d77c4625749cc932cafa4385ad18db811e9b';
+    if (data?.schema !== 1 || data.kernelSet !== 'exact-workloads-sh2-model-v1'
+      || data.baseline?.sourceCommit !== prior || data.comparison?.priorLibraryCommit !== prior
+      || data.comparison?.claimsUniversalTenfoldGain !== false || data.samplesPerCase !== 7
+      || data.mismatches !== 0 || !Array.isArray(data.records) || data.records.length !== 44
+      || run?.environment !== 'isolated-sh2-interpreter' || run.hardwareMeasured !== false
+      || run.browserTimingUsed !== false || run.hostResults !== false || run.setupIncluded !== true
+      || run.wholeBatch !== true || run.cpuCount !== 1 || run.memoryModel !== 'flat RAM'
+      || run.toolchainVerifiedInELF !== true || run.interpreterModified !== false
+      || run.interpreterCommit !== '7e38821dbac265490f115e163c523a939acda759'
+      || !/^[a-f0-9]{40}$/.test(run.sourceCommit) || !/^[a-f0-9]{64}$/.test(run.elfSHA256)
+      || !/^[a-f0-9]{64}$/.test(run.rawCaptureSHA256)) return null;
+    const seen = new Set(), ids = new Set(), close = (a, b) => Number.isFinite(a) && Math.abs(a - b) <= 1e-10 * Math.max(1, Math.abs(b));
+    const median = values => [...values].sort((a, b) => a - b)[3];
+    let words = 0, comparisons = 0;
+    for (const row of data.records) {
+      const spec = workloadSpecs[row?.group], key = row?.group + ':' + row?.profile + ':' + row?.size;
+      if (!spec || !spec.sizes.includes(row.size) || !spec.profiles.includes(row.profile)
+        || seen.has(key) || typeof row.id !== 'string' || ids.has(row.id)
+        || JSON.stringify(row.paths) !== JSON.stringify(spec.paths)
+        || row.queries !== (row.group === 'spatial' ? 128 : 0)
+        || row.sampleCount !== 7 || row.setupIncluded !== true
+        || !Array.isArray(row.samples) || row.samples.length !== 7
+        || row.guards?.srSRetained !== true || row.guards?.srSOutputMatch !== true || row.guards?.noMacWithS !== true) return null;
+      const outputWords = row.group === 'spatial' ? 128 * (Math.ceil(row.size / 32) + 1) : row.size * (['rotation', 'normalize'].includes(row.group) ? 3 : 1);
+      if (row.outputWords !== outputWords || row.checkedOutputWords !== 7 * outputWords
+        || row.checkedComparisons !== 7 * outputWords * (row.paths.length - 1)) return null;
+      for (const sample of row.samples) {
+        if (sample?.mismatches !== 0 || !/^[a-f0-9]{8}$/.test(sample.inputChecksum)) return null;
+        const checksums = new Set();
+        for (const name of spec.paths) {
+          const cost = sample.paths?.[name];
+          if (!positive(cost?.cycles) || !positive(cost?.instructions) || !/^[a-f0-9]{8}$/.test(cost?.checksum)) return null;
+          for (const metric of ['dataReads', 'dataWrites', 'macInstructions', 'dmulsInstructions'])
+            if (!Number.isSafeInteger(cost[metric]) || cost[metric] < 0) return null;
+          if (cost.macInstructions + cost.dmulsInstructions > cost.instructions) return null;
+          checksums.add(cost.checksum);
+        }
+        if (checksums.size !== 1) return null;
+      }
+      const divisor = row.group === 'spatial' ? row.queries : row.size;
+      for (const name of spec.paths) {
+        const cycles = median(row.samples.map(sample => sample.paths[name].cycles));
+        if (row.medianCycles?.[name] !== cycles || !close(row.cyclesPerItem?.[name], cycles / divisor)) return null;
+        for (const control of spec.baselines) {
+          const ratio = row.relativeTo?.[control]?.[name];
+          if (!close(ratio?.speedup, row.medianCycles[control] / cycles)
+            || !close(ratio?.cyclesSavedPercent, 100 * (1 - cycles / row.medianCycles[control]))) return null;
+        }
+      }
+      seen.add(key); ids.add(row.id); words += row.checkedOutputWords; comparisons += row.checkedComparisons;
+    }
+    return words === data.checkedOutputWords && comparisons === data.checkedComparisons ? data : null;
+  }
+
+  function strongestWorkloadControl(row) {
+    return workloadSpecs[row.group].baselines.reduce((best, name) => row.medianCycles[name] < row.medianCycles[best] ? name : best);
+  }
+  function workloadRatio(beforeCycles, afterCycles) {
+    return beforeCycles === afterCycles ? 'Same cost' : beforeCycles > afterCycles
+      ? (beforeCycles / afterCycles).toFixed(2) + '× speedup'
+      : (afterCycles / beforeCycles).toFixed(2) + '× control cost';
+  }
+  function workloadChange(beforeCycles, afterCycles) {
+    if (beforeCycles === afterCycles) return 'No change';
+    const percent = Math.abs(100 * (1 - afterCycles / beforeCycles));
+    return (percent < .05 ? '<0.1' : percent.toFixed(1)) + '% ' + (afterCycles < beforeCycles ? 'less' : 'more');
+  }
+  function workloadCell(tag, text, className) {
+    const cell = document.createElement(tag); cell.textContent = text;
+    if (className) cell.className = className;
+    if (tag === 'th') cell.scope = 'row';
+    return cell;
+  }
+  function selectWorkload(group, profile, size) {
+    if (!workloadData || !Object.hasOwn(workloadSpecs, group)) return;
+    workloadGroup = group;
+    const spec = workloadSpecs[group];
+    workloadProfile = spec.profiles.includes(profile) ? profile : spec.profiles[0];
+    workloadSize = spec.sizes.includes(size) ? size : spec.sizes[spec.sizes.length - 1];
+    workloadBaseline = group === 'spatial' ? 'inline_brute' : group === 'rotation' ? 'strongest' : 'prior';
+    workloadKernel = group === 'rotation' ? 'mac' : spec.kernels[0];
+    fillOptions($('workload-group'), Object.entries(workloadSpecs).map(([key, value]) => [key, value.label]), group);
+    fillOptions($('workload-profile'), spec.profiles.map(name => [name, workloadProfileNames[name]]), workloadProfile);
+    fillOptions($('workload-size'), spec.sizes.map(value => [String(value), number(value) + (group === 'spatial' ? ' boxes' : group === 'rotation' ? ' vectors' : ' calls')]), String(workloadSize));
+    const controls = spec.baselines.map(name => [name, workloadPathNames[name]]);
+    if (controls.length > 1) controls.unshift(['strongest', 'Fastest recorded control']);
+    fillOptions($('workload-baseline'), controls, workloadBaseline);
+    fillOptions($('workload-kernel'), spec.kernels.map(name => [name, workloadPathNames[name]]), workloadKernel);
+    for (const name of ['group', 'profile', 'size', 'baseline', 'kernel']) $('workload-' + name).disabled = false;
+    showWorkloadResults();
+  }
+
+  function showWorkloadHighlights() {
+    for (const group of ['rotation', 'spatial']) {
+      const row = workloadData.records.find(value => value.group === group && value.size === 512 && value.profile === (group === 'rotation' ? 'bounded' : 'sparse'));
+      const control = group === 'rotation' ? strongestWorkloadControl(row) : 'inline_brute', path = group === 'rotation' ? 'mac' : 'index';
+      const beforeCycles = row.medianCycles[control], afterCycles = row.medianCycles[path];
+      const headline = $('workload-' + group + '-highlight');
+      headline.textContent = workloadRatio(beforeCycles, afterCycles);
+      headline.classList.toggle('math-loss', afterCycles > beforeCycles);
+      if (group === 'rotation') {
+        $('workload-rotation-control').textContent = 'Against ' + workloadPathNames[control].toLowerCase();
+        $('workload-rotation-other').textContent = ['scalar', 'composed', 'composed_mac'].map(name =>
+          (row.medianCycles[name] / afterCycles).toFixed(2) + '× vs ' + ({scalar: 'repeated calls', composed: 'matrix + C', composed_mac: 'matrix + MAC.L'}[name])).join(' · ');
+      } else $('workload-spatial-other').textContent = (row.medianCycles.api_brute / afterCycles).toFixed(2)
+        + '× vs prior API loop · index build + 128 queries included.';
+    }
+    let faster = 0, same = 0, slower = 0, tenfold = 0;
+    const rows = workloadData.records.map(row => {
+      const control = strongestWorkloadControl(row), kernel = row.group === 'rotation' ? 'mac' : row.group === 'spatial' ? 'index' : 'current';
+      const beforeCycles = row.medianCycles[control], afterCycles = row.medianCycles[kernel];
+      if (afterCycles < beforeCycles) faster++; else if (afterCycles > beforeCycles) slower++; else same++;
+      if (beforeCycles / afterCycles >= 10) tenfold++;
+      const tr = document.createElement('tr'), name = workloadCell('td', '');
+      const button = document.createElement('button'); button.type = 'button'; button.className = 'workload-case-select';
+      button.textContent = workloadSpecs[row.group].label;
+      button.addEventListener('click', () => {
+        selectWorkload(row.group, row.profile, row.size);
+        $('workload-group').focus();
+      });
+      name.append(button);
+      tr.append(name, workloadCell('td', workloadProfileNames[row.profile] + ' / ' + number(row.size)),
+        workloadCell('td', workloadPathNames[control]), workloadCell('td', number(afterCycles)),
+        workloadCell('td', workloadChange(beforeCycles, afterCycles) + ' · ' + workloadRatio(beforeCycles, afterCycles), afterCycles < beforeCycles ? 'math-gain' : afterCycles > beforeCycles ? 'math-loss' : ''));
+      return tr;
+    });
+    $('workload-all-cases').replaceChildren(...rows);
+    $('workload-coverage').textContent = 'All 44 cases against their fastest recorded controls: '
+      + faster + ' faster · ' + same + ' unchanged · ' + slower + ' slower. '
+      + tenfold + ' of 44 reach 10×. Every case is retained below.';
+    document.querySelectorAll('[data-workload-example]').forEach(button => { button.disabled = false; });
+  }
+
+  function showWorkloadResults() {
+    const row = workloadData?.records.find(value => value.group === workloadGroup && value.profile === workloadProfile && value.size === workloadSize);
+    if (!row) {
+      const rejected = !!window.SH2ZAM_WORKLOAD_MODEL;
+      window.SH2ZAM_WORKLOAD_STATE = {ready: false, rejected};
+      $('workload-status').textContent = rejected ? 'Evidence rejected' : 'Awaiting native capture';
+      $('workload-proof').textContent = rejected
+        ? 'The loaded workload data failed its native evidence checks. No performance figures are shown.'
+        : 'Awaiting validated native SH-2 evidence. No workload gains are claimed yet.';
+      $('workload-proof').classList.add('pending');
+      return;
+    }
+    const control = workloadBaseline === 'strongest' ? strongestWorkloadControl(row) : workloadBaseline;
+    const beforeCycles = row.medianCycles[control], afterCycles = row.medianCycles[workloadKernel];
+    const divisor = row.group === 'spatial' ? row.queries : row.size, unit = row.group === 'spatial' ? 'query' : row.group === 'rotation' ? 'vector' : 'call';
+    const savings = 100 * (1 - afterCycles / beforeCycles), perItem = cycles => (cycles / divisor).toLocaleString('en-US', {maximumFractionDigits: 2}) + ' cycles / ' + unit;
+    window.SH2ZAM_WORKLOAD_STATE = {ready: true, group: workloadGroup, profile: workloadProfile, size: workloadSize,
+      baselineChoice: workloadBaseline, baseline: control, kernel: workloadKernel, beforeCycles, afterCycles,
+      speedup: beforeCycles / afterCycles, savedPercent: savings, sourceCommit: workloadData.run.sourceCommit, record: row};
+    $('workload-status').textContent = 'Recorded · SH-2 model';
+    $('workload-before-label').textContent = workloadPathNames[control].toUpperCase();
+    $('workload-after-label').textContent = workloadPathNames[workloadKernel].toUpperCase();
+    $('workload-before-cycles').textContent = number(beforeCycles); $('workload-after-cycles').textContent = number(afterCycles);
+    $('workload-before-unit').textContent = perItem(beforeCycles); $('workload-after-unit').textContent = perItem(afterCycles);
+    $('workload-savings-label').textContent = savings < 0 ? 'EXTRA WORKLOAD COST' : 'WORKLOAD COST SAVED';
+    $('workload-savings').textContent = (Math.abs(savings) > 0 && Math.abs(savings) < .05 ? '<0.1' : Math.abs(savings).toFixed(1)) + '%';
+    $('workload-savings').closest('article').classList.toggle('loss', savings < 0);
+    $('workload-speedup').textContent = workloadRatio(beforeCycles, afterCycles);
+    $('workload-context').textContent = workloadSpecs[row.group].label + ' · ' + workloadProfileNames[row.profile]
+      + ' · ' + number(row.size) + (row.group === 'spatial' ? ' boxes / 128 queries' : row.group === 'rotation' ? ' vectors' : ' calls')
+      + ' · median of seven changing-input samples.';
+    $('workload-baseline-note').textContent = row.group === 'rotation'
+      ? (control === 'scalar' ? 'Repeated-call control selected. ' : workloadBaseline === 'strongest' ? 'The fastest existing control is selected for this case. ' : 'Existing composed control selected. ')
+        + 'All rotation controls already use SH2ZAM. Both composed paths remain visible so shared-setup gains can be assessed separately from improvements beyond composition.'
+      : row.group === 'spatial' ? 'Independent inline C prepares each query once and tests every box with the same exact predicate. The prior API loop is also retained.'
+        : 'Latest optimized revision 3374d77 → this capture. The 48-operation table below keeps the earlier 10786b6 comparison separately labeled.';
+    $('workload-unit-heading').textContent = 'Cycles / ' + unit;
+    $('workload-table-caption').textContent = 'Whole-workload medians · setup included · all ' + row.paths.length + ' paths';
+    $('workload-paths').replaceChildren(...row.paths.map(name => {
+      const cycles = row.medianCycles[name], tr = document.createElement('tr'), label = workloadCell('th', workloadPathNames[name]);
+      if (name === control) label.append(workloadCell('small', 'Selected control'));
+      else if (name === strongestWorkloadControl(row)) label.append(workloadCell('small', 'Fastest existing control'));
+      tr.classList.toggle('selected', name === workloadKernel); tr.classList.toggle('baseline-selected', name === control);
+      tr.append(label, workloadCell('td', number(cycles)), workloadCell('td', (cycles / divisor).toLocaleString('en-US', {maximumFractionDigits: 2})),
+        workloadCell('td', (beforeCycles / cycles).toFixed(3) + '×', cycles > beforeCycles ? 'math-loss' : cycles < beforeCycles ? 'math-gain' : ''));
+      return tr;
+    }));
+    $('workload-proof').classList.remove('pending');
+    $('workload-proof').textContent = 'Bit-exact: ' + number(row.checkedOutputWords) + ' output words · '
+      + number(row.checkedComparisons) + ' path comparisons · zero mismatches. SR.S preserved; native MAC.L disabled with SR.S=1.';
+    $('workload-scope').textContent = row.group === 'rotation'
+      ? 'One shared quaternion setup per composed or batch call. When MAC.L is attempted, the input scan and range qualification are included. New batches below eight vectors skip MAC preparation; one vector uses the scalar call. Full-range and SR.S fallbacks stay in the results.'
+      : row.group === 'spatial' ? 'One index build + all 128 queries are measured together. Results retain dense, crowded, and full-range inputs. Rebuild when boxes change.'
+        : 'All 32 API calls, input loads, and result writes are included. No relaxed precision or approximate API is substituted.';
+    const header = document.createElement('tr');
+    for (const label of ['Sample / input', ...row.paths.map(name => workloadPathNames[name]), 'Output checksum']) {
+      const cell = workloadCell('th', label); cell.scope = 'col'; header.append(cell);
+    }
+    $('workload-samples-head').replaceChildren(header);
+    $('workload-samples').replaceChildren(...row.samples.map((sample, i) => {
+      const tr = document.createElement('tr');
+      tr.append(workloadCell('th', String(i + 1) + ' / ' + sample.inputChecksum),
+        ...row.paths.map(name => workloadCell('td', number(sample.paths[name].cycles))),
+        workloadCell('td', sample.paths[row.paths[0]].checksum));
+      return tr;
+    }));
+    $('workload-samples-note').textContent = 'Modeled cycles for the selected case. Identical outputs are checked word by word across all paths. The export includes every sample’s instruction, memory-access, and multiplier counters for all 44 cases.';
+    const macs = row.samples.reduce((sum, sample) => sum + sample.paths[workloadKernel].macInstructions, 0);
+    $('workload-dispatch').textContent = 'Selected path: ' + number(macs) + ' MAC.L instructions across these seven samples. A zero count includes paths using exact fallbacks.';
+    const run = workloadData.run;
+    $('workload-provenance').textContent = '44 complete cases · ' + number(workloadData.checkedComparisons)
+      + ' exact comparisons · source ' + run.sourceCommit.slice(0, 8) + ' · prior 3374d77 · compiler ' + run.compiler;
+    $('workload-flags').textContent = run.compileFlags + '\nELF SHA-256: ' + run.elfSHA256
+      + '\nRaw capture SHA-256: ' + run.rawCaptureSHA256 + '\nYabause: ' + run.interpreterCommit;
+    try {
+      const url = new URL(run.evidenceUrl);
+      if (url.origin === 'https://github.com' && url.pathname.startsWith('/lamb2k/SH2ZAM/actions/')) $('workload-evidence').href = url.href;
+    } catch (_) { /* Retain the fixed source link if provenance is malformed. */ }
+    $('workload-export').disabled = false; $('export').disabled = false;
+  }
+
+  function loadWorkloadResults() {
+    workloadData = validatedWorkloads(window.SH2ZAM_WORKLOAD_MODEL);
+    if (workloadData) { showWorkloadHighlights(); selectWorkload('rotation', 'bounded', 512); }
+    else showWorkloadResults();
   }
 
   function loadScene() {
@@ -355,7 +588,7 @@
     requestAnimationFrame(frame);
   }
   function exportModel() {
-    if ((!modelData || !modelRow) && !mathData) return;
+    if ((!modelData || !modelRow) && !mathData && !workloadData) return;
     const state = window.SH2ZAM_MODEL_STATE;
     const report = {
       schema: 'sh2zam-model-selection-v1', environment: 'isolated-sh2-interpreter',
@@ -370,7 +603,9 @@
         run: modelData.run, guards: modelData.guards, records: [modelRow]
       }
       } : {}),
-      ...(mathData ? {mathLibrary: {selection: {family: mathFamily, operation: mathOperation}, evidence: mathData}} : {})
+      ...(mathData ? {mathLibrary: {selection: {family: mathFamily, operation: mathOperation}, evidence: mathData}} : {}),
+      ...(workloadData ? {workloads: {selection: {group: workloadGroup, profile: workloadProfile, size: workloadSize,
+        baseline: workloadBaseline, kernel: workloadKernel}, evidence: workloadData}} : {})
     };
     const url = URL.createObjectURL(new Blob([JSON.stringify(report, null, 2)], {type: 'application/json'}));
     const link = document.createElement('a');
@@ -405,6 +640,35 @@
     if (!mathData) return;
     mathOperation = event.target.value; showMathResults();
   });
+  $('workload-group').addEventListener('change', event => selectWorkload(event.target.value));
+  $('workload-profile').addEventListener('change', event => {
+    if (!workloadData || !workloadSpecs[workloadGroup].profiles.includes(event.target.value)) return;
+    workloadProfile = event.target.value; showWorkloadResults();
+  });
+  $('workload-size').addEventListener('change', event => {
+    const size = Number(event.target.value);
+    if (!workloadData || !workloadSpecs[workloadGroup].sizes.includes(size)) return;
+    workloadSize = size; showWorkloadResults();
+  });
+  $('workload-baseline').addEventListener('change', event => {
+    const value = event.target.value;
+    if (!workloadData || (value !== 'strongest' && !workloadSpecs[workloadGroup].baselines.includes(value))) return;
+    workloadBaseline = value; showWorkloadResults();
+  });
+  $('workload-kernel').addEventListener('change', event => {
+    if (!workloadData || !workloadSpecs[workloadGroup].kernels.includes(event.target.value)) return;
+    workloadKernel = event.target.value; showWorkloadResults();
+  });
+  document.querySelectorAll('[data-workload-example]').forEach(button => button.addEventListener('click', () => {
+    const group = button.dataset.workloadExample;
+    selectWorkload(group, group === 'spatial' ? 'sparse' : 'bounded', 512);
+  }));
+  $('workload-export').addEventListener('click', () => {
+    if (!workloadData) return;
+    const url = URL.createObjectURL(new Blob([JSON.stringify(workloadData, null, 2)], {type: 'application/json'}));
+    const link = document.createElement('a'); link.href = url; link.download = 'sh2zam-workload-evidence-' + workloadData.run.sourceCommit.slice(0, 8) + '.json';
+    link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
   reduced.addEventListener('change', event => { if (event.matches) { playing = false; draw(); } });
   new ResizeObserver(resize).observe($('stage'));
 
@@ -429,6 +693,7 @@
     }
   }
   // Model evidence does not depend on WebAssembly or animation starting.
+  loadWorkloadResults();
   loadMathResults();
   loadScene();
   initVisual();

@@ -108,7 +108,7 @@ static void edge_quaternions(void) {
         {INT32_MAX,INT32_MIN,INT32_MAX,INT32_MIN},
         {INT32_MAX,INT32_MAX,INT32_MAX,INT32_MAX}
     };
-    static const size_t counts[]={1,8,32,128,512};
+    static const size_t counts[]={1,2,7,8,9,32,128,512};
     for(size_t i=0;i<sizeof q/sizeof q[0];i++) for(unsigned profile=0;profile<3;profile++)
         for(size_t n=0;n<sizeof counts/sizeof counts[0];n++) check_batch(q[i],profile,counts[n]);
 }

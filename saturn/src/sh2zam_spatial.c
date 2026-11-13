@@ -30,27 +30,43 @@ static bool spatial_contains_box(const sh2z_aabb_t *outer,const sh2z_aabb_t *inn
 static uint32_t spatial_distance(int32_t a,int32_t b) {
     return a>=b?(uint32_t)a-(uint32_t)b:(uint32_t)b-(uint32_t)a;
 }
+struct spatial_sphere {
+    sh2z_sphere_t value;
+    uint64_t square;
+};
+static inline uint32_t spatial_interval_distance(int32_t value,int32_t low,int32_t high) {
+    if(value<low) return (uint32_t)low-(uint32_t)value;
+    if(value>high) return (uint32_t)value-(uint32_t)high;
+    return 0;
+}
+/* Callers already know the box is valid and the radius is nonnegative.
+ * The component checks bound each square by INT32_MAX^2, so the sum of
+ * three squares is below 3*2^62 < 2^64. Unlike the two-sphere primitive,
+ * this radius cannot exceed INT32_MAX: one unsigned sum is safe. */
+static inline bool spatial_sphere_hits_box(const struct spatial_sphere *s,const sh2z_aabb_t *b) {
+    const uint32_t radius=(uint32_t)s->value.radius;
+    const uint32_t x=spatial_interval_distance(s->value.center.x,b->min.x,b->max.x);
+    if(x>radius) return false;
+    const uint32_t y=spatial_interval_distance(s->value.center.y,b->min.y,b->max.y);
+    if(y>radius) return false;
+    const uint32_t z=spatial_interval_distance(s->value.center.z,b->min.z,b->max.z);
+    if(z>radius) return false;
+    return (uint64_t)x*x+(uint64_t)y*y+(uint64_t)z*z<=s->square;
+}
 /* The farthest AABB corner maximizes squared distance from the center.
- * Reject each oversized component before squaring, then subtract squares
- * from the radius square so their sum cannot overflow. */
-static bool spatial_sphere_contains_box(const sh2z_sphere_t *s,const sh2z_aabb_t *b) {
-    const uint32_t radius=(uint32_t)s->radius;
-    uint32_t a=spatial_distance(s->center.x,b->min.x),c=spatial_distance(s->center.x,b->max.x);
+ * The same component bound as the narrow phase makes the sum safe. */
+static bool spatial_sphere_contains_box(const struct spatial_sphere *s,const sh2z_aabb_t *b) {
+    const uint32_t radius=(uint32_t)s->value.radius;
+    uint32_t a=spatial_distance(s->value.center.x,b->min.x),c=spatial_distance(s->value.center.x,b->max.x);
     const uint32_t x=a>c?a:c;
     if(x>radius) return false;
-    a=spatial_distance(s->center.y,b->min.y); c=spatial_distance(s->center.y,b->max.y);
+    a=spatial_distance(s->value.center.y,b->min.y); c=spatial_distance(s->value.center.y,b->max.y);
     const uint32_t y=a>c?a:c;
     if(y>radius) return false;
-    a=spatial_distance(s->center.z,b->min.z); c=spatial_distance(s->center.z,b->max.z);
+    a=spatial_distance(s->value.center.z,b->min.z); c=spatial_distance(s->value.center.z,b->max.z);
     const uint32_t z=a>c?a:c;
     if(z>radius) return false;
-    uint64_t remaining=(uint64_t)radius*radius;
-    uint64_t square=(uint64_t)x*x;
-    if(square>remaining) return false;
-    remaining-=square; square=(uint64_t)y*y;
-    if(square>remaining) return false;
-    remaining-=square; square=(uint64_t)z*z;
-    return square<=remaining;
+    return (uint64_t)x*x+(uint64_t)y*y+(uint64_t)z*z<=s->square;
 }
 static int32_t spatial_low(int32_t center,int32_t radius) {
     return center<INT32_MIN+radius?INT32_MIN:center-radius;
@@ -63,16 +79,35 @@ static sh2z_aabb_t spatial_sphere_bounds(sh2z_sphere_t s) {
         {spatial_low(s.center.x,s.radius),spatial_low(s.center.y,s.radius),spatial_low(s.center.z,s.radius)},
         {spatial_high(s.center.x,s.radius),spatial_high(s.center.y,s.radius),spatial_high(s.center.z,s.radius)}};
 }
+/* A cost heuristic only: covering >=3/4 of each root interval usually leaves
+ * little useful AABB pruning. Clipped unsigned spans handle INT32 endpoints
+ * without overflow or a volume multiply. Both choices remain exact; this
+ * threshold cannot guarantee that scanning is faster for every distribution. */
+static bool spatial_covers_axis(int32_t qlo,int32_t qhi,int32_t lo,int32_t hi) {
+    if(qhi<lo||qlo>hi) return false;
+    const int32_t a=qlo>lo?qlo:lo,b=qhi<hi?qhi:hi;
+    const uint32_t extent=(uint32_t)hi-(uint32_t)lo;
+    const uint32_t covered=(uint32_t)b-(uint32_t)a;
+    return covered>=extent-(extent>>2);
+}
+static bool spatial_broad_query(const sh2z_aabb_t *query,const sh2z_aabb_t *root) {
+    return spatial_covers_axis(query->min.x,query->max.x,root->min.x,root->max.x)&&
+           spatial_covers_axis(query->min.y,query->max.y,root->min.y,root->max.y)&&
+           spatial_covers_axis(query->min.z,query->max.z,root->min.z,root->max.z);
+}
 
-/* Unsigned order keys preserve signed coordinate order. Their midpoint never
- * overflows, including the full INT32_MIN..INT32_MAX interval. */
-static uint32_t spatial_center(const sh2z_aabb_t *b,unsigned axis) {
-    int32_t lo,hi;
-    if(axis==0) {lo=b->min.x;hi=b->max.x;}
-    else if(axis==1) {lo=b->min.y;hi=b->max.y;}
-    else {lo=b->min.z;hi=b->max.z;}
-    const uint32_t key=(uint32_t)lo^UINT32_C(0x80000000);
-    return key+(((uint32_t)hi^UINT32_C(0x80000000))-key)/2u;
+/* The base points to the selected named scalar member of the first box.
+ * Advancing by sizeof(box) preserves its alignment and effective type; the
+ * max member is at the same offset in the second vector. Hoisting the member
+ * offset removes an axis branch from every median-selection comparison. */
+static uint32_t spatial_center(const unsigned char *base,uint32_t id) {
+    const unsigned char *p=base+(size_t)id*sizeof(sh2z_aabb_t);
+    const int32_t lo=*(const int32_t *)(const void *)p;
+    const int32_t hi=*(const int32_t *)(const void *)(p+offsetof(sh2z_aabb_t,max));
+    /* Unsigned modular arithmetic gives the exact signed interval midpoint;
+     * flipping the sign bit then preserves signed order as an unsigned key. */
+    const uint32_t middle=(uint32_t)lo+((uint32_t)hi-(uint32_t)lo)/2u;
+    return middle^UINT32_C(0x80000000);
 }
 static void spatial_swap(uint32_t *a,uint32_t *b) {
     const uint32_t t=*a;*a=*b;*b=t;
@@ -87,14 +122,17 @@ static uint32_t spatial_median(uint32_t a,uint32_t b,uint32_t c) {
  * floor(n/2) and ceil(n/2) leaves, independent of the spatial distribution. */
 static void spatial_select(uint32_t *ids,size_t count,size_t middle,
                            const sh2z_aabb_t *boxes,unsigned axis) {
+    const size_t offset=axis==0?offsetof(sh2z_vec3_t,x):
+                        axis==1?offsetof(sh2z_vec3_t,y):offsetof(sh2z_vec3_t,z);
+    const unsigned char *base=(const unsigned char *)(const void *)boxes+offset;
     size_t first=0,last=count;
     while(last-first>1) {
-        const uint32_t pivot=spatial_median(spatial_center(&boxes[ids[first]],axis),
-            spatial_center(&boxes[ids[first+(last-first)/2]],axis),
-            spatial_center(&boxes[ids[last-1]],axis));
+        const uint32_t pivot=spatial_median(spatial_center(base,ids[first]),
+            spatial_center(base,ids[first+(last-first)/2]),
+            spatial_center(base,ids[last-1]));
         size_t low=first,scan=first,high=last;
         while(scan<high) {
-            const uint32_t key=spatial_center(&boxes[ids[scan]],axis);
+            const uint32_t key=spatial_center(base,ids[scan]);
             if(key<pivot) {spatial_swap(&ids[low],&ids[scan]);++low;++scan;}
             else if(key>pivot) {--high;spatial_swap(&ids[scan],&ids[high]);}
             else ++scan;
@@ -190,7 +228,18 @@ static bool spatial_query_valid(uint32_t *hits,size_t capacity,size_t *hit_count
     return true;
 }
 static void spatial_set_hit(uint32_t *hits,uint32_t object) {
-    hits[object>>5]|=UINT32_C(1)<<(object&31u);
+    /* SH-2 has no variable logical shift. The first native capture called a
+     * shift helper for every hit; a 128-byte table avoids that call. */
+    static const uint32_t masks[32]={
+        UINT32_C(0x00000001),UINT32_C(0x00000002),UINT32_C(0x00000004),UINT32_C(0x00000008),
+        UINT32_C(0x00000010),UINT32_C(0x00000020),UINT32_C(0x00000040),UINT32_C(0x00000080),
+        UINT32_C(0x00000100),UINT32_C(0x00000200),UINT32_C(0x00000400),UINT32_C(0x00000800),
+        UINT32_C(0x00001000),UINT32_C(0x00002000),UINT32_C(0x00004000),UINT32_C(0x00008000),
+        UINT32_C(0x00010000),UINT32_C(0x00020000),UINT32_C(0x00040000),UINT32_C(0x00080000),
+        UINT32_C(0x00100000),UINT32_C(0x00200000),UINT32_C(0x00400000),UINT32_C(0x00800000),
+        UINT32_C(0x01000000),UINT32_C(0x02000000),UINT32_C(0x04000000),UINT32_C(0x08000000),
+        UINT32_C(0x10000000),UINT32_C(0x20000000),UINT32_C(0x40000000),UINT32_C(0x80000000)};
+    hits[object>>5]|=masks[object&31u];
 }
 static size_t spatial_accept_subtree(uint32_t *hits,const sh2z_aabb_node_t *nodes,
                                      size_t first,size_t last) {
@@ -200,16 +249,42 @@ static size_t spatial_accept_subtree(uint32_t *hits,const sh2z_aabb_node_t *node
     }
     return count;
 }
+/* Sequential scans build one complete output word in a register. This avoids
+ * per-hit read/modify/write traffic and the native variable-shift helper. */
+static size_t spatial_scan(uint32_t *hits,const sh2z_aabb_index_t *index,
+                           const struct spatial_sphere *sphere) {
+    const bool all_valid=index->node_count==index->count+(index->count-1);
+    const sh2z_aabb_t *box=index->boxes;
+    size_t remaining=index->count,total=0;
+    while(remaining) {
+        size_t amount=remaining<32?remaining:32;
+        remaining-=amount;
+        uint32_t bits=0,mask=1;
+        do {
+            if((all_valid||spatial_valid_box(box))&&spatial_sphere_hits_box(sphere,box)) {
+                bits|=mask;++total;
+            }
+            ++box;mask<<=1;
+        } while(--amount);
+        *hits++=bits;
+    }
+    return total;
+}
 bool sh2z_aabb_index_query_sphere(uint32_t *hits,size_t hit_word_capacity,
     size_t *hit_count,const sh2z_aabb_index_t *index,sh2z_sphere_t sphere) {
     if(!spatial_query_valid(hits,hit_word_capacity,hit_count,index)) return false;
     const size_t words=index->count/32+(index->count%32!=0);
     size_t count=0;
+    if(sphere.radius<0||!index->node_count) {
+        for(size_t i=0;i<words;i++) hits[i]=0;
+        if(hit_count) *hit_count=0;
+        return true;
+    }
+    const uint32_t radius=(uint32_t)sphere.radius;
+    const struct spatial_sphere prepared={sphere,(uint64_t)radius*radius};
     /* Exact whole-tree acceptance is especially useful for dense queries.
      * If every original box is valid, original-index output is a packed mask. */
-    bool all=false;
-    if(sphere.radius>=0&&index->node_count)
-        all=spatial_sphere_contains_box(&sphere,&index->nodes[0].bounds);
+    const bool all=spatial_sphere_contains_box(&prepared,&index->nodes[0].bounds);
     if(all&&index->node_count==index->count+(index->count-1)) {
         for(size_t i=0;i<words;i++) hits[i]=UINT32_MAX;
         const unsigned remainder=(unsigned)(index->count%32);
@@ -217,32 +292,26 @@ bool sh2z_aabb_index_query_sphere(uint32_t *hits,size_t hit_word_capacity,
         if(hit_count) *hit_count=index->count;
         return true;
     }
-    for(size_t i=0;i<words;i++) hits[i]=0;
-    if(sphere.radius<0||!index->node_count) {
-        if(hit_count) *hit_count=0;
-        return true;
+    if(all) {
+        for(size_t i=0;i<words;i++) hits[i]=0;
+        count=spatial_accept_subtree(hits,index->nodes,0,index->node_count);
     }
-    if(all) count=spatial_accept_subtree(hits,index->nodes,0,index->node_count);
     else {
         const sh2z_aabb_t query=spatial_sphere_bounds(sphere);
-        /* If even the root's AABB is contained by the query AABB, none of the
-         * child AABBs can prune a candidate; avoid traversing that tree. */
-        if(spatial_contains_box(&query,&index->nodes[0].bounds)) {
-            for(size_t i=0;i<index->count;i++) if(sh2z_sphere_intersects_aabb(sphere,index->boxes[i])) {
-                spatial_set_hit(hits,(uint32_t)i);++count;
-            }
-        } else {
+        if(spatial_broad_query(&query,&index->nodes[0].bounds)) count=spatial_scan(hits,index,&prepared);
+        else {
+            for(size_t i=0;i<words;i++) hits[i]=0;
             size_t node=0;
             while(node<index->node_count) {
                 const sh2z_aabb_node_t *n=&index->nodes[node];
                 if(!spatial_hits_box(&query,&n->bounds)) {node=n->escape;continue;}
                 if(n->object!=UINT32_MAX) {
-                    if(sh2z_sphere_intersects_aabb(sphere,index->boxes[n->object])) {
+                    if(spatial_sphere_hits_box(&prepared,&n->bounds)) {
                         spatial_set_hit(hits,n->object);++count;
                     }
                     ++node;
                 } else if(n->escape-node>=15&&spatial_contains_box(&query,&n->bounds)&&
-                          spatial_sphere_contains_box(&sphere,&n->bounds)) {
+                          spatial_sphere_contains_box(&prepared,&n->bounds)) {
                     count+=spatial_accept_subtree(hits,index->nodes,node,n->escape);
                     node=n->escape;
                 } else ++node;

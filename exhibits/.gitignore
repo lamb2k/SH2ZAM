@@ -10,3 +10,4 @@ test-result.json
 __pycache__/
 
 math-results.js
+workload-results.js

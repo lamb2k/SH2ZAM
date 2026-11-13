@@ -1,8 +1,8 @@
 /* Independent spatial-query oracle and buffer/lifetime contracts. MIT. */
 #include "sh2zam/spatial.h"
-#include <assert.h>
 #include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define MAX_BOXES 512u
@@ -17,7 +17,13 @@ static uint32_t scratch[MAX_BOXES],saved_scratch[MAX_BOXES];
 static uint32_t hits[MAX_WORDS+2],expected[MAX_WORDS+2];
 static bool seen[MAX_BOXES];
 
-static void check(bool value) {++checks;assert(value);}
+static void check(bool value) {
+    ++checks;
+    if(!value) {
+        fprintf(stderr,"spatial check %llu failed\n",(unsigned long long)checks);
+        exit(EXIT_FAILURE);
+    }
+}
 static uint32_t random_word(void) {
     state^=state<<13;state^=state>>17;state^=state<<5;return state;
 }
@@ -137,6 +143,18 @@ static void edge_cases(void) {
         index=build(count);
         query(&index,(sh2z_sphere_t){{0,0,0},5});
     }
+    /* Three bounded squares can exceed INT64_MAX; the narrow phase must use
+     * their exact unsigned sum. Broad direct scans also preserve tail bits. */
+    for(size_t i=0;i<65;i++) boxes[i]=(sh2z_aabb_t){{0,0,0},{0,0,0}};
+    sh2z_aabb_index_t index=build(65);
+    query(&index,(sh2z_sphere_t){{INT32_MAX,INT32_MAX,INT32_MAX},INT32_MAX});
+    query(&index,(sh2z_sphere_t){{INT32_MAX,0,0},INT32_MAX});
+    query(&index,(sh2z_sphere_t){{INT32_MAX,1,0},INT32_MAX});
+    query(&index,(sh2z_sphere_t){{INT32_MIN,0,0},INT32_MAX});
+    boxes[32]=(sh2z_aabb_t){{1,0,0},{0,0,0}};
+    index=build(65);
+    query(&index,(sh2z_sphere_t){{INT32_MAX,INT32_MAX,INT32_MAX},INT32_MAX});
+    query(&index,(sh2z_sphere_t){{0,0,0},0});
 }
 static void distribution_cases(void) {
     const size_t counts[]={0,1,2,3,7,16,31,32,33,63,64,65,127,128,255,256,511,512};

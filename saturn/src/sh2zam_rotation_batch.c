@@ -18,6 +18,10 @@ bool sh2z_quat_rotate_vectors(sh2z_vec3_t *out,sh2z_quat_t q,
     const sh2z_vec3_t *in,size_t count) {
     if(!rotation_buffers_valid(out,in,count)) return false;
     if(!count) return true;
+    if(count==1) {
+        *out=sh2z_quat_rotate(q,*in);
+        return true;
+    }
     const sh2z_mat34_t matrix=sh2z_quat_to_mat34(q);
     return sh2z_mat34_transform_points(out,&matrix,in,count);
 }
@@ -26,9 +30,15 @@ bool sh2z_quat_rotate_vectors_mac(sh2z_vec3_t *out,sh2z_quat_t q,
     const sh2z_vec3_t *in,size_t count) {
     if(!rotation_buffers_valid(out,in,count)) return false;
     if(!count) return true;
+    if(count==1) {
+        *out=sh2z_quat_rotate(q,*in);
+        return true;
+    }
     const sh2z_mat34_t matrix=sh2z_quat_to_mat34(q);
 #if SH2Z_NATIVE_MUL
-    if(out!=in) {
+    /* Eight is the smallest measured batch where bounded MAC.L recovered
+     * its scan/qualification cost. Smaller batches use the ordinary path. */
+    if(count>=8&&out!=in) {
         sh2z_mesh_view_t mesh;
         sh2z_transform_plan_t plan;
         if(!sh2z_mesh_view_init(&mesh,in,count)||

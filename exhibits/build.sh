@@ -6,6 +6,7 @@ node saturn/benchmarks/generate-fixtures.cjs
 node saturn/benchmarks/compile-results.cjs
 node saturn/benchmarks/compile-model-results.cjs
 node saturn/benchmarks/compile-math-results.cjs
+node saturn/benchmarks/compile-workload-results.cjs --allow-missing
 # clang + lld, no emscripten, npm bundle, libc, CDN, or web framework needed.
 "${CLANG:-clang}" --target=wasm32 -O3 -std=c11 -ffreestanding -fno-builtin \
   -fno-fast-math -ffp-contract=off -nostdlib -DSH2Z_FORCE_PORTABLE=1 \

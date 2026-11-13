@@ -24,6 +24,7 @@ jobs:
           bash exhibits/build.sh
           node --check exhibits/app.js
           node exhibits/test-math.cjs
+          node exhibits/test-workload-ui.cjs
           node saturn/benchmarks/test-results.cjs
           node saturn/benchmarks/test-model-results.cjs
           node saturn/benchmarks/math-model/validate.cjs
@@ -44,7 +45,7 @@ jobs:
       - name: Stage static site
         run: |
           mkdir -p _site
-          cp exhibits/index.html exhibits/style.css exhibits/app.js exhibits/meshes.js exhibits/saturn-results.js exhibits/sh2-model-results.js exhibits/math-results.js exhibits/math-module.js exhibits/math.wasm exhibits/gainz.webp exhibits/LICENSE exhibits/NOTICE.md _site/
+          cp exhibits/index.html exhibits/style.css exhibits/app.js exhibits/meshes.js exhibits/saturn-results.js exhibits/sh2-model-results.js exhibits/math-results.js exhibits/workload-results.js exhibits/math-module.js exhibits/math.wasm exhibits/gainz.webp exhibits/LICENSE exhibits/NOTICE.md _site/
           touch _site/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:
