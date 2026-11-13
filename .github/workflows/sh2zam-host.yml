@@ -1,25 +1,49 @@
-name: SH2ZAM portable host correctness
+name: SH2ZAM host correctness
 on:
   push:
-    branches:
-      - feature/sh2zam-saturn
-      - 'feature/sh2zam-*'
+    paths: ['saturn/**', 'CMakeLists.txt', '.github/workflows/sh2zam-host.yml']
   pull_request:
-    paths:
-      - 'saturn/**'
-      - '.github/workflows/sh2zam-host.yml'
-
+  workflow_dispatch:
+permissions:
+  contents: read
 jobs:
-  host:
-    runs-on: ubuntu-latest
+  test:
+    runs-on: ubuntu-24.04
     strategy:
+      fail-fast: false
       matrix:
-        compiler: [gcc, clang]
+        include:
+          - { cc: gcc, cxx: g++, build_type: Release, sanitize: 'OFF' }
+          - { cc: clang, cxx: clang++, build_type: Release, sanitize: 'OFF' }
+          - { cc: clang, cxx: clang++, build_type: Debug, sanitize: 'ON' }
+    name: ${{ matrix.cc }}-${{ matrix.build_type }}-sanitize-${{ matrix.sanitize }}
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
     steps:
       - uses: actions/checkout@v4
-      - name: Configure
-        run: cmake -S saturn -B build/sh2zam-host -DCMAKE_C_COMPILER=${{ matrix.compiler }} -DSH2Z_FORCE_PORTABLE=ON -DSH2Z_BUILD_TESTS=ON
-      - name: Compile
-        run: cmake --build build/sh2zam-host -j2
-      - name: Test
-        run: ctest --test-dir build/sh2zam-host --output-on-failure
+      - name: Build library, tests and examples
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DSH2Z_STRICT=ON -DSH2Z_SANITIZE=${{ matrix.sanitize }}
+          cmake --build build --parallel
+      - name: Execute regression and oracle suites, C++ interop and examples
+        run: ctest --test-dir build --output-on-failure --verbose
+      - name: Check standalone library and installed package
+        if: matrix.sanitize == 'OFF'
+        run: |
+          cmake -S saturn -B standalone -DCMAKE_BUILD_TYPE=Release -DSH2Z_BUILD_TESTS=OFF -DSH2Z_BUILD_EXAMPLES=OFF
+          cmake --build standalone --parallel
+          cmake --install standalone --prefix "$PWD/install"
+          mkdir consumer
+          printf '%s\n' 'cmake_minimum_required(VERSION 3.16)' 'project(consumer C)' 'find_package(SH2ZAM 0.2 CONFIG REQUIRED)' 'add_executable(consumer main.c)' 'target_link_libraries(consumer PRIVATE SH2ZAM::sh2zam)' > consumer/CMakeLists.txt
+          printf '%s\n' '#include <sh2zam/sh2zam.h>' 'int main(void) { return sh2z_mul(SH2Z_ONE, SH2Z_ONE) != SH2Z_ONE; }' > consumer/main.c
+          cmake -S consumer -B consumer-build -DCMAKE_PREFIX_PATH="$PWD/install"
+          cmake --build consumer-build
+          ./consumer-build/consumer
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: host-${{ matrix.cc }}-${{ matrix.build_type }}-sanitize-${{ matrix.sanitize }}
+          path: build/Testing/Temporary/LastTest.log

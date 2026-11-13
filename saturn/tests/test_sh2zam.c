@@ -1,5 +1,8 @@
 /* Host-side SH2ZAM behavior tests; SH-2 instruction path needs console tests. */
 #include "sh2zam/sh2zam.h"
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #include <assert.h>
 #include <limits.h>
 #include <stdio.h>

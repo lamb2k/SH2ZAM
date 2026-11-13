@@ -14,8 +14,8 @@ jobs:
       - name: Pull the Yaul project's documented toolchain image
         run: |
           docker pull ijacquez/yaul:latest
-          docker image inspect ijacquez/yaul:latest --format '{{index .RepoDigests 0}}' > sh2-toolchain-image.txt
-      - name: Compile and audit actual big-endian SH-2 objects
+          docker image inspect ijacquez/yaul:latest --format '{{index .RepoDigests 0}}' | tee sh2-toolchain-image.txt
+      - name: Compile and audit actual big-endian SH-2 objects and link Saturn demo
         shell: bash
         run: |
           set -euo pipefail
@@ -39,11 +39,9 @@ jobs:
             done
             "$AR" rcs build/sh2/libsh2zam.a build/sh2/*.o
             for src in saturn/examples/math_examples.c saturn/examples/saturn_smoke.c; do
-              if test -f "$src"; then
-                "$CC" -m2 -mb -O2 -ffreestanding -std=c11 -Wall -Wextra -Werror \
-                  -Isaturn/include -Isaturn/examples -c "$src" \
-                  -o "build/sh2/$(basename "${src%.c}").o"
-              fi
+              "$CC" -m2 -mb -O2 -ffreestanding -std=c11 -Wall -Wextra -Werror \
+                -Isaturn/include -Isaturn/examples -c "$src" \
+                -o "build/sh2/$(basename "${src%.c}").o"
             done
             "$READELF" -h build/sh2/libsh2zam.a > sh2-elf.txt
             "$OBJDUMP" -d build/sh2/libsh2zam.a > sh2-disassembly.txt
@@ -52,6 +50,7 @@ jobs:
             grep -q "dmuls.l" sh2-disassembly.txt
             cat sh2-elf.txt
             cat sh2-undefined.txt
+            make -C saturn/examples/yaul-smoke
           '
       - uses: actions/upload-artifact@v4
         if: always()
@@ -60,3 +59,7 @@ jobs:
           path: |
             build/sh2/
             sh2-*.txt
+            saturn/examples/yaul-smoke/*.iso
+            saturn/examples/yaul-smoke/*.cue
+            saturn/examples/yaul-smoke/*.bin
+            saturn/examples/yaul-smoke/build/

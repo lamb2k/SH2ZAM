@@ -1,0 +1,3 @@
+@PACKAGE_INIT@
+include("${CMAKE_CURRENT_LIST_DIR}/SH2ZAMTargets.cmake")
+check_required_components(SH2ZAM)

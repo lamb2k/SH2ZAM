@@ -1,182 +1,118 @@
-/* SH2ZAM: independent C11 fixed-point backend for the Sega Saturn's SH-2 CPUs.
- * Copyright (c) 2026 SH2ZAM Contributors. MIT; see root LICENSE.
- */
-#include "sh2zam/sh2zam.h"
-#include <limits.h>
-#include <stdint.h>
+/* SH2ZAM scalar/vector core. MIT; Copyright (c) 2026 SH2ZAM Contributors. */
+#include "sh2zam_internal.h"
 
-static sh2z_fx_t clamp64(int64_t n) {
-    if (n > INT32_MAX) return INT32_MAX;
-    if (n < INT32_MIN) return INT32_MIN;
-    return (sh2z_fx_t)n;
-}
-
-sh2z_fx_t sh2z_from_int(int32_t n) {
-    if (n >= 32768) return INT32_MAX;
-    if (n < -32768) return INT32_MIN;
-    return n * INT32_C(65536);
-}
-int32_t sh2z_to_int(sh2z_fx_t n) { return n / INT32_C(65536); }
-
-sh2z_fx_t sh2z_add(sh2z_fx_t a, sh2z_fx_t b) {
-    if (b > 0 && a > INT32_MAX - b) return INT32_MAX;
-    if (b < 0 && a < INT32_MIN - b) return INT32_MIN;
-    return a + b;
-}
-sh2z_fx_t sh2z_sub(sh2z_fx_t a, sh2z_fx_t b) {
-    if (b < 0 && a > INT32_MAX + b) return INT32_MAX;
-    if (b > 0 && a < INT32_MIN + b) return INT32_MIN;
-    return a - b;
-}
-
-sh2z_fx_t sh2z_mul(sh2z_fx_t a, sh2z_fx_t b) {
-#if defined(__sh__) && defined(__SH2__) && !defined(SH2Z_FORCE_PORTABLE)
-    /* 32x32->64 signed SH-2 multiply; MACH/MACL are per-CPU registers.
-     * Q16.16 extraction is the middle 32 bits of the product. */
-    int32_t hi;
-    uint32_t lo;
-    __asm__ volatile(
-        "dmuls.l %[a], %[b]\n\t"
-        "sts mach, %[hi]\n\t"
-        "sts macl, %[lo]"
-        : [hi] "=&r"(hi), [lo] "=&r"(lo)
-        : [a] "r"(a), [b] "r"(b)
-        : "mach", "macl");
-    if (hi > 32767) return INT32_MAX;
-    if (hi < -32768) return INT32_MIN;
-    return (int32_t)(((uint32_t)hi << 16) | (lo >> 16));
+const char *sh2z_backend(void) {
+#if SH2Z_NATIVE_MUL
+    return "sh2-dmuls";
 #else
-    const int64_t product = (int64_t)a * (int64_t)b;
-    /* Explicit mathematical floor, including negative fractional products.
-     * Matches SH-2's signed high/middle-word extraction. */
-    const int64_t q = (product >= 0)
-        ? (product / INT64_C(65536))
-        : -(((-product) + INT64_C(65535)) / INT64_C(65536));
-    return clamp64(q);
+    return "portable";
 #endif
 }
-
-sh2z_fx_t sh2z_div(sh2z_fx_t a, sh2z_fx_t b) {
-    /* Portable, correct baseline: replace with DIVU after console validation.
-     * Hardware DIVU is not transparently reentrant across interrupt handlers. */
-    if (b == 0) return (a > 0) ? INT32_MAX : ((a < 0) ? INT32_MIN : 0);
-    return clamp64(((int64_t)a * INT64_C(65536)) / b);
+sh2z_fx_t sh2z_from_int(int32_t n) { return sh2zi_clamp((int64_t)n*65536); }
+int32_t sh2z_to_int(sh2z_fx_t n) { return n/65536; }
+sh2z_fx_t sh2z_add(sh2z_fx_t a,sh2z_fx_t b) {
+    if(b>0 && a>INT32_MAX-b) return INT32_MAX;
+    if(b<0 && a<INT32_MIN-b) return INT32_MIN;
+    return a+b;
+}
+sh2z_fx_t sh2z_sub(sh2z_fx_t a,sh2z_fx_t b) {
+    if(b<0 && a>INT32_MAX+b) return INT32_MAX;
+    if(b>0 && a<INT32_MIN+b) return INT32_MIN;
+    return a-b;
+}
+sh2z_fx_t sh2z_mul(sh2z_fx_t a,sh2z_fx_t b) { return sh2zi_clamp(sh2zi_floor16(sh2zi_product(a,b))); }
+sh2z_fx_t sh2z_div(sh2z_fx_t a,sh2z_fx_t b) {
+    if(!b) return a>0 ? INT32_MAX : (a<0 ? INT32_MIN : 0);
+    return sh2zi_clamp(((int64_t)a*65536)/b);
+}
+sh2z_fx_t sh2z_muldiv(sh2z_fx_t a,sh2z_fx_t b,sh2z_fx_t c) {
+    int64_t p=sh2zi_product(a,b);
+    if(!c) return p>0 ? INT32_MAX : (p<0 ? INT32_MIN : 0);
+    return sh2zi_clamp(p/c);
+}
+sh2z_fx_t sh2z_neg(sh2z_fx_t a) { return a==INT32_MIN ? INT32_MAX : -a; }
+sh2z_fx_t sh2z_abs(sh2z_fx_t a) { return a<0 ? sh2z_neg(a) : a; }
+sh2z_fx_t sh2z_min(sh2z_fx_t a,sh2z_fx_t b) { return a<b ? a:b; }
+sh2z_fx_t sh2z_max(sh2z_fx_t a,sh2z_fx_t b) { return a>b ? a:b; }
+sh2z_fx_t sh2z_clamp(sh2z_fx_t a,sh2z_fx_t lo,sh2z_fx_t hi) {
+    if(lo>hi) { sh2z_fx_t t=lo; lo=hi; hi=t; }
+    return sh2z_min(sh2z_max(a,lo),hi);
+}
+sh2z_fx_t sh2z_floor(sh2z_fx_t a) { return (sh2z_fx_t)(sh2zi_floor16(a)*65536); }
+sh2z_fx_t sh2z_ceil(sh2z_fx_t a) { return sh2zi_clamp(-sh2zi_floor16(-(int64_t)a)*65536); }
+sh2z_fx_t sh2z_round(sh2z_fx_t a) {
+    int64_t n=a;
+    return sh2zi_clamp((n>=0 ? (n+32768)/65536 : -((-n+32768)/65536))*65536);
+}
+sh2z_fx_t sh2z_sqrt(sh2z_fx_t a) { return a<=0 ? 0 : (sh2z_fx_t)sh2zi_isqrt((uint64_t)(uint32_t)a<<16); }
+sh2z_fx_t sh2z_recip(sh2z_fx_t a) { return sh2z_div(SH2Z_ONE,a); }
+sh2z_fx_t sh2z_rsqrt(sh2z_fx_t a) { return a<=0 ? 0 : sh2z_recip(sh2z_sqrt(a)); }
+sh2z_fx_t sh2z_lerp(sh2z_fx_t a,sh2z_fx_t b,sh2z_fx_t t) {
+    return sh2zi_clamp((int64_t)a+sh2zi_floor16(((int64_t)b-a)*t));
+}
+sh2z_fx_t sh2z_smoothstep(sh2z_fx_t t) {
+    t=sh2z_clamp(t,0,SH2Z_ONE);
+    return sh2z_mul(sh2z_mul(t,t),3*SH2Z_ONE-2*t);
 }
 
-sh2z_fx_t sh2z_sqrt(sh2z_fx_t value) {
-    if (value <= 0) return 0;
-    uint64_t op = (uint64_t)(uint32_t)value << 16;
-    uint64_t res = 0;
-    uint64_t bit = UINT64_C(1) << 62;
-    while (bit > op) bit >>= 2;
-    while (bit) {
-        if (op >= res + bit) {
-            op -= res + bit;
-            res = (res >> 1) + bit;
-        } else {
-            res >>= 1;
-        }
-        bit >>= 2;
+static sh2z_fx_t length_n(const int32_t *v,unsigned n) {
+    uint64_t sum=0;
+    for(unsigned i=0;i<n;i++) {
+        uint64_t a=sh2zi_magnitude(v[i]),square=a*a;
+        if(UINT64_MAX-sum<square) return INT32_MAX;
+        sum+=square;
     }
-    return (sh2z_fx_t)res;
+    uint64_t length=sh2zi_isqrt(sum);
+    return length>INT32_MAX ? INT32_MAX : (int32_t)length;
 }
+static void normalize_n(int32_t *out,const int32_t *v,unsigned n) {
+    uint32_t largest=0;
+    for(unsigned i=0;i<n;i++) { uint32_t a=sh2zi_magnitude(v[i]); if(a>largest) largest=a; }
+    if(!largest) { for(unsigned i=0;i<n;i++) out[i]=0; return; }
+    /* Bring maximum into [2^28,2^29). Enough fractional precision for tiny
+     * input; four squares fit in 2^60; no length saturation for huge input. */
+    int shift=0; uint32_t m=largest;
+    while(m>=(UINT32_C(1)<<29)) { m>>=1; ++shift; }
+    while(m<(UINT32_C(1)<<28)) { m<<=1; --shift; }
+    int32_t scaled[4]; uint64_t sum=0;
+    for(unsigned i=0;i<n;i++) {
+        int64_t s=shift>=0 ? (int64_t)v[i]/(INT64_C(1)<<shift)
+                           : (int64_t)v[i]*(INT64_C(1)<<(-shift));
+        scaled[i]=(int32_t)s;
+        sum+=(uint64_t)(s*s);
+    }
+    int64_t len=(int64_t)sh2zi_isqrt(sum);
+    for(unsigned i=0;i<n;i++) out[i]=(int32_t)(((int64_t)scaled[i]*65536)/len);
+}
+sh2z_vec2_t sh2z_vec2_add(sh2z_vec2_t a,sh2z_vec2_t b) { return (sh2z_vec2_t){sh2z_add(a.x,b.x),sh2z_add(a.y,b.y)}; }
+sh2z_vec2_t sh2z_vec2_sub(sh2z_vec2_t a,sh2z_vec2_t b) { return (sh2z_vec2_t){sh2z_sub(a.x,b.x),sh2z_sub(a.y,b.y)}; }
+sh2z_vec2_t sh2z_vec2_scale(sh2z_vec2_t a,sh2z_fx_t s) { return (sh2z_vec2_t){sh2z_mul(a.x,s),sh2z_mul(a.y,s)}; }
+sh2z_fx_t sh2z_vec2_dot(sh2z_vec2_t a,sh2z_vec2_t b) { const int32_t x[]={a.x,a.y},y[]={b.x,b.y}; return sh2zi_clamp(sh2zi_dot(x,y,2,0,0)); }
+sh2z_fx_t sh2z_vec2_length(sh2z_vec2_t a) { const int32_t x[]={a.x,a.y}; return length_n(x,2); }
+sh2z_vec2_t sh2z_vec2_normalize(sh2z_vec2_t a) { const int32_t x[]={a.x,a.y}; int32_t y[2]; normalize_n(y,x,2); return (sh2z_vec2_t){y[0],y[1]}; }
+sh2z_vec2_t sh2z_vec2_lerp(sh2z_vec2_t a,sh2z_vec2_t b,sh2z_fx_t t) { return (sh2z_vec2_t){sh2z_lerp(a.x,b.x,t),sh2z_lerp(a.y,b.y,t)}; }
+sh2z_vec3_t sh2z_vec3_add(sh2z_vec3_t a,sh2z_vec3_t b) { return (sh2z_vec3_t){sh2z_add(a.x,b.x),sh2z_add(a.y,b.y),sh2z_add(a.z,b.z)}; }
+sh2z_vec3_t sh2z_vec3_sub(sh2z_vec3_t a,sh2z_vec3_t b) { return (sh2z_vec3_t){sh2z_sub(a.x,b.x),sh2z_sub(a.y,b.y),sh2z_sub(a.z,b.z)}; }
+sh2z_vec3_t sh2z_vec3_scale(sh2z_vec3_t a,sh2z_fx_t s) { return (sh2z_vec3_t){sh2z_mul(a.x,s),sh2z_mul(a.y,s),sh2z_mul(a.z,s)}; }
+sh2z_fx_t sh2z_vec3_dot(sh2z_vec3_t a,sh2z_vec3_t b) { const int32_t x[]={a.x,a.y,a.z},y[]={b.x,b.y,b.z}; return sh2zi_clamp(sh2zi_dot(x,y,3,0,0)); }
+sh2z_fx_t sh2z_vec3_length(sh2z_vec3_t a) { const int32_t x[]={a.x,a.y,a.z}; return length_n(x,3); }
+sh2z_vec3_t sh2z_vec3_normalize(sh2z_vec3_t a) { const int32_t x[]={a.x,a.y,a.z}; int32_t y[3]; normalize_n(y,x,3); return (sh2z_vec3_t){y[0],y[1],y[2]}; }
+sh2z_vec3_t sh2z_vec3_lerp(sh2z_vec3_t a,sh2z_vec3_t b,sh2z_fx_t t) { return (sh2z_vec3_t){sh2z_lerp(a.x,b.x,t),sh2z_lerp(a.y,b.y,t),sh2z_lerp(a.z,b.z,t)}; }
+sh2z_vec4_t sh2z_vec4_add(sh2z_vec4_t a,sh2z_vec4_t b) { return (sh2z_vec4_t){sh2z_add(a.x,b.x),sh2z_add(a.y,b.y),sh2z_add(a.z,b.z),sh2z_add(a.w,b.w)}; }
+sh2z_vec4_t sh2z_vec4_sub(sh2z_vec4_t a,sh2z_vec4_t b) { return (sh2z_vec4_t){sh2z_sub(a.x,b.x),sh2z_sub(a.y,b.y),sh2z_sub(a.z,b.z),sh2z_sub(a.w,b.w)}; }
+sh2z_vec4_t sh2z_vec4_scale(sh2z_vec4_t a,sh2z_fx_t s) { return (sh2z_vec4_t){sh2z_mul(a.x,s),sh2z_mul(a.y,s),sh2z_mul(a.z,s),sh2z_mul(a.w,s)}; }
+sh2z_fx_t sh2z_vec4_dot(sh2z_vec4_t a,sh2z_vec4_t b) { const int32_t x[]={a.x,a.y,a.z,a.w},y[]={b.x,b.y,b.z,b.w}; return sh2zi_clamp(sh2zi_dot(x,y,4,0,0)); }
+sh2z_fx_t sh2z_vec4_length(sh2z_vec4_t a) { const int32_t x[]={a.x,a.y,a.z,a.w}; return length_n(x,4); }
+sh2z_vec4_t sh2z_vec4_normalize(sh2z_vec4_t a) { const int32_t x[]={a.x,a.y,a.z,a.w}; int32_t y[4]; normalize_n(y,x,4); return (sh2z_vec4_t){y[0],y[1],y[2],y[3]}; }
+sh2z_vec4_t sh2z_vec4_lerp(sh2z_vec4_t a,sh2z_vec4_t b,sh2z_fx_t t) { return (sh2z_vec4_t){sh2z_lerp(a.x,b.x,t),sh2z_lerp(a.y,b.y,t),sh2z_lerp(a.z,b.z,t),sh2z_lerp(a.w,b.w,t)}; }
 
-sh2z_fx_t sh2z_vec2_dot(sh2z_vec2_t a, sh2z_vec2_t b) {
-    return sh2z_add(sh2z_mul(a.x, b.x), sh2z_mul(a.y, b.y));
+sh2z_fx_t sh2z_vec2_cross(sh2z_vec2_t a,sh2z_vec2_t b) {
+    const int32_t x[]={a.x,a.y},y[]={b.y,b.x};
+    return sh2zi_clamp(sh2zi_dot(x,y,2,2,0));
 }
-sh2z_fx_t sh2z_vec3_dot(sh2z_vec3_t a, sh2z_vec3_t b) {
-    return sh2z_add(sh2z_vec2_dot((sh2z_vec2_t){a.x,a.y}, (sh2z_vec2_t){b.x,b.y}), sh2z_mul(a.z,b.z));
-}
-sh2z_fx_t sh2z_vec4_dot(sh2z_vec4_t a, sh2z_vec4_t b) {
-    return sh2z_add(sh2z_vec3_dot((sh2z_vec3_t){a.x,a.y,a.z}, (sh2z_vec3_t){b.x,b.y,b.z}), sh2z_mul(a.w,b.w));
-}
-sh2z_vec3_t sh2z_vec3_add(sh2z_vec3_t a, sh2z_vec3_t b) {
-    return (sh2z_vec3_t){sh2z_add(a.x,b.x), sh2z_add(a.y,b.y), sh2z_add(a.z,b.z)};
-}
-sh2z_vec3_t sh2z_vec3_scale(sh2z_vec3_t a, sh2z_fx_t s) {
-    return (sh2z_vec3_t){sh2z_mul(a.x,s), sh2z_mul(a.y,s), sh2z_mul(a.z,s)};
-}
-sh2z_vec3_t sh2z_vec3_cross(sh2z_vec3_t a, sh2z_vec3_t b) {
+sh2z_vec3_t sh2z_vec3_cross(sh2z_vec3_t a,sh2z_vec3_t b) {
     return (sh2z_vec3_t){
-        sh2z_sub(sh2z_mul(a.y,b.z),sh2z_mul(a.z,b.y)),
-        sh2z_sub(sh2z_mul(a.z,b.x),sh2z_mul(a.x,b.z)),
-        sh2z_sub(sh2z_mul(a.x,b.y),sh2z_mul(a.y,b.x))};
-}
-sh2z_fx_t sh2z_vec3_length(sh2z_vec3_t v) { return sh2z_sqrt(sh2z_vec3_dot(v,v)); }
-sh2z_vec3_t sh2z_vec3_normalize(sh2z_vec3_t v) {
-    sh2z_fx_t length = sh2z_vec3_length(v);
-    if (!length) return (sh2z_vec3_t){0,0,0};
-    return (sh2z_vec3_t){sh2z_div(v.x,length),sh2z_div(v.y,length),sh2z_div(v.z,length)};
-}
-
-sh2z_mat34_t sh2z_mat34_identity(void) {
-    sh2z_mat34_t m = {{{SH2Z_ONE,0,0,0},{0,SH2Z_ONE,0,0},{0,0,SH2Z_ONE,0}}};
-    return m;
-}
-void sh2z_mat34_multiply(sh2z_mat34_t *out, const sh2z_mat34_t *a, const sh2z_mat34_t *b) {
-    sh2z_mat34_t result = {{{0}}};
-    for (int r=0;r<3;r++) for (int c=0;c<4;c++) {
-        sh2z_fx_t x = (c == 3) ? a->m[r][3] : 0;
-        for (int k=0;k<3;k++) x = sh2z_add(x,sh2z_mul(a->m[r][k],b->m[k][c]));
-        result.m[r][c] = x;
-    }
-    *out = result;
-}
-sh2z_vec3_t sh2z_mat34_transform_point(const sh2z_mat34_t *m, sh2z_vec3_t v) {
-    sh2z_vec3_t o;
-    sh2z_fx_t *p[3] = {&o.x,&o.y,&o.z};
-    for (int i=0;i<3;i++) {
-        *p[i] = sh2z_add(sh2z_add(sh2z_add(sh2z_mul(m->m[i][0],v.x),
-            sh2z_mul(m->m[i][1],v.y)),sh2z_mul(m->m[i][2],v.z)),m->m[i][3]);
-    }
-    return o;
-}
-sh2z_vec3_t sh2z_mat34_transform_direction(const sh2z_mat34_t *m, sh2z_vec3_t v) {
-    sh2z_vec3_t o;
-    sh2z_fx_t *p[3] = {&o.x,&o.y,&o.z};
-    for (int i=0;i<3;i++) {
-        *p[i] = sh2z_add(sh2z_add(sh2z_mul(m->m[i][0],v.x),
-            sh2z_mul(m->m[i][1],v.y)),sh2z_mul(m->m[i][2],v.z));
-    }
-    return o;
-}
-sh2z_mat44_t sh2z_mat44_identity(void) {
-    sh2z_mat44_t m = {{{SH2Z_ONE,0,0,0},{0,SH2Z_ONE,0,0},{0,0,SH2Z_ONE,0},{0,0,0,SH2Z_ONE}}};
-    return m;
-}
-void sh2z_mat44_multiply(sh2z_mat44_t *out, const sh2z_mat44_t *a, const sh2z_mat44_t *b) {
-    sh2z_mat44_t result = {{{0}}};
-    for (int r=0;r<4;r++) for (int c=0;c<4;c++) {
-        sh2z_fx_t value=0;
-        for (int k=0;k<4;k++) value=sh2z_add(value,sh2z_mul(a->m[r][k],b->m[k][c]));
-        result.m[r][c]=value;
-    }
-    *out=result;
-}
-sh2z_vec4_t sh2z_mat44_transform(const sh2z_mat44_t *m, sh2z_vec4_t v) {
-    sh2z_vec4_t out;
-    sh2z_fx_t *p[4]={&out.x,&out.y,&out.z,&out.w};
-    for(int r=0;r<4;r++) {
-        sh2z_fx_t value=0;
-        const sh2z_fx_t elements[4]={v.x,v.y,v.z,v.w};
-        for(int c=0;c<4;c++) value=sh2z_add(value,sh2z_mul(m->m[r][c],elements[c]));
-        *p[r]=value;
-    }
-    return out;
-}
-
-sh2z_quat_t sh2z_quat_identity(void) { return (sh2z_quat_t){0,0,0,SH2Z_ONE}; }
-sh2z_quat_t sh2z_quat_multiply(sh2z_quat_t a, sh2z_quat_t b) {
-    /* Hamilton product; quaternion scalar stored in w. */
-    sh2z_quat_t out;
-    out.w=sh2z_sub(sh2z_sub(sh2z_sub(sh2z_mul(a.w,b.w),sh2z_mul(a.x,b.x)),sh2z_mul(a.y,b.y)),sh2z_mul(a.z,b.z));
-    out.x=sh2z_add(sh2z_add(sh2z_mul(a.w,b.x),sh2z_mul(a.x,b.w)),sh2z_sub(sh2z_mul(a.y,b.z),sh2z_mul(a.z,b.y)));
-    out.y=sh2z_add(sh2z_add(sh2z_mul(a.w,b.y),sh2z_mul(a.y,b.w)),sh2z_sub(sh2z_mul(a.z,b.x),sh2z_mul(a.x,b.z)));
-    out.z=sh2z_add(sh2z_add(sh2z_mul(a.w,b.z),sh2z_mul(a.z,b.w)),sh2z_sub(sh2z_mul(a.x,b.y),sh2z_mul(a.y,b.x)));
-    return out;
-}
-sh2z_quat_t sh2z_quat_normalize(sh2z_quat_t q) {
-    sh2z_fx_t len=sh2z_sqrt(sh2z_vec4_dot((sh2z_vec4_t){q.x,q.y,q.z,q.w},(sh2z_vec4_t){q.x,q.y,q.z,q.w}));
-    if (!len) return sh2z_quat_identity();
-    return (sh2z_quat_t){sh2z_div(q.x,len),sh2z_div(q.y,len),sh2z_div(q.z,len),sh2z_div(q.w,len)};
+        sh2z_vec2_cross((sh2z_vec2_t){a.y,a.z},(sh2z_vec2_t){b.y,b.z}),
+        sh2z_vec2_cross((sh2z_vec2_t){a.z,a.x},(sh2z_vec2_t){b.z,b.x}),
+        sh2z_vec2_cross((sh2z_vec2_t){a.x,a.y},(sh2z_vec2_t){b.x,b.y})};
 }
