@@ -233,12 +233,28 @@ bool sh2z_mat44_perspective(sh2z_mat44_t *out,sh2z_angle_t fov,sh2z_fx_t aspect,
     sh2z_mat44_t m={{{(int32_t)x,0,0,0},{0,(int32_t)y,0,0},{0,0,(int32_t)z,(int32_t)w},{0,0,-SH2Z_ONE,0}}};
     *out=m; return true;
 }
+/* Successful clip coordinates need at most 15 unsigned quotient bits.
+ * Share their denominator setup and quotient loop, and start at the highest
+ * possible screen-coordinate bit. No division, approximation or MMIO. */
 bool sh2z_project_clip(sh2z_screen_t *out,sh2z_vec4_t v,uint16_t width,uint16_t height) {
     if(!out||!width||!height||width>32767||height>32767||v.w<=0) return false;
     if(v.x< -v.w||v.x>v.w||v.y< -v.w||v.y>v.w||v.z< -v.w||v.z>v.w) return false;
-    int64_t d=2*(int64_t)v.w;
-    out->x=(int16_t)((((int64_t)v.x+v.w)*(width-1))/d);
-    out->y=(int16_t)((((int64_t)v.w-v.y)*(height-1))/d);
+    const uint32_t denominator=2u*(uint32_t)v.w;
+    uint64_t x=(uint64_t)((uint32_t)v.x+(uint32_t)v.w)*(width-1u);
+    uint64_t y=(uint64_t)((uint32_t)v.w-(uint32_t)v.y)*(height-1u);
+    uint64_t trial=denominator;
+    uint32_t bit=1,extent=(width-1u)|(height-1u);
+    if(extent>=256u) { extent>>=8; trial<<=8; bit<<=8; }
+    if(extent>=16u) { extent>>=4; trial<<=4; bit<<=4; }
+    if(extent>=4u) { extent>>=2; trial<<=2; bit<<=2; }
+    if(extent>=2u) { trial<<=1; bit<<=1; }
+    uint32_t screen_x=0,screen_y=0;
+    do {
+        if(x>=trial) { x-=trial; screen_x|=bit; }
+        if(y>=trial) { y-=trial; screen_y|=bit; }
+        trial>>=1; bit>>=1;
+    } while(bit);
+    out->x=(int16_t)screen_x; out->y=(int16_t)screen_y;
     return true;
 }
 bool sh2z_mat34_transform_points_general(sh2z_vec3_t *out,const sh2z_mat34_t *m,const sh2z_vec3_t *in,size_t count) {

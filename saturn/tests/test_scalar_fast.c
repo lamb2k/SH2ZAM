@@ -93,8 +93,8 @@ static void boundaries(void) {
     const size_t count=sizeof(edge)/sizeof(edge[0]);
     for(size_t i=0;i<count;i++) for(size_t j=0;j<count;j++) for(size_t k=0;k<count;k++)
         scalars(edge[i],edge[j],edge[k]);
-    /* Exercise both sides of the sum-of-magnitudes bound, cancellation,
-     * all four signs, mixed scales, and the four-square uint64 overflow. */
+    /* Exercise cancellation, all four signs, mixed scales, the vec2-dot
+     * unique overflow case, and the four-square uint64 overflow. */
     for(size_t i=0;i<count;i++) for(size_t j=0;j<count;j++) {
         const int32_t a[]={edge[i],edge[j],edge[i],edge[j]};
         const int32_t b[]={edge[j],edge[i],edge[count-1-i],edge[count-1-j]};
@@ -109,7 +109,6 @@ static void boundaries(void) {
         4294967295LL,4294967296LL,INT64_MAX-1,INT64_MAX};
     for(size_t i=0;i<sizeof(wide_edge)/sizeof(wide_edge[0]);i++) {
         CHECK(sh2zi_floor16(wide_edge[i])==floor16(wide_edge[i]));
-        for(size_t j=0;j<count;j++) CHECK(sh2zi_div64_32(wide_edge[i],edge[j])==div_oracle(wide_edge[i],edge[j]));
     }
     root_property(0); root_property(UINT64_MAX);
     for(unsigned bit=0;bit<64;bit++) {
@@ -140,7 +139,6 @@ int main(void) {
         else if(i%3u==2u) { a/=65536; b/=65536; c/=65536; }
         scalars(a,b,c);
         int64_t numerator=random_i64();
-        CHECK(sh2zi_div64_32(numerator,b)==div_oracle(numerator,b));
         CHECK(sh2zi_floor16(numerator)==floor16(numerator));
         uint64_t bits=((uint64_t)random_u32()<<32)|random_u32();
         root_property(bits);

@@ -14,7 +14,10 @@ static uint32_t math_check_outputs(u32 before,u32 after,u32 words,uint64_t *chec
  for(unsigned i=0;i<MATH_CAPTURE_BATCH;i++) for(unsigned j=0;j<MATH_CAPTURE_WORDS;j++) {
   u32 a=rl(&cpu,before+4*(i*MATH_CAPTURE_WORDS+j));
   u32 b=rl(&cpu,after+4*(i*MATH_CAPTURE_WORDS+j));
-  if(a!=b) fail("Math before/after output mismatch",i*MATH_CAPTURE_WORDS+j);
+  if(a!=b) {
+   fprintf(stderr,"Math output row %u word %u: previous=%08x optimized=%08x\n",i,j,a,b);
+   fail("Math before/after output mismatch",i*MATH_CAPTURE_WORDS+j);
+  }
   if(j<words) {h=(h^a)*UINT32_C(16777619);(*checked)++;}
   else if(a!=UINT32_C(0x5a5a5a5a)) fail("Math output outside result",j);
  }

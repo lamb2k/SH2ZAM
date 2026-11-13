@@ -23,15 +23,12 @@ sh2z_fx_t sh2z_sub(sh2z_fx_t a,sh2z_fx_t b) {
 sh2z_fx_t sh2z_mul(sh2z_fx_t a,sh2z_fx_t b) { return sh2zi_clamp(sh2zi_floor16(sh2zi_product(a,b))); }
 sh2z_fx_t sh2z_div(sh2z_fx_t a,sh2z_fx_t b) {
     if(!b) return a>0 ? INT32_MAX : (a<0 ? INT32_MIN : 0);
-    uint32_t magnitude=sh2zi_magnitude(a),divisor=sh2zi_magnitude(b);
-    if(magnitude<=divisor) {
-        int32_t quotient=(int32_t)sh2zi_fraction16(magnitude,divisor);
-        return (a<0)!=(b<0) ? -quotient : quotient;
-    }
-    return sh2zi_div64_32((int64_t)a*65536,b);
+    return sh2zi_clamp(((int64_t)a*65536)/b);
 }
 sh2z_fx_t sh2z_muldiv(sh2z_fx_t a,sh2z_fx_t b,sh2z_fx_t c) {
-    return sh2zi_div64_32(sh2zi_product(a,b),c);
+    int64_t p=sh2zi_product(a,b);
+    if(!c) return p>0 ? INT32_MAX : (p<0 ? INT32_MIN : 0);
+    return sh2zi_clamp(p/c);
 }
 sh2z_fx_t sh2z_neg(sh2z_fx_t a) { return a==INT32_MIN ? INT32_MAX : -a; }
 sh2z_fx_t sh2z_abs(sh2z_fx_t a) { return a<0 ? sh2z_neg(a) : a; }
@@ -96,7 +93,12 @@ static void normalize_n(int32_t *out,const int32_t *v,unsigned n) {
 sh2z_vec2_t sh2z_vec2_add(sh2z_vec2_t a,sh2z_vec2_t b) { return (sh2z_vec2_t){sh2z_add(a.x,b.x),sh2z_add(a.y,b.y)}; }
 sh2z_vec2_t sh2z_vec2_sub(sh2z_vec2_t a,sh2z_vec2_t b) { return (sh2z_vec2_t){sh2z_sub(a.x,b.x),sh2z_sub(a.y,b.y)}; }
 sh2z_vec2_t sh2z_vec2_scale(sh2z_vec2_t a,sh2z_fx_t s) { return (sh2z_vec2_t){sh2z_mul(a.x,s),sh2z_mul(a.y,s)}; }
-sh2z_fx_t sh2z_vec2_dot(sh2z_vec2_t a,sh2z_vec2_t b) { const int32_t x[]={a.x,a.y},y[]={b.x,b.y}; return sh2zi_clamp(sh2zi_dot(x,y,2,0,0)); }
+sh2z_fx_t sh2z_vec2_dot(sh2z_vec2_t a,sh2z_vec2_t b) {
+    /* Two signed 32-bit products sum within int64_t except when both are
+     * INT32_MIN*INT32_MIN. That unique overflow case saturates positively. */
+    if(a.x==INT32_MIN && a.y==INT32_MIN && b.x==INT32_MIN && b.y==INT32_MIN) return INT32_MAX;
+    return sh2zi_clamp(sh2zi_floor16(sh2zi_product(a.x,b.x)+sh2zi_product(a.y,b.y)));
+}
 sh2z_fx_t sh2z_vec2_length(sh2z_vec2_t a) { const int32_t x[]={a.x,a.y}; return length_n(x,2); }
 sh2z_vec2_t sh2z_vec2_normalize(sh2z_vec2_t a) { const int32_t x[]={a.x,a.y}; int32_t y[2]; normalize_n(y,x,2); return (sh2z_vec2_t){y[0],y[1]}; }
 sh2z_vec2_t sh2z_vec2_lerp(sh2z_vec2_t a,sh2z_vec2_t b,sh2z_fx_t t) { return (sh2z_vec2_t){sh2z_lerp(a.x,b.x,t),sh2z_lerp(a.y,b.y,t)}; }
@@ -115,13 +117,17 @@ sh2z_fx_t sh2z_vec4_length(sh2z_vec4_t a) { const int32_t x[]={a.x,a.y,a.z,a.w};
 sh2z_vec4_t sh2z_vec4_normalize(sh2z_vec4_t a) { const int32_t x[]={a.x,a.y,a.z,a.w}; int32_t y[4]; normalize_n(y,x,4); return (sh2z_vec4_t){y[0],y[1],y[2],y[3]}; }
 sh2z_vec4_t sh2z_vec4_lerp(sh2z_vec4_t a,sh2z_vec4_t b,sh2z_fx_t t) { return (sh2z_vec4_t){sh2z_lerp(a.x,b.x,t),sh2z_lerp(a.y,b.y,t),sh2z_lerp(a.z,b.z,t),sh2z_lerp(a.w,b.w,t)}; }
 
+static inline sh2z_fx_t cross_component(int32_t ax,int32_t ay,int32_t bx,int32_t by) {
+    /* The difference of two signed 32-bit products is in
+     * [-2^63+2^31, 2^63-2^31], including all INT32_MIN cases. */
+    return sh2zi_clamp(sh2zi_floor16(sh2zi_product(ax,by)-sh2zi_product(ay,bx)));
+}
 sh2z_fx_t sh2z_vec2_cross(sh2z_vec2_t a,sh2z_vec2_t b) {
-    const int32_t x[]={a.x,a.y},y[]={b.y,b.x};
-    return sh2zi_clamp(sh2zi_dot(x,y,2,2,0));
+    return cross_component(a.x,a.y,b.x,b.y);
 }
 sh2z_vec3_t sh2z_vec3_cross(sh2z_vec3_t a,sh2z_vec3_t b) {
     return (sh2z_vec3_t){
-        sh2z_vec2_cross((sh2z_vec2_t){a.y,a.z},(sh2z_vec2_t){b.y,b.z}),
-        sh2z_vec2_cross((sh2z_vec2_t){a.z,a.x},(sh2z_vec2_t){b.z,b.x}),
-        sh2z_vec2_cross((sh2z_vec2_t){a.x,a.y},(sh2z_vec2_t){b.x,b.y})};
+        cross_component(a.y,a.z,b.y,b.z),
+        cross_component(a.z,a.x,b.z,b.x),
+        cross_component(a.x,a.y,b.x,b.y)};
 }

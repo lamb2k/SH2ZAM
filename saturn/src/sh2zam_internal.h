@@ -33,36 +33,21 @@ static inline int64_t sh2zi_product(int32_t a,int32_t b) {
     return (int64_t)a*b;
 #endif
 }
-/* Extract the signed Q16 quotient with no signed shift, divide, or negation
- * of INT64_MIN. Both unsigned values converted below fit in int64_t. */
+/* Well-defined for INT64_MIN, without signed shifts or negating INT64_MIN.
+ * Keep the conditional form: the branchless 64-bit extraction generated
+ * substantially more SH-2 instructions in the native math-model capture. */
 static inline int64_t sh2zi_floor16(int64_t v) {
-    uint64_t bits=(uint64_t)v;
-    return (int64_t)(bits>>16)-(int64_t)(bits>>63)*INT64_C(281474976710656);
+    return v>=0 ? v/65536 : -1-((-1-v)/65536);
 }
 /* Four signed raw products could overflow int64_t BEFORE Q16 extraction.
- * If sum(abs(a)) fits uint32_t, the absolute product sum is at most
- * (2^32-1)*2^31 < INT64_MAX. That common case can accumulate directly.
- * Otherwise split products into floor quotients + positive remainders.
- * The maximum quotient sum is 2^48, so cancellation stays exact without int128.
+ * Split each into floor quotient + positive remainder; sum both separately.
+ * Maximum quotient sum is 2^48, so cancellation remains exact without int128.
+ * Batch callers can hoist bounds proofs; a per-dot proof cost more than this
+ * general path for vec3/vec4 in the native SH-2 instruction model.
  * minus is a bit mask of terms to subtract; offset is already Q16.16. */
 static inline int64_t sh2zi_dot(const int32_t *a,const int32_t *b,unsigned n,unsigned minus,int32_t offset) {
-    uint32_t bound=0;
-    unsigned i=0;
-    for(;i<n;i++) {
-        uint32_t magnitude=sh2zi_magnitude(a[i]);
-        if(magnitude>UINT32_MAX-bound) break;
-        bound+=magnitude;
-    }
-    if(i==n) {
-        int64_t products=0;
-        for(i=0;i<n;i++) {
-            int64_t p=sh2zi_product(a[i],b[i]);
-            products+=(minus & (1u<<i)) ? -p : p;
-        }
-        return sh2zi_floor16(products)+offset;
-    }
     int64_t sum=offset; uint32_t rem=0;
-    for(i=0;i<n;i++) {
+    for(unsigned i=0;i<n;i++) {
         int64_t p=sh2zi_product(a[i],b[i]);
         if(minus & (1u<<i)) p=-p;
         int64_t q=sh2zi_floor16(p);
@@ -113,26 +98,5 @@ static inline uint32_t sh2zi_fraction16(uint32_t value,uint32_t denominator) {
         if(value>=denominator) { value-=denominator; result|=1u; }
     }
     return result;
-}
-/* A saturating signed 64/32 quotient needs at most 31 quotient bits. Reject
- * saturation before division, then use only 32-bit remainders. This avoids
- * the general 64/64 division helper on a 32-bit CPU. */
-static inline int32_t sh2zi_div64_32(int64_t numerator,int32_t denominator) {
-    if(!denominator) return numerator>0 ? INT32_MAX : (numerator<0 ? INT32_MIN : 0);
-    bool negative=(numerator<0)!=(denominator<0);
-    uint64_t magnitude=numerator<0 ? UINT64_C(0)-(uint64_t)numerator : (uint64_t)numerator;
-    uint32_t divisor=sh2zi_magnitude(denominator);
-    if(magnitude>=((uint64_t)divisor<<31)) return negative ? INT32_MIN : INT32_MAX;
-    uint32_t hi=(uint32_t)(magnitude>>32),quotient=(uint32_t)magnitude;
-    if(!hi) quotient/=divisor;
-    else {
-        uint32_t remainder=(hi<<1)|(quotient>>31);
-        quotient<<=1;
-        for(unsigned i=0;i<31;i++) {
-            remainder=(remainder<<1)|(quotient>>31); quotient<<=1;
-            if(remainder>=divisor) { remainder-=divisor; quotient|=1u; }
-        }
-    }
-    return negative ? -(int32_t)quotient : (int32_t)quotient;
 }
 #endif

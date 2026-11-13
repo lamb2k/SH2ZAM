@@ -239,8 +239,57 @@ static void collision_cases(void) {
     }
 }
 
+static bool oracle_project(sh2z_screen_t *out,sh2z_vec4_t v,uint16_t width,uint16_t height) {
+    if(!width||!height||width>32767||height>32767||v.w<=0) return false;
+    if(v.x< -v.w||v.x>v.w||v.y< -v.w||v.y>v.w||v.z< -v.w||v.z>v.w) return false;
+    int64_t denominator=2*(int64_t)v.w;
+    out->x=(int16_t)((((int64_t)v.x+v.w)*(width-1))/denominator);
+    out->y=(int16_t)((((int64_t)v.w-v.y)*(height-1))/denominator);
+    return true;
+}
+static void check_project(sh2z_vec4_t v,uint16_t width,uint16_t height) {
+    sh2z_screen_t actual={1234,-2321},expected=actual;
+    CHECK(sh2z_project_clip(&actual,v,width,height)==oracle_project(&expected,v,width,height));
+    CHECK(actual.x==expected.x&&actual.y==expected.y);
+}
+static void projection_cases(void) {
+    static const int32_t denominators[]={1,2,3,255,256,65535,65536,65537,1<<30,INT32_MAX};
+    static const uint16_t screens[]={0,1,2,3,15,16,17,255,256,257,320,352,480,640,4096,32766,32767,32768,UINT16_MAX};
+    for(unsigned i=0;i<sizeof(denominators)/sizeof(denominators[0]);i++) {
+        int32_t w=denominators[i];
+        const int32_t points[]={-w,-w+1,-1,0,1,w-1,w};
+        for(unsigned x=0;x<7;x++) for(unsigned y=0;y<7;y++)
+            for(unsigned j=0;j<sizeof(screens)/sizeof(screens[0]);j++)
+                for(unsigned k=0;k<sizeof(screens)/sizeof(screens[0]);k++)
+                    check_project((sh2z_vec4_t){points[x],points[y],0,w},screens[j],screens[k]);
+        check_project((sh2z_vec4_t){INT32_MIN,0,0,w},320,240);
+        check_project((sh2z_vec4_t){0,INT32_MIN,0,w},320,240);
+        check_project((sh2z_vec4_t){0,0,INT32_MIN,w},320,240);
+        check_project((sh2z_vec4_t){0,0,w,w},32767,32767);
+        check_project((sh2z_vec4_t){0,0,-w,w},32767,32767);
+        if(w<INT32_MAX) {
+            check_project((sh2z_vec4_t){w+1,0,0,w},320,240);
+            check_project((sh2z_vec4_t){0,w+1,0,w},320,240);
+            check_project((sh2z_vec4_t){0,0,w+1,w},320,240);
+        }
+    }
+    for(unsigned i=0;i<500000;i++) {
+        int32_t w=(int32_t)(random_u32()&INT32_MAX);
+        if(!w) w=1;
+        uint32_t span=2u*(uint32_t)w;
+        int32_t x=(int32_t)((int64_t)(random_u32()%(span+1u))-w);
+        int32_t y=(int32_t)((int64_t)(random_u32()%(span+1u))-w);
+        int32_t z=(int32_t)((int64_t)(random_u32()%(span+1u))-w);
+        check_project((sh2z_vec4_t){x,y,z,w},(uint16_t)(random_u32()&32767u),(uint16_t)(random_u32()&32767u));
+    }
+    check_project((sh2z_vec4_t){0,0,0,0},320,240);
+    check_project((sh2z_vec4_t){0,0,0,-1},320,240);
+    check_project((sh2z_vec4_t){0,0,0,INT32_MIN},320,240);
+    CHECK(!sh2z_project_clip(NULL,(sh2z_vec4_t){0,0,0,1},320,240));
+}
+
 int main(void) {
-    transform_cases(); collision_cases(); inverse_cases();
+    transform_cases(); collision_cases(); inverse_cases(); projection_cases();
     printf("transform/collision wide-oracle checks: %u passed\n",checks);
     return 0;
 }
