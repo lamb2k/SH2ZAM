@@ -55,6 +55,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
       const ay=Math.floor(pose/21*65536)&65535;
       w.setup(ax,ay,0,0,0,0);w.before();w.general();w.after();
       assert.equal(w.optimized_path(),scene==='cubes'?2:1,'generic coordinate counts select the intended strategy');
+      assert.equal(w.reuse_block_size(),scene==='cubes'?8:0,'actual coordinate pattern selects the eight-vertex loop');
       if(w.optimized_path()===2)reusedPoses++;
       for(let i=0;i<points.length;i++){
         assert.equal(optimized[i],safe[i],'reused/prepared output preserves every component and original order');

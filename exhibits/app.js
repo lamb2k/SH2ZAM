@@ -22,11 +22,12 @@
   const {makeMesh}=window.SH2ZAM_MESHES;
   const strategies=['general-fallback','prepared-scalar','coordinate-reuse'];
   function showOptimizedStrategy() {
-    const strategy=wasm.optimized_path();
-    if(strategy===shownStrategy)return;
-    shownStrategy=strategy;
-    $('after-label').textContent=strategy===2?'REUSED PRODUCTS':strategy===1?'PREPARED BATCH':'GENERAL FALLBACK';
-    $('stage-after-label').textContent=`${strategy===2?'Reused':strategy===1?'Prepared':'General'} Q16.16 · Browser/WASM`;
+    const strategy=wasm.optimized_path(),blockSize=wasm.reuse_block_size();
+    const key=`${strategy}:${blockSize}`;
+    if(key===shownStrategy)return;
+    shownStrategy=key;
+    $('after-label').textContent=strategy===2?(blockSize===8?'REUSED BLOCKS':'REUSED PRODUCTS'):strategy===1?'PREPARED BATCH':'GENERAL FALLBACK';
+    $('stage-after-label').textContent=`${strategy===2?(blockSize===8?'Reused blocks':'Reused'):strategy===1?'Prepared':'General'} Q16.16 · Browser/WASM`;
     $('optimized-code-title').textContent=strategy===2?'Shared products · Q16.16':strategy===1?'Prepared batch · Q16.16':'General fallback · Q16.16';
     $('optimized-code').textContent=strategy===2?
       '// Tables rebuilt for each matrix.\n// x_term includes raw translation.\nint64_t sum =\n    x_term[row] + yz_term[row];\nreturn (int32_t)\n    sh2zi_prepared_floor16(sum);':
@@ -163,7 +164,7 @@
     maxError=0; for(let i=0;i<a.length;i++) maxError=Math.max(maxError,Math.hypot(a[i][3]-b[i][3],a[i][4]-b[i][4]));
     checkPrecision();
     $('play').textContent=playing?'Pause':'Play';$('play-state').textContent=playing?'12 SECOND LOOP':'PAUSED';
-    window.SH2ZAM_EXHIBIT_STATE={ready:true,scene,detail,count:input.length/3,maxError,maxWorldError,maxGeneralWorldError,fixedMismatches,outputChecksums,outputsValid,preparedFastPath:!!(wasm.candidate_available()&1),optimizedStrategy:strategies[wasm.optimized_path()],seconds,playing,busy};
+    window.SH2ZAM_EXHIBIT_STATE={ready:true,scene,detail,count:input.length/3,maxError,maxWorldError,maxGeneralWorldError,fixedMismatches,outputChecksums,outputsValid,preparedFastPath:!!(wasm.candidate_available()&1),optimizedStrategy:strategies[wasm.optimized_path()],coordinateReuseBlockSize:wasm.reuse_block_size(),seconds,playing,busy};
   }
   function frame(now) {
     if(last&&playing&&!busy&&!document.hidden) { seconds=(seconds+Math.min((now-last)/1000,0.1))%12;draw(); }
@@ -250,8 +251,8 @@
       $('kernel-time').textContent=`${componentTimes.kernelOnly.toFixed(4)} ms`;
       $('live-status').textContent='CAPTURED';
       const measurable=paths.every(path=>times[path]>0);
-      $('result').textContent=!measurable?'Timer resolution is insufficient; increase mesh detail.':`Captured · safe / optimized: ${(times.general/times.optimized).toFixed(2)}× · browser timings`;
-      report={schema:4,kernelSet:'float-safe-mesh-v1',backend:'SH2ZAM exact integer C / WebAssembly',reference:'float32 C / WebAssembly (browser float)',preparedFastPath:!!(wasm.candidate_available()&1),optimizedStrategy:strategies[wasm.optimized_path()],scene,detail,vertices:input.length/3,triangles:mesh.faces.length,loopSeconds:seconds,maximumScreenErrorPx:maxError,maximumWorldError:{general:maxGeneralWorldError,optimized:maxWorldError},maximumAllowedWorldError:MAX_WORLD_ERROR,fixedMismatches,outputChecksums,minimumSampleDurationMs:targetSampleMs,sampleIterations,sampleElapsedMs,sampleCount:21,measurementOrder:'rotate reference/general/optimized',medianMs:times,samplesMs:samples,components:{medianMs:componentTimes,samples:componentSamples},ratios:measurable?{generalOverOptimized:times.general/times.optimized,referenceOverOptimized:times.reference/times.optimized}:null,wasmSHA256:window.SH2ZAM_WASM_SHA256,userAgent:navigator.userAgent,measuredAt:new Date().toISOString(),includes:['matrix qualification and product-table rebuilding per optimized batch','range validation','output writes','JS-to-WASM call'],excludes:['geometry generation','matrix construction and quantization','rendering','input conversion','one-time mesh bounds scan and coordinate indexing','precision checks'],saturnBenchmark:false};
+      $('result').textContent=!measurable?'Timer resolution is insufficient; increase mesh detail.':`Captured · float / optimized: ${(times.reference/times.optimized).toFixed(2)}× · safe / optimized: ${(times.general/times.optimized).toFixed(2)}× · browser timings`;
+      report={schema:4,kernelSet:'float-safe-mesh-v1',backend:'SH2ZAM exact integer C / WebAssembly',reference:'float32 C / WebAssembly (browser float)',preparedFastPath:!!(wasm.candidate_available()&1),optimizedStrategy:strategies[wasm.optimized_path()],coordinateReuseBlockSize:wasm.reuse_block_size(),scene,detail,vertices:input.length/3,triangles:mesh.faces.length,loopSeconds:seconds,maximumScreenErrorPx:maxError,maximumWorldError:{general:maxGeneralWorldError,optimized:maxWorldError},maximumAllowedWorldError:MAX_WORLD_ERROR,fixedMismatches,outputChecksums,minimumSampleDurationMs:targetSampleMs,sampleIterations,sampleElapsedMs,sampleCount:21,measurementOrder:'rotate reference/general/optimized',medianMs:times,samplesMs:samples,components:{medianMs:componentTimes,samples:componentSamples},ratios:measurable?{generalOverOptimized:times.general/times.optimized,referenceOverOptimized:times.reference/times.optimized}:null,wasmSHA256:window.SH2ZAM_WASM_SHA256,userAgent:navigator.userAgent,measuredAt:new Date().toISOString(),includes:['matrix qualification and product-table rebuilding per optimized batch','range validation','output writes','JS-to-WASM call'],excludes:['geometry generation','matrix construction and quantization','rendering','input conversion','one-time mesh bounds scan, coordinate indexing and workspace binding','precision checks'],saturnBenchmark:false};
     } catch(error) {if(!outputsValid)showTimings({});$('live-status').textContent='CAPTURE FAILED';$('result').textContent=`Measurement failed: ${error.message}`; }
     finally { busy=false;controls.forEach(c=>c.disabled=false);$('export').disabled=!report;draw(); }
   }

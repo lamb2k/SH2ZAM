@@ -65,6 +65,14 @@ attributed to its recorded build; later CI captures have their own ELF and sourc
 hashes. The older CI records below retain their original provenance and describe
 the evidence available at that time.
 
+[SH-2 CI 43493549643](https://github.com/lamb2k/SH2ZAM/actions/runs/43493549643)
+repeated the execution on the freshly built
+[`b79f83c81896bedbf58fc695203af2296c8ea854`](https://github.com/lamb2k/SH2ZAM/commit/b79f83c81896bedbf58fc695203af2296c8ea854)
+ELF. All 315 poses, 1,267,560 components per fixed path and both fallback guards
+passed again, and all 15 inclusive median cycle counts matched the recorded
+capture above. Its raw and validated results are in
+[artifact 14069829911](https://github.com/lamb2k/SH2ZAM/actions/runs/43493549643/artifacts/14069829911).
+
 ## Historical prepared bounds and fused native candidates
 
 Implementation and shared benchmark:

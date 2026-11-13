@@ -28,6 +28,7 @@ static sh2z_transform_plan_t transform_plan;
 #define REUSE_KEYS 256u
 static sh2z_reuse_mesh_t reuse_mesh;
 static sh2z_reuse_plan_t reuse_plan;
+static bool reuse_plan_initialized;
 static sh2z_reuse_index_t reuse_indices[CAPACITY];
 static int32_t reuse_x_keys[REUSE_KEYS];
 static sh2z_reuse_yz_t reuse_yz_keys[REUSE_KEYS];
@@ -50,9 +51,11 @@ sh2z_vec3_t *dmuls_ptr(void) { return dmuls_output; }
 API("plan_prepare") int plan_prepare(void) {
 #ifdef __wasm__
     if(reuse_mesh.reusable) {
-        const bool ok=sh2z_reuse_plan_init(&reuse_plan,&reuse_mesh,&fixed_matrix,
-            reuse_x_terms,REUSE_KEYS,reuse_yz_terms,REUSE_KEYS);
-        if(ok)transform_plan=reuse_plan.base;
+        const bool ok=reuse_plan_initialized
+            ?sh2z_reuse_plan_update_matrix(&reuse_plan,&fixed_matrix)
+            :sh2z_reuse_plan_init(&reuse_plan,&reuse_mesh,&fixed_matrix,
+                reuse_x_terms,REUSE_KEYS,reuse_yz_terms,REUSE_KEYS);
+        if(ok)reuse_plan_initialized=true;
         return ok;
     }
     reuse_plan.enabled=false;
@@ -62,14 +65,26 @@ API("plan_prepare") int plan_prepare(void) {
 /* Browser labels and exports identify the actual strategy. */
 API("optimized_path") unsigned optimized_path(void) {
 #ifdef __wasm__
-    if(reuse_plan.enabled)return 2;
+    if(reuse_plan_initialized)
+        return reuse_plan.enabled?2u:reuse_plan.base.fast_path?1u:0u;
 #endif
     return transform_plan.fast_path?1u:0u;
 }
+API("reuse_block_size") unsigned reuse_block_size(void) {
+#ifdef __wasm__
+    if(reuse_plan_initialized&&reuse_plan.enabled)
+        return reuse_mesh.blocks8?8u:1u;
+#endif
+    return 0;
+}
 API("candidate_available") unsigned candidate_available(void) {
-    return (transform_plan.fast_path?1u:0u)
-        |(sh2z_transform_plan_mac_available(&transform_plan)?2u:0u)
-        |(sh2z_transform_plan_dmuls_available(&transform_plan)?4u:0u);
+    const sh2z_transform_plan_t *plan=&transform_plan;
+#ifdef __wasm__
+    if(reuse_plan_initialized)plan=&reuse_plan.base;
+#endif
+    return (plan->fast_path?1u:0u)
+        |(sh2z_transform_plan_mac_available(plan)?2u:0u)
+        |(sh2z_transform_plan_dmuls_available(plan)?4u:0u);
 }
 API("prepare") int prepare(unsigned n) {
     if(n>CAPACITY) return 0;
@@ -78,6 +93,7 @@ API("prepare") int prepare(unsigned n) {
         reuse_x_keys,REUSE_KEYS,reuse_yz_keys,REUSE_KEYS))return 0;
     mesh_view=reuse_mesh.view;
     reuse_plan.enabled=false;
+    reuse_plan_initialized=false;
 #else
     if(!sh2z_mesh_view_init(&mesh_view,input,n)) return 0;
 #endif
@@ -115,7 +131,7 @@ void general_range(unsigned start,unsigned n) {
 }
 void after_range(unsigned start,unsigned n) {
 #ifdef __wasm__
-    if(reuse_plan.enabled) {
+    if(reuse_plan_initialized) {
         (void)sh2z_reuse_plan_execute_range(fixed_output+start,&reuse_plan,start,n);
         return;
     }

@@ -15,6 +15,7 @@ int plan_prepare(void);
 unsigned candidate_available(void);
 /* 0=general fallback, 1=prepared scalar, 2=reused coordinate products. */
 unsigned optimized_path(void);
+unsigned reuse_block_size(void);
 void setup(unsigned ax,unsigned ay,float sx,float cx,float sy,float cy);
 void before_range(unsigned start,unsigned n);
 void general_range(unsigned start,unsigned n);

@@ -19,6 +19,7 @@ typedef struct {
     sh2z_reuse_yz_t *yz_keys;
     size_t index_capacity,x_capacity,yz_capacity,x_count,yz_count;
     bool reusable;
+    bool blocks8; /* Complete aligned octets have the proved X/YZ pattern. */
 } sh2z_reuse_mesh_t;
 
 typedef struct {
@@ -41,6 +42,9 @@ typedef struct {
  *  2*uniqueYZ+uniqueX<=count/2 are required. This gate predicts reduced work,
  *  not a guaranteed speedup. Key counts can be partial when reusable=false;
  *  those keys/indices are never used by execution.
+ *  When all complete source octets have X offsets [a,b,b,a,a,b,b,a] and
+ *  matching YZ offsets within each adjacent pair, blocks8 is true. Execution
+ *  may reuse their table loads. Partial octets have no pattern requirement.
  *
  *  The source, metadata, key buffers and mesh object must remain unchanged
  *  and alive while any plan borrows this mesh. Rebuild after source edits.
@@ -54,7 +58,7 @@ bool sh2z_reuse_mesh_init(sh2z_reuse_mesh_t *mesh,
 /** Snapshots matrix, proves the ordinary prepared bounds, and builds all
  *  contribution tables for this matrix. Both table-build cost and execution
  *  belong in a per-matrix benchmark. Tables are caller-owned, exclusive to
- *  this plan and must stay unchanged until this plan is reinitialized.
+ *  this plan and must stay unchanged between initialization/update calls.
  *
  *  Insufficient table capacities, an ineligible mesh, or a failed numeric
  *  proof produce a valid prepared fallback (enabled=false), not an error.
@@ -66,6 +70,21 @@ bool sh2z_reuse_plan_init(sh2z_reuse_plan_t *plan,
     const sh2z_reuse_mesh_t *mesh,const sh2z_mat34_t *matrix,
     sh2z_reuse_term_t *x_terms,size_t x_term_capacity,
     sh2z_reuse_term_t *yz_terms,size_t yz_term_capacity);
+
+/** Replaces the matrix of an already initialized plan while retaining its
+ *  validated workspace binding. Reproves the numeric bounds and rebuilds ALL
+ *  used contribution entries, including when matrix values are unchanged.
+ *  A failed numeric proof is a successful prepared fallback (enabled=false).
+ *
+ *  Plan bindings/capacities, borrowed mesh/source/metadata and workspace
+ *  allocations must be unchanged since plan_init. To change any binding,
+ *  call plan_init again. The caller synchronizes updates and executions.
+ *  Null arguments or matrix overlap with plan/term storage return false
+ *  before writes, leaving plan/tables unchanged. Other source/metadata
+ *  aliasing is read-only. Matrix is snapshotted; it need not remain alive.
+ *  This operation belongs inside per-matrix transform timing. */
+bool sh2z_reuse_plan_update_matrix(sh2z_reuse_plan_t *plan,
+    const sh2z_mat34_t *matrix);
 
 /** Exact Q16.16 affine output in original vertex order. Same floor and
  *  saturation result as transform_points_general, including fallback.

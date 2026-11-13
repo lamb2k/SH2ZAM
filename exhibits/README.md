@@ -61,18 +61,24 @@ output stores. The selection rule requires at least 128 vertices and
 `2 * unique_YZ + unique_X <= vertex_count / 2`, with a 256-key budget for each
 table. Every current cube-field detail qualifies; the ring and torus use the
 prepared scalar path. Selection depends on the data, never the scene name.
-This work heuristic does not guarantee a float win. See the
+A second proof recognizes blocks of eight vertices sharing two X contributions
+and four paired YZ contributions. Eligible complete blocks load 18 terms instead
+of 48 and reuse six indices instead of 16; arbitrary range prefixes and tails
+keep the scalar loop. The proof checks actual indices, and adds no per-vertex
+storage. This work heuristic does not guarantee a float win. See the
 [coordinate-reuse API, proof and memory costs](../saturn/COORDINATE_REUSE.md).
 
 ## Timing contract
 
 All three kernels use the same compiler and optimization settings. They allocate no
 memory during measurement. Matrix construction, trigonometry, input conversion,
-the one-time mesh-bound scan and coordinate indexing, scene generation, rendering, checksums and precision
+the one-time mesh-bound scan, coordinate indexing and workspace binding, scene
+generation, rendering, checksums and precision
 checks are outside timing. Source meshes remain immutable after preparation.
 Changing a mesh requires rerunning preparation. The safe matrix gate and the
 optimized matrix qualification and contribution-table building remain inside
-their respective measured calls. Float receives the same immutable source and
+their respective measured calls. Repeated matrices still rebuild every table;
+only immutable workspace bindings retain their validation. Float receives the same immutable source and
 quantized coefficients and retains the conventional affine reference kernel.
 
 Live timings update every 500 ms while the exhibit runs. Repetition counts adapt
@@ -96,7 +102,9 @@ Schema-4 JSON export (`float-safe-mesh-v1`) records every distribution,
 iteration count and elapsed duration, component timings, medians, ratios,
 independent output checksums, precision checks, geometry, pose, browser user
 agent, module hash and measurement boundaries. `optimizedStrategy` records
-`coordinate-reuse`, `prepared-scalar` or `general-fallback`. Internal JSON keys
+`coordinate-reuse`, `prepared-scalar` or `general-fallback`.
+`coordinateReuseBlockSize` records 8 for the unrolled blocks, 1 for scalar
+coordinate reuse or 0 when reuse is inactive. Internal JSON keys
 `general` and `optimized` mean safe batch and the selected optimized batch,
 respectively. Schema 3 always used prepared scalar; schema 2 used different
 baselines. **Play** resumes live sampling.

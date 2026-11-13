@@ -55,6 +55,7 @@ with sync_playwright() as p:
         assert f"detail 5 · {state['count']} vertices" in page.locator('#saturn-workload').inner_text()
         assert f"detail 5 · {state['count']} vertices" in page.locator('#model-workload').inner_text()
         assert state['optimizedStrategy']==('coordinate-reuse' if scene=='cubes' else 'prepared-scalar')
+        assert state['coordinateReuseBlockSize']==(8 if scene=='cubes' else 0)
         assert state['maxError']<0.1,state
         assert state['fixedMismatches']==0,state
         assert state['maxWorldError']<2/65536,state
@@ -75,6 +76,7 @@ with sync_playwright() as p:
     data=json.loads((root/'test-result.json').read_text())
     assert data['schema']==4 and data['kernelSet']=='float-safe-mesh-v1'
     assert data['optimizedStrategy']=='prepared-scalar'
+    assert data['coordinateReuseBlockSize']==0
     assert data['preparedFastPath'] is True
     assert data['minimumSampleDurationMs']==5
     assert data['fixedMismatches']==0 and data['saturnBenchmark'] is False
@@ -91,7 +93,7 @@ with sync_playwright() as p:
         assert all(value['elapsedMs']>=5 for value in data['components']['samples'][component])
     assert 'matrix qualification and product-table rebuilding per optimized batch' in data['includes']
     assert data['maximumWorldError']['general']==data['maximumWorldError']['optimized']
-    print('Browser capture:',json.dumps({key:data[key] for key in ['schema','scene','detail','vertices','medianMs','components','ratios','maximumWorldError','fixedMismatches','outputChecksums','wasmSHA256']}),flush=True)
+    print('Browser capture:',json.dumps({**{key:data[key] for key in ['schema','scene','detail','vertices','medianMs','ratios','maximumWorldError','fixedMismatches','outputChecksums','wasmSHA256']},'componentMedianMs':data['components']['medianMs']}),flush=True)
     # Check the actual adaptive strategy and full inclusive timing in every
     # scene. A speedup is reported by measurements, never a pass/fail condition.
     for extra_scene in ['cubes','torus']:
@@ -106,11 +108,12 @@ with sync_playwright() as p:
         extra=json.loads(target.read_text())
         assert extra['schema']==4 and extra['kernelSet']=='float-safe-mesh-v1'
         assert extra['optimizedStrategy']==('coordinate-reuse' if extra_scene=='cubes' else 'prepared-scalar')
+        assert extra['coordinateReuseBlockSize']==(8 if extra_scene=='cubes' else 0)
         assert extra['fixedMismatches']==0
         assert extra['outputChecksums']['general']==extra['outputChecksums']['optimized']
         assert all(value>=5 for path in extra['sampleElapsedMs'].values() for value in path)
         assert extra['maximumWorldError']['optimized']<2/65536
-        print('Additional browser capture:',json.dumps({key:extra[key] for key in ['scene','detail','vertices','optimizedStrategy','medianMs','ratios','fixedMismatches','maximumWorldError','wasmSHA256']}),flush=True)
+        print('Additional browser capture:',json.dumps({**{key:extra[key] for key in ['scene','detail','vertices','optimizedStrategy','coordinateReuseBlockSize','medianMs','ratios','fixedMismatches','maximumWorldError','wasmSHA256']},'componentMedianMs':extra['components']['medianMs']}),flush=True)
     captured=page.locator('#before-time').inner_text()
     page.wait_for_timeout(650)
     assert page.locator('#before-time').inner_text()==captured
