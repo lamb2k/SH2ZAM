@@ -5,8 +5,8 @@
 <meta name="color-scheme" content="dark">
 <meta name="description" content="Compare a floating-point C reference with real SH2ZAM fixed-point C math in a looping, interactive 3D exhibit.">
 <title>SH2ZAM / The math lab</title>
-<link rel="stylesheet" href="style.css">
-<script defer src="math-module.js"></script><script defer src="app.js"></script>
+<link rel="stylesheet" href="style.css?v=live-code-2">
+<script defer src="math-module.js"></script><script defer src="app.js?v=live-code-2"></script>
 </head>
 <body>
 <header class="top"><a class="wordmark" href="https://github.com/lamb2k/SH2ZAM">SH<span>2</span>ZAM<span class="dot">·</span></a><span class="topnote">SEGA SATURN MATH / INTERACTIVE LAB</span><a class="source" href="https://github.com/lamb2k/SH2ZAM/tree/main/exhibits">View source ↗</a></header>
@@ -15,11 +15,25 @@
 <nav class="scenes" aria-label="Choose a 3D exhibit"><button class="active" data-scene="saturn" aria-pressed="true"><small>01</small> Ring world</button><button data-scene="cubes" aria-pressed="false"><small>02</small> Cube field</button><button data-scene="torus" aria-pressed="false"><small>03</small> Twisted orbit</button></nav>
 <section class="viewer" aria-label="3D math comparison">
 <div class="scene-header"><div><h2 id="scene-title">Ring world</h2><p id="scene-caption">A low-poly planet and concentric rings, transformed in lockstep.</p></div><span id="mesh-count">— vertices</span></div>
-<div class="stage" id="stage"><canvas id="after-canvas" aria-label="SH2ZAM fixed-point 3D rendering"></canvas><canvas id="before-canvas" aria-label="Floating-point reference 3D rendering"></canvas><div class="badges"><span>BEFORE <b>C float reference</b></span><span>AFTER <b>SH2ZAM Q16.16</b></span></div><div class="divider" id="divider"><button id="drag" tabindex="-1" aria-label="Drag comparison divider">↔</button></div><div class="stage-foot"><span id="play-state">12 SECOND LOOP</span></div></div>
+<div class="stage" id="stage"><canvas id="after-canvas" aria-label="SH2ZAM fixed-point 3D rendering"></canvas><canvas id="before-canvas" aria-label="Floating-point reference 3D rendering"></canvas><div class="badges"><span>BEFORE <b>C float reference</b><strong id="stage-before-time">—</strong></span><span>AFTER <b>SH2ZAM Q16.16</b><strong id="stage-after-time">—</strong></span></div><div class="divider" id="divider"><button id="drag" tabindex="-1" aria-label="Drag comparison divider">↔</button></div><div class="stage-foot"><span id="play-state">12 SECOND LOOP</span><span id="live-status">Loading timings…</span></div></div>
 <div class="controls"><div class="wide"><label for="wipe">Compare <output id="wipe-value">50%</output></label><input id="wipe" type="range" min="0" max="100" value="50" aria-label="Before and after reveal percentage"></div><button id="play" class="button" type="button" disabled>Pause</button><div><label for="detail">Mesh detail <output id="detail-value">3</output></label><input id="detail" type="range" min="1" max="5" step="1" value="3"></div></div>
 <div class="timeline"><label for="time">Loop position</label><input id="time" type="range" min="0" max="12" step="0.01" value="0"><output id="time-value">0.00 s</output></div>
 </section>
 <section class="metrics" aria-label="Comparison measurements"><article><p>REFERENCE TRANSFORM</p><strong id="before-time">—</strong><small>C float / median batch time</small></article><article><p>SH2ZAM TRANSFORM</p><strong id="after-time">—</strong><small>Q16.16 C / median batch time</small></article><article><p>PROJECTED DIFFERENCE</p><strong id="error">—</strong><small>Max. vertex offset</small></article></section>
+<section class="kernel-table" aria-label="Transform source code"><article><h3>Reference · float32</h3><pre><code>API("before") void before(void) {
+    for(unsigned i=0;i&lt;count;i++)
+        for(unsigned j=0;j&lt;3;j++)
+            float_output[i][j]=float_matrix[j][0]*float_input[i][0]
+                +float_matrix[j][1]*float_input[i][1]+float_matrix[j][2]*float_input[i][2];
+}</code></pre></article><article><h3>SH2ZAM · Q16.16</h3><pre><code>API("after") void after(void) {
+    (void)sh2z_mat34_transform_points(fixed_output,&amp;fixed_matrix,input,count);
+}
+
+sh2z_vec3_t sh2z_mat34_transform_point(const sh2z_mat34_t *m,sh2z_vec3_t v) {
+    const int32_t x[]={v.x,v.y,v.z}; int32_t y[3];
+    for(unsigned row=0;row&lt;3;row++) y[row]=sh2zi_clamp(sh2zi_dot(m-&gt;m[row],x,3,0,m-&gt;m[row][3]));
+    return (sh2z_vec3_t){y[0],y[1],y[2]};
+}</code></pre><a href="https://github.com/lamb2k/SH2ZAM/blob/main/exhibits/bridge.c">C source ↗</a></article></section>
 <div class="benchmark"><div><button id="benchmark" class="button primary" disabled>Capture benchmark</button><button id="export" class="button" disabled>Export results</button></div><p id="result" role="status">Loading…</p></div>
 <p id="failure" class="failure" role="alert" hidden></p>
 <details><summary>Technical notes</summary><p>Both kernels run as WebAssembly with shared geometry and rendering. These are browser timings, not Saturn benchmarks.</p><p>The reference uses a float32 affine transform. SH2ZAM uses saturating Q16.16 arithmetic and wider intermediates. Identical raw Q16 inputs are converted once for the float path; matrix setup uses the same 16-bit angles.</p><p>Live timings update every 500 ms using a rolling median of five samples, each averaging 64 transforms. Drawing and matrix setup are excluded. Capture benchmark holds a result for export; playing the scene resumes live timings. Capture pauses the loop, warms both kernels, then takes 21 samples of 64 batch calls each, alternating measurement order. The displayed time is the median per batch, including the JS-to-WASM call. Browser timing resolution, JIT, power state and other tabs can affect results. Export includes the sample distributions and WASM hash.</p><p>Use the reveal slider or drag the center handle. Scrubbing pauses animation. Reduced-motion preferences start the scene paused. Changing scene or detail invalidates old timings. The visual projection is shared JavaScript, not SH2ZAM’s integer screen-coordinate projection API.</p></details>

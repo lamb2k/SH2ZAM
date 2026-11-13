@@ -66,6 +66,8 @@
   }
   function invalidate() {
     liveBefore.length=liveAfter.length=0; liveAt=-Infinity;
+    $('live-status').textContent='Sampling…';
+    $('stage-before-time').textContent=$('stage-after-time').textContent='—';
     report=null; $('before-time').textContent=$('after-time').textContent='—';
     $('export').disabled=true; $('result').textContent='Live · browser timings';
   }
@@ -146,6 +148,9 @@
     $('before-time').textContent=format(liveBefore);
     $('after-time').textContent=format(liveAfter);
     $('before-time').dataset.samples=$('after-time').dataset.samples=String(liveOrder);
+    $('stage-before-time').textContent=$('before-time').textContent;
+    $('stage-after-time').textContent=$('after-time').textContent;
+    $('live-status').textContent=`LIVE · SAMPLE ${liveOrder}`;
   }
   const yieldFrame=()=>new Promise(resolve=>requestAnimationFrame(resolve));
   async function benchmark() {
@@ -162,6 +167,9 @@
       const ta=median(a),tb=median(b);
       $('before-time').textContent=ta>0?`${ta.toFixed(4)} ms`:'< timer limit';
       $('after-time').textContent=tb>0?`${tb.toFixed(4)} ms`:'< timer limit';
+      $('stage-before-time').textContent=$('before-time').textContent;
+      $('stage-after-time').textContent=$('after-time').textContent;
+      $('live-status').textContent='CAPTURED';
       const ratio=ta>0?tb/ta:null;
       $('result').textContent=ratio===null?'Timer resolution is insufficient; increase mesh detail.':`Captured · SH2ZAM / reference: ${ratio.toFixed(2)}× · browser timings`;
       report={schema:1,backend:'SH2ZAM portable C / WebAssembly',reference:'float32 C / WebAssembly',scene,detail,vertices:input.length/3,triangles:mesh.faces.length,loopSeconds:seconds,maximumScreenErrorPx:maxError,iterationsPerSample:iterations,sampleCount:21,medianMs:{before:ta,after:tb},samplesMs:{before:a,after:b},wasmSHA256:window.SH2ZAM_WASM_SHA256,userAgent:navigator.userAgent,measuredAt:new Date().toISOString(),excludes:['geometry generation','matrix setup','rendering','output conversion'],saturnBenchmark:false};

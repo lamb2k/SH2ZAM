@@ -23,6 +23,12 @@ with sync_playwright() as p:
     assert page.evaluate('SH2ZAM_EXHIBIT_STATE.playing')
     assert page.locator('#before-time').inner_text() != '—'
     assert page.locator('#after-time').inner_text() != '—'
+    assert page.locator('#stage-before-time').inner_text()==page.locator('#before-time').inner_text()
+    assert page.locator('#stage-after-time').inner_text()==page.locator('#after-time').inner_text()
+    assert 'LIVE' in page.locator('#live-status').inner_text()
+    assert page.locator('.kernel-table pre code').count()==2
+    assert 'float_matrix' in page.locator('.kernel-table').inner_text()
+    assert 'sh2zi_dot' in page.locator('.kernel-table').inner_text()
     page.click('#play')
     assert not page.evaluate('SH2ZAM_EXHIBIT_STATE.playing')
     for scene in ['saturn','cubes','torus']:
