@@ -1,0 +1,47 @@
+name: SH-2 cross compile
+on:
+  push:
+    paths: ['saturn/**', 'CMakeLists.txt', '.github/workflows/sh2-cross.yml']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sh2-objects:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cross compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-sh4-linux-gnu binutils-sh4-linux-gnu
+          sh4-linux-gnu-gcc --version
+      - name: Verify SH-2 target and compile (no Linux runtime linkage)
+        shell: bash
+        run: |
+          set -euo pipefail
+          sh4-linux-gnu-gcc -m2 -mb -ffreestanding -dM -E -x c /dev/null > sh2-macros.txt
+          grep -q '__SH2__' sh2-macros.txt
+          grep -q '__BYTE_ORDER__ __ORDER_BIG_ENDIAN__' sh2-macros.txt
+          cmake -S saturn -B build/sh2 -DCMAKE_SYSTEM_NAME=Generic \
+            -DCMAKE_SYSTEM_PROCESSOR=sh2 -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
+            -DCMAKE_C_COMPILER=sh4-linux-gnu-gcc \
+            -DCMAKE_C_FLAGS='-m2 -mb -O2 -ffreestanding -DSH2Z_REQUIRE_SH2=1' \
+            -DSH2Z_BUILD_TESTS=OFF -DSH2Z_BUILD_EXAMPLES=OFF
+          cmake --build build/sh2 --parallel
+          sh4-linux-gnu-readelf -h build/sh2/libsh2zam.a > sh2-elf.txt
+          sh4-linux-gnu-objdump -d build/sh2/libsh2zam.a > sh2-disassembly.txt
+          sh4-linux-gnu-nm -u build/sh2/libsh2zam.a > sh2-undefined.txt
+          grep -q 'big endian' sh2-elf.txt
+          grep -q 'dmuls.l' sh2-disassembly.txt
+          cat sh2-elf.txt
+          cat sh2-undefined.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sh2-compile-evidence
+          path: |
+            build/sh2/libsh2zam.a
+            sh2-macros.txt
+            sh2-elf.txt
+            sh2-disassembly.txt
+            sh2-undefined.txt
