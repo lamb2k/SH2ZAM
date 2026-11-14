@@ -76,6 +76,30 @@ The other affected APIs are `vec2_normalize`, `vec4_normalize`,
 The other 35 APIs retain their prior profile medians. The measured improvements
 above do not establish a universal 10× gain for individual math calls.
 
+## General division with `DIV1` steps (feature branch `claude/sh2-div1-division`)
+
+`sh2z_div` previously called libgcc's 64-bit divide for `(a*65536)/b`. On SH-2 it now
+divides magnitudes with an unsigned 64/32 `DIV1` sequence (`DIV0U`, 32 `ROTCL`/`DIV1`
+pairs), then applies the sign and the unchanged saturation. The high word of the 48-bit
+dividend is compared with `|b|` first: when it reaches `|b|` the quotient needs more than 32
+bits and saturates, which is also the `DIV1` sequence's precondition. CPU division steps
+only; no memory-mapped divider.
+
+Local capture with the same math-suite fixtures and wrappers, against the committed results
+(model only, not hardware): all 114,912 output words match the frozen implementation and
+SR.S is preserved; 12 of 144 records change, none slower.
+
+| API (sh2z_ prefix omitted) | Current `main` cycles/call (bounded) | Branch | Saved |
+| --- | ---: | ---: | ---: |
+| `div` | 266.09 | 104.09 | 60.9% |
+| `recip` | 258.41 | 103.84 | 59.8% |
+| `rsqrt` | 689.28 | 533.56 | 22.6% |
+
+Full-range medians move the same way (`div` 255.00 to 99.66). `muldiv` keeps libgcc: its
+dividend is a full 64-bit product. Host coverage: `scalar_fast_exact` checks
+`sh2zi_div16` with portable steps against an int128 oracle over every sign, the saturation
+edges and 2M random pairs.
+
 ## Cumulative recorded costs relative to `10786b6`
 
 Both versions in this suite are compiled with the same pinned Yaul GCC 13.2.0

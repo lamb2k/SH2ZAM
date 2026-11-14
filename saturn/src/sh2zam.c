@@ -23,7 +23,11 @@ sh2z_fx_t sh2z_sub(sh2z_fx_t a,sh2z_fx_t b) {
 sh2z_fx_t sh2z_mul(sh2z_fx_t a,sh2z_fx_t b) { return sh2zi_clamp(sh2zi_floor16(sh2zi_product(a,b))); }
 sh2z_fx_t sh2z_div(sh2z_fx_t a,sh2z_fx_t b) {
     if(!b) return a>0 ? INT32_MAX : (a<0 ? INT32_MIN : 0);
+#if SH2Z_NATIVE_MUL
+    return sh2zi_div16(a,b);
+#else
     return sh2zi_clamp(((int64_t)a*65536)/b);
+#endif
 }
 sh2z_fx_t sh2z_muldiv(sh2z_fx_t a,sh2z_fx_t b,sh2z_fx_t c) {
     int64_t p=sh2zi_product(a,b);
