@@ -131,8 +131,35 @@ static void boundaries(void) {
         if(n) CHECK(sh2zi_fraction16(n-1,UINT32_C(1)<<31)==q-1);
     }
 }
+/* sh2zi_div16 (the SH-2 sh2z_div path, here with portable division steps) against the
+ * int128 oracle: every sign, saturation boundary and 1-LSB neighbourhood. */
+static void div16_case(int32_t a,int32_t b) {
+    if(b) CHECK(sh2zi_div16(a,b)==div_oracle((int64_t)a*65536,b));
+}
+static void div16_boundaries(void) {
+    static const int32_t v[]={INT32_MIN,INT32_MIN+1,-65537,-65536,-65535,-32768,-2,-1,0,1,2,
+                              32767,32768,65535,65536,65537,0x7fff,0x8000,0x10000,
+                              INT32_MAX-1,INT32_MAX};
+    for(unsigned i=0;i<sizeof v/sizeof v[0];i++)
+        for(unsigned j=0;j<sizeof v/sizeof v[0];j++) div16_case(v[i],v[j]);
+    for(int32_t b=1;b<70000;b+=1) {
+        /* Quotients at the saturation edges: a = b*32768 +- 1 (= 2^31 in Q16.16). */
+        int64_t edge=(int64_t)b*32768;
+        for(int d=-2;d<=2;d++) {
+            if(edge+d<=INT32_MAX) { div16_case((int32_t)(edge+d),b); div16_case((int32_t)(edge+d),-b); }
+            if(-edge-d>=INT32_MIN) { div16_case((int32_t)(-edge-d),b); div16_case((int32_t)(-edge-d),-b); }
+        }
+    }
+}
+
 int main(void) {
     boundaries();
+    div16_boundaries();
+    for(unsigned i=0;i<2000000;i++) {
+        int32_t a=random_i32(),b=random_i32();
+        if(i%4u==1u) b/=65536; else if(i%4u==2u) a/=65536; else if(i%4u==3u) b>>=(random_u32()%31u);
+        div16_case(a,b);
+    }
     for(unsigned i=0;i<300000;i++) {
         int32_t a=random_i32(),b=random_i32(),c=random_i32();
         if(i%3u==1u) { a/=4096; b/=4096; c/=4096; }

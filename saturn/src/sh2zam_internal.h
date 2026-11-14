@@ -87,6 +87,47 @@ static inline uint64_t sh2zi_isqrt(uint64_t n) {
     if(rem_hi>trial_hi || (rem_hi==trial_hi && rem>=trial)) root|=1u;
     return root;
 }
+/* Unsigned 64/32 division by CPU division steps: (hi:lo)/divisor, truncated, for
+ * hi < divisor, so the quotient fits 32 bits. Native: DIV0U, then 32 ROTCL/DIV1 pairs and
+ * a final ROTCL (Renesas SH-1/SH-2/SH-DSP Software Manual, unsigned 64/32 example). One
+ * indivisible asm block owns Q/M/T; DIV0U does not alter SR.S. CPU steps, not the
+ * memory-mapped divider. Portable: the same restoring shift-subtract, one bit per step. */
+static inline uint32_t sh2zi_udiv64_32(uint32_t hi,uint32_t lo,uint32_t divisor) {
+#if SH2Z_NATIVE_MUL
+#define SH2ZI_DIV_STEP "rotcl %[quotient]\n\tdiv1 %[divisor], %[remainder]\n\t"
+#define SH2ZI_DIV_STEP8 SH2ZI_DIV_STEP SH2ZI_DIV_STEP SH2ZI_DIV_STEP SH2ZI_DIV_STEP \
+                        SH2ZI_DIV_STEP SH2ZI_DIV_STEP SH2ZI_DIV_STEP SH2ZI_DIV_STEP
+    __asm__ volatile(
+        "div0u\n\t"
+        SH2ZI_DIV_STEP8 SH2ZI_DIV_STEP8 SH2ZI_DIV_STEP8 SH2ZI_DIV_STEP8
+        "rotcl %[quotient]"
+        : [remainder] "+&r"(hi), [quotient] "+&r"(lo)
+        : [divisor] "r"(divisor) : "t");
+#undef SH2ZI_DIV_STEP8
+#undef SH2ZI_DIV_STEP
+    return lo;
+#else
+    uint32_t quotient=0;
+    for(unsigned i=0;i<32;i++) {
+        uint32_t carry=hi>>31;
+        hi=(hi<<1)|(lo>>31); lo<<=1; quotient<<=1;
+        if(carry || hi>=divisor) { hi-=divisor; quotient|=1u; }
+    }
+    return quotient;
+#endif
+}
+/* clamp((a*65536)/b) for b != 0, without a 64-bit divide. C division truncates toward
+ * zero, which is the magnitude quotient with the sign applied. |a|*65536 is a 48-bit
+ * dividend; when its high word reaches |b| the quotient needs more than 32 bits and
+ * saturates as the clamp would. Used by sh2z_div on SH-2; host tests run it portably. */
+static inline int32_t sh2zi_div16(int32_t a,int32_t b) {
+    const uint32_t ua=sh2zi_magnitude(a),ub=sh2zi_magnitude(b);
+    const int negative=(a<0)!=(b<0);
+    if((ua>>16)>=ub) return negative ? INT32_MIN : INT32_MAX;
+    const uint32_t q=sh2zi_udiv64_32(ua>>16,ua<<16,ub);
+    if(!negative) return q>(uint32_t)INT32_MAX ? INT32_MAX : (int32_t)q;
+    return q>=UINT32_C(0x80000000) ? INT32_MIN : (int32_t)(0u-q);
+}
 /* Exact sixteen-bit fractional quotient for value <= denominator <= 2^31.
  * Each doubled remainder fits uint32_t, including denominator == 2^31. */
 static inline uint32_t sh2zi_fraction16(uint32_t value,uint32_t denominator) {
