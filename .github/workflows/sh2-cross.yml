@@ -51,9 +51,6 @@ jobs:
             "$READELF" -h build/sh2/libsh2zam.a > sh2-elf.txt
             "$OBJDUMP" -d build/sh2/libsh2zam.a > sh2-disassembly.txt
             "$NM" -u build/sh2/libsh2zam.a > sh2-undefined.txt
-            "$OBJDUMP" -d build/sh2/sh2zam_m68k.o > sh2-m68k-disassembly.txt
-            grep -q "div1" sh2-m68k-disassembly.txt
-            grep -q "muls.w" sh2-m68k-disassembly.txt
             "$OBJDUMP" -dr build/sh2/sh2zam_transform.o > sh2-batch-disassembly.txt
             "$OBJDUMP" -dr build/sh2/sh2zam_batch_sh2.o > sh2-fused-disassembly.txt
             "$OBJDUMP" -dr build/sh2/sh2zam_prepared.o > sh2-prepared-disassembly.txt
@@ -67,6 +64,10 @@ jobs:
             # Integer-kernel bridge for the executed-instruction model (68000 arithmetic,
             # box overlap, cell placement). Freestanding link against the model's RAM map.
             "$CC" -m2 -mb -O2 -ffreestanding -std=c11 -Wall -Wextra -Werror -DSH2Z_REQUIRE_SH2=1               -Isaturn/include -c saturn/benchmarks/integer-model/bridge.c -o build/sh2/integer-bridge.o
+            # The m68k kernels are header-inline: audit the bridge object that instantiates them.
+            "$OBJDUMP" -d build/sh2/integer-bridge.o > sh2-m68k-disassembly.txt
+            grep -q "div1" sh2-m68k-disassembly.txt
+            grep -q "muls.w" sh2-m68k-disassembly.txt
             "$CC" -m2 -mb -nostdlib -nostartfiles -Wl,-T,saturn/benchmarks/integer-model/model.ld -Wl,-e,0               -o build/sh2/integer-model.elf build/sh2/integer-bridge.o build/sh2/libsh2zam.a -lgcc
             make -C saturn/examples/yaul-smoke
             make -C saturn/benchmarks/yaul
