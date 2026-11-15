@@ -62,7 +62,7 @@ jobs:
             cat sh2-elf.txt
             cat sh2-undefined.txt
             # Integer-kernel bridge for the executed-instruction model (68000 arithmetic,
-            # box overlap, cell placement). Freestanding link against the model's RAM map.
+            # box overlap, cell placement). Freestanding link against the model RAM map.
             "$CC" -m2 -mb -O2 -ffreestanding -std=c11 -Wall -Wextra -Werror -DSH2Z_REQUIRE_SH2=1               -Isaturn/include -c saturn/benchmarks/integer-model/bridge.c -o build/sh2/integer-bridge.o
             # The m68k kernels are header-inline: audit the bridge object that instantiates them.
             "$OBJDUMP" -d build/sh2/integer-bridge.o > sh2-m68k-disassembly.txt
