@@ -51,6 +51,9 @@ jobs:
             "$READELF" -h build/sh2/libsh2zam.a > sh2-elf.txt
             "$OBJDUMP" -d build/sh2/libsh2zam.a > sh2-disassembly.txt
             "$NM" -u build/sh2/libsh2zam.a > sh2-undefined.txt
+            "$OBJDUMP" -d build/sh2/sh2zam_m68k.o > sh2-m68k-disassembly.txt
+            grep -q "div1" sh2-m68k-disassembly.txt
+            grep -q "muls.w" sh2-m68k-disassembly.txt
             "$OBJDUMP" -dr build/sh2/sh2zam_transform.o > sh2-batch-disassembly.txt
             "$OBJDUMP" -dr build/sh2/sh2zam_batch_sh2.o > sh2-fused-disassembly.txt
             "$OBJDUMP" -dr build/sh2/sh2zam_prepared.o > sh2-prepared-disassembly.txt
@@ -61,6 +64,10 @@ jobs:
             grep -q "dmuls.l" sh2-disassembly.txt
             cat sh2-elf.txt
             cat sh2-undefined.txt
+            # Integer-kernel bridge for the executed-instruction model (68000 arithmetic,
+            # box overlap, cell placement). Freestanding link against the model's RAM map.
+            "$CC" -m2 -mb -O2 -ffreestanding -std=c11 -Wall -Wextra -Werror -DSH2Z_REQUIRE_SH2=1               -Isaturn/include -c saturn/benchmarks/integer-model/bridge.c -o build/sh2/integer-bridge.o
+            "$CC" -m2 -mb -nostdlib -nostartfiles -Wl,-T,saturn/benchmarks/integer-model/model.ld -Wl,-e,0               -o build/sh2/integer-model.elf build/sh2/integer-bridge.o build/sh2/libsh2zam.a -lgcc
             make -C saturn/examples/yaul-smoke
             make -C saturn/benchmarks/yaul
             "$CC" -m2 -mb -O2 -ffreestanding -std=c11 -fno-fast-math -ffp-contract=off -fno-lto -DSH2Z_REQUIRE_SH2=1 -DSH2Z_EXHIBIT_CAPACITY=4096 -Isaturn/include -c exhibits/bridge.c -o build/sh2/benchmark-bridge.o
@@ -102,6 +109,13 @@ jobs:
             saturn/benchmarks/yaul/build/sh2zam-benchmark.sym \
             build/sh2-model/results.json
           node saturn/benchmarks/compile-model-results.cjs build/sh2-model/results.json
+      - name: Verify and cost the integer kernels in the SH-2 instruction model
+        env:
+          MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          MODEL_TOOLCHAIN: Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)
+          MODEL_SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          bash saturn/benchmarks/integer-model/run.sh             build/sh2/integer-model.elf             build/sh2-model/integer-results.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -125,3 +139,5 @@ jobs:
             build/sh2-model/math-raw.json
             build/sh2-model/workload-results.json
             build/sh2-model/workload-raw.json
+            build/sh2-model/integer-results.json
+            build/sh2-model/integer-raw.json

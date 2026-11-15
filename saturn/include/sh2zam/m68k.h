@@ -19,10 +19,11 @@
  *    quotient (both 16 bits), N is quotient bit 15, Z is quotient == 0,
  *    V = C = 0.
  *  - Overflow (quotient does not fit 16 bits: unsigned > 0xFFFF; signed outside
- *    -32768..32767): dn is unchanged and V is set. The 68000 manual leaves N
- *    undefined on overflow and Z unaffected in the sense of "undefined"; this
- *    library reports N = 1, Z = 0, C = 0, which is deterministic and equal on
- *    every path, but callers must not rely on N or Z after V.
+ *    -32768..32767): dn is unchanged and V is set. The 68000 manual lists N and
+ *    Z as undefined after an overflow; this library reports N = 1, Z = 0, C = 0.
+ *    That choice is deterministic and identical on every path here, but it is
+ *    not checked against silicon: callers that need real-hardware N/Z after an
+ *    overflow must verify them separately.
  *  - Division by zero: dn unchanged, SH2Z_M68K_DIV_ZERO is the only bit
  *    returned. Raising the 68000's divide-by-zero exception is the caller's
  *    decision; the library has no exception model.
