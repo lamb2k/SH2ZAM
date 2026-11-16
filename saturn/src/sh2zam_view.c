@@ -1,8 +1,6 @@
 /* Integer view transform, projection and clip codes. Portable definition of
  * the view-contract-1 results. MIT; SH2ZAM Contributors. */
 #include "sh2zam/view_experimental.h"
-#include <limits.h>
-#include <string.h>
 
 _Static_assert(sizeof(sh2z_pos16_t)==6,"sh2z_pos16_t is 6 bytes");
 _Static_assert(sizeof(sh2z_view_vertex_t)==20,"sh2z_view_vertex_t is 20 bytes");
@@ -23,7 +21,7 @@ static bool view_valid(const sh2z_view_t *v) {
 }
 bool sh2z_view_init(sh2z_view_t *out,const sh2z_view_t *in) {
     if(!out || !view_valid(in))return false;
-    if(out!=in)memmove(out,in,sizeof(*out));
+    if(out!=in)*out=*in;
     return true;
 }
 static int64_t floor_shift16(int64_t n) {
@@ -44,7 +42,7 @@ bool sh2z_view_place(sh2z_view_t *v,sh2z_vec3_t eye) {
         t[i]=(int32_t)value;
         if(!row_fits(v->r[i],t[i]))return false;
     }
-    memcpy(v->t,t,sizeof(t));
+    for(unsigned i=0;i<3;++i)v->t[i]=t[i];
     return true;
 }
 static int32_t sat32(int64_t a) {
@@ -74,14 +72,12 @@ bool sh2z_view_batch(sh2z_view_vertex_t *out,const sh2z_view_t *v,
     const sh2z_view_t c=*v;
     const unsigned char *p=positions;
     for(size_t k=0;k<count;++k,p+=in_stride) {
-        int16_t in[3];
-        memcpy(in,p,sizeof(in));
+        /* positions and in_stride are 2-byte aligned by contract. */
+        const int16_t *in=(const int16_t *)(const void *)p;
         int32_t view[3];
         for(unsigned i=0;i<3;++i)
             view[i]=(int32_t)c.r[i][0]*in[0]+(int32_t)c.r[i][1]*in[1]+(int32_t)c.r[i][2]*in[2]+c.t[i];
-        sh2z_view_vertex_t o;
-        memset(&o,0,sizeof(o));
-        o.x=view[0];o.y=view[1];o.z=view[2];
+        sh2z_view_vertex_t o={view[0],view[1],view[2],0,0,0,{0,0,0}};
         if(view[2]<c.near_z) {
             o.outcode=SH2Z_OUT_NEAR;
         } else {
