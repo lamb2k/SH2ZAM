@@ -8,7 +8,8 @@ SH_SRCS := main.c ../../../exhibits/bridge.c \
   ../../src/sh2zam.c ../../src/sh2zam_trig.c \
   ../../src/sh2zam_angles.c ../../src/sh2zam_transform.c ../../src/sh2zam_geometry.c \
   ../../src/sh2zam_prepared.c ../../src/sh2zam_batch_sh2.c ../../src/sh2zam_reuse.c \
-  ../../src/sh2zam_rotation_batch.c ../../src/sh2zam_spatial.c
+  ../../src/sh2zam_rotation_batch.c ../../src/sh2zam_spatial.c \
+  ../../src/sh2zam_view.c
 SH_SRCS += ../math-model/math_bridge.c ../math-model/legacy_sh2zam.c \
   ../math-model/legacy_sh2zam_trig.c ../math-model/legacy_sh2zam_angles.c \
   ../math-model/legacy_sh2zam_transform.c ../math-model/legacy_sh2zam_geometry.c
