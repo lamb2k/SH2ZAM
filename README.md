@@ -185,6 +185,16 @@ and [`sh2zam/cell16.h`](saturn/include/sh2zam/cell16.h) mirrors, offsets and cli
 All are host-exact tested and costed in the SH-2 instruction model (modelled, no console run). See the
 [integer kernels guide](saturn/INTEGER_KERNELS.md).
 
+## Shading kernels
+
+[`sh2zam/shade_experimental.h`](saturn/include/sh2zam/shade_experimental.h) (contract tag `shade-1`)
+lights int8 normals with a directional light and a reflection table, packs 5:5:5 Gouraud colours,
+culls faces against an integer eye with a conservative margin, and looks up a threshold depth fog
+through a bucket index, each reproducing an existing renderer's integer rules exactly with
+reciprocal multiplies in place of its divisions. Host-exact tested against an independent oracle
+and costed in the SH-2 instruction model (modelled, no console run). See
+[the shading guide](saturn/SHADE.md).
+
 ## Git submodule
 
 ```sh

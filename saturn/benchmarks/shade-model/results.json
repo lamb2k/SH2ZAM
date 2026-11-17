@@ -1,0 +1,400 @@
+{
+ "schema": 1,
+ "kind": "Yabause isolated SH2 interpreter flat-RAM model, not Saturn timing",
+ "verified": {
+  "normals": 632538,
+  "gouraudPairs": 2574879,
+  "cullFaces": 509311,
+  "fogTables": 4000,
+  "fogLookups": 2555263,
+  "fadeColours": 5172842,
+  "frameCorners": 205072,
+  "entries": "every fast_ and plain_ result against tests/shade_oracle.h"
+ },
+ "rows": {
+  "light_1": {
+   "normals": 1,
+   "corpora": 64,
+   "fast_light": {
+    "meanCycles": 3169.59,
+    "medianCycles": 3159.0,
+    "minCycles": 3131,
+    "maxCycles": 3212,
+    "meanInstructions": 2810.5
+   },
+   "fast_light_normals": {
+    "meanCycles": 286.67,
+    "medianCycles": 276.0,
+    "minCycles": 266,
+    "maxCycles": 315,
+    "meanInstructions": 254.88
+   },
+   "plain_light": {
+    "meanCycles": 2710.77,
+    "medianCycles": 2711.0,
+    "minCycles": 2674,
+    "maxCycles": 2729,
+    "meanInstructions": 2371.78
+   }
+  },
+  "light_128": {
+   "normals": 128,
+   "corpora": 64,
+   "fast_light": {
+    "meanCycles": 15801.98,
+    "medianCycles": 15778.0,
+    "minCycles": 15324,
+    "maxCycles": 16420,
+    "meanInstructions": 13225.58
+   },
+   "fast_light_normals": {
+    "meanCycles": 12917.53,
+    "medianCycles": 12889.0,
+    "minCycles": 12441,
+    "maxCycles": 13521,
+    "meanInstructions": 10669.77
+   },
+   "plain_light": {
+    "meanCycles": 24295.92,
+    "medianCycles": 24295.0,
+    "minCycles": 24266,
+    "maxCycles": 24318,
+    "meanInstructions": 20539.06
+   }
+  },
+  "light_256": {
+   "normals": 256,
+   "corpora": 64,
+   "fast_light": {
+    "meanCycles": 28522.88,
+    "medianCycles": 28522.0,
+    "minCycles": 27762,
+    "maxCycles": 29531,
+    "meanInstructions": 23724.95
+   },
+   "fast_light_normals": {
+    "meanCycles": 25641.05,
+    "medianCycles": 25647.0,
+    "minCycles": 24871,
+    "maxCycles": 26650,
+    "meanInstructions": 21171.23
+   },
+   "plain_light": {
+    "meanCycles": 46038.05,
+    "medianCycles": 46044.5,
+    "minCycles": 45946,
+    "maxCycles": 46071,
+    "meanInstructions": 38855.84
+   }
+  },
+  "gouraud_1": {
+   "pairs": 1,
+   "corpora": 64,
+   "fast_gouraud": {
+    "meanCycles": 275.22,
+    "medianCycles": 275.0,
+    "minCycles": 275,
+    "maxCycles": 278,
+    "meanInstructions": 256.97
+   },
+   "plain_gouraud": {
+    "meanCycles": 270.5,
+    "medianCycles": 270.0,
+    "minCycles": 270,
+    "maxCycles": 276,
+    "meanInstructions": 240.0
+   }
+  },
+  "gouraud_448": {
+   "pairs": 448,
+   "corpora": 64,
+   "fast_gouraud": {
+    "meanCycles": 60257.05,
+    "medianCycles": 60227.5,
+    "minCycles": 60173,
+    "maxCycles": 60565,
+    "meanInstructions": 55703.47
+   },
+   "plain_gouraud": {
+    "meanCycles": 105919.47,
+    "medianCycles": 105900.0,
+    "minCycles": 105762,
+    "maxCycles": 106390,
+    "meanInstructions": 92188.94
+   }
+  },
+  "cull_1": {
+   "faces": 1,
+   "corpora": 64,
+   "fast_cull": {
+    "meanCycles": 245.86,
+    "medianCycles": 245.0,
+    "minCycles": 239,
+    "maxCycles": 255,
+    "meanInstructions": 222.41
+   },
+   "plain_cull": {
+    "meanCycles": 128.27,
+    "medianCycles": 127.0,
+    "minCycles": 127,
+    "maxCycles": 130,
+    "meanInstructions": 115.67
+   }
+  },
+  "cull_112": {
+   "faces": 112,
+   "corpora": 64,
+   "fast_cull": {
+    "meanCycles": 9435.64,
+    "medianCycles": 9429.0,
+    "minCycles": 9321,
+    "maxCycles": 9575,
+    "meanInstructions": 8280.02
+   },
+   "plain_cull": {
+    "meanCycles": 11378.27,
+    "medianCycles": 11377.0,
+    "minCycles": 11329,
+    "maxCycles": 11434,
+    "meanInstructions": 9959.95
+   }
+  },
+  "cull_256": {
+   "faces": 256,
+   "corpora": 64,
+   "fast_cull": {
+    "meanCycles": 21363.09,
+    "medianCycles": 21379.5,
+    "minCycles": 21092,
+    "maxCycles": 21579,
+    "meanInstructions": 18782.78
+   },
+   "plain_cull": {
+    "meanCycles": 25981.23,
+    "medianCycles": 25982.5,
+    "minCycles": 25897,
+    "maxCycles": 26041,
+    "meanInstructions": 22775.03
+   }
+  },
+  "fog_build": {
+   "tables": 1,
+   "corpora": 64,
+   "fast_fog_build": {
+    "meanCycles": 90657.52,
+    "medianCycles": 90646.0,
+    "minCycles": 88113,
+    "maxCycles": 93223,
+    "meanInstructions": 77614.25
+   },
+   "plain_fog_build": {
+    "meanCycles": 191491.64,
+    "medianCycles": 190503.5,
+    "minCycles": 188451,
+    "maxCycles": 196577,
+    "meanInstructions": 162205.64
+   }
+  },
+  "fog_1": {
+   "depths": 1,
+   "corpora": 64,
+   "fast_fog": {
+    "meanCycles": 205.56,
+    "medianCycles": 198.0,
+    "minCycles": 191,
+    "maxCycles": 292,
+    "meanInstructions": 185.12
+   },
+   "plain_fog": {
+    "meanCycles": 151.97,
+    "medianCycles": 152.0,
+    "minCycles": 148,
+    "maxCycles": 158,
+    "meanInstructions": 139.44
+   }
+  },
+  "fog_1024_uniform": {
+   "depths": 1024,
+   "corpora": 64,
+   "fast_fog": {
+    "meanCycles": 42952.06,
+    "medianCycles": 41691.0,
+    "minCycles": 31638,
+    "maxCycles": 57561,
+    "meanInstructions": 38944.64
+   },
+   "plain_fog": {
+    "meanCycles": 133024.34,
+    "medianCycles": 133130.0,
+    "minCycles": 129302,
+    "maxCycles": 137032,
+    "meanInstructions": 120195.05
+   }
+  },
+  "fog_1024_near_dense": {
+   "depths": 1024,
+   "corpora": 64,
+   "fast_fog": {
+    "meanCycles": 81716.27,
+    "medianCycles": 86652.0,
+    "minCycles": 49833,
+    "maxCycles": 102025,
+    "meanInstructions": 73757.45
+   },
+   "plain_fog": {
+    "meanCycles": 137007.5,
+    "medianCycles": 136259.0,
+    "minCycles": 134614,
+    "maxCycles": 143832,
+    "meanInstructions": 120233.09
+   }
+  },
+  "fade_1": {
+   "fades": 1,
+   "corpora": 64,
+   "fast_offset": {
+    "meanCycles": 311.08,
+    "medianCycles": 313.5,
+    "minCycles": 299,
+    "maxCycles": 320,
+    "meanInstructions": 284.2
+   },
+   "plain_offset": {
+    "meanCycles": 193.31,
+    "medianCycles": 195.0,
+    "minCycles": 187,
+    "maxCycles": 195,
+    "meanInstructions": 165.16
+   },
+   "fast_mix": {
+    "meanCycles": 267.0,
+    "medianCycles": 267.0,
+    "minCycles": 267,
+    "maxCycles": 267,
+    "meanInstructions": 247.0
+   },
+   "plain_mix": {
+    "meanCycles": 182.0,
+    "medianCycles": 182.0,
+    "minCycles": 182,
+    "maxCycles": 182,
+    "meanInstructions": 159.0
+   }
+  },
+  "fade_1024": {
+   "fades": 1024,
+   "corpora": 64,
+   "fast_offset": {
+    "meanCycles": 84704.03,
+    "medianCycles": 86048.0,
+    "minCycles": 71909,
+    "maxCycles": 93413,
+    "meanInstructions": 79841.16
+   },
+   "plain_offset": {
+    "meanCycles": 169605.06,
+    "medianCycles": 170474.0,
+    "minCycles": 162844,
+    "maxCycles": 171036,
+    "meanInstructions": 140624.53
+   },
+   "fast_mix": {
+    "meanCycles": 82107.0,
+    "medianCycles": 82107.0,
+    "minCycles": 82107,
+    "maxCycles": 82107,
+    "meanInstructions": 71857.0
+   },
+   "plain_mix": {
+    "meanCycles": 157724.0,
+    "medianCycles": 157724.0,
+    "minCycles": 157724,
+    "maxCycles": 157724,
+    "meanInstructions": 134172.0
+   }
+  },
+  "vehicle_frame_112_faces_128_normals": {
+   "faces": 112,
+   "corpora": 64,
+   "meanKeptFaces": 51.0,
+   "meanUniquePairs": 328.4,
+   "plain_frame": {
+    "meanCycles": 83830.45,
+    "medianCycles": 84697.0,
+    "minCycles": 59075,
+    "maxCycles": 97108,
+    "meanInstructions": 72451.23
+   },
+   "fast_frame": {
+    "meanCycles": 55258.2,
+    "medianCycles": 55683.0,
+    "minCycles": 40058,
+    "maxCycles": 63427,
+    "meanInstructions": 49262.11
+   },
+   "fast_frame_baked": {
+    "meanCycles": 70957.59,
+    "medianCycles": 70955.5,
+    "minCycles": 66561,
+    "maxCycles": 73241,
+    "meanInstructions": 63851.2
+   }
+  }
+ },
+ "label": "MODELLED: executed SH-2 instructions in the Yabause interpreter; flat RAM, no caches or wait states; not Saturn hardware",
+ "sourceCommit": "c654d25509228c3609639367281768ebcb06a2a1",
+ "elfSha256": "25a9cf183566463bc9a7e22645e8378051323c7ecadc373882f0a997c58bb4a4",
+ "toolchain": "Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)",
+ "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44107090315",
+ "yabauseCommit": "7e38821dbac265490f115e163c523a939acda759",
+ "cyclesPerElement": {
+  "light_256": {
+   "fast_light": 99.42,
+   "fast_light_normals": 99.43,
+   "plain_light": 169.91
+  },
+  "gouraud_448": {
+   "fast_gouraud": 134.19,
+   "plain_gouraud": 236.35
+  },
+  "cull_256": {
+   "fast_cull": 82.81,
+   "plain_cull": 101.38
+  },
+  "fog_1024_uniform": {
+   "fast_fog": 41.79,
+   "plain_fog": 129.89
+  },
+  "fade_1024": {
+   "fast_offset": 82.5,
+   "plain_offset": 165.6,
+   "fast_mix": 80.0,
+   "plain_mix": 154.0
+  }
+ },
+ "instructionsPerElement": {
+  "light_256": {
+   "fast_light": 82.02,
+   "fast_light_normals": 82.02,
+   "plain_light": 143.07
+  },
+  "gouraud_448": {
+   "fast_gouraud": 124.04,
+   "plain_gouraud": 205.7
+  },
+  "cull_256": {
+   "fast_cull": 72.79,
+   "plain_cull": 88.86
+  },
+  "fog_1024_uniform": {
+   "fast_fog": 37.89,
+   "plain_fog": 117.36
+  },
+  "fade_1024": {
+   "fast_offset": 77.77,
+   "plain_offset": 137.3,
+   "fast_mix": 70.0,
+   "plain_mix": 131.0
+  }
+ }
+}
