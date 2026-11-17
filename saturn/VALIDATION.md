@@ -1,4 +1,4 @@
-# Validation record — 2026-11-15 (integer kernels)
+# Validation record â€” 2026-11-15 (integer kernels)
 
 Branch `cps2-kernels-20261115` adds `sh2zam/m68k.h`, `sh2zam/box2.h` and `sh2zam/cell16.h`
 ([guide](INTEGER_KERNELS.md)). **No console run was done.** Evidence by tier:
