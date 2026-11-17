@@ -181,6 +181,88 @@ bool sh2z_view_edge_steps_divu(sh2z_view_vertex_t *out,const sh2z_view_t *v,
 unsigned sh2z_view_clip_near_divu(sh2z_view_vertex_t out[6],const sh2z_view_t *v,
     const sh2z_view_vertex_t in[4]);
 
+/* ---- Contract tag view-guard-1 ------------------------------------------- */
+
+#define SH2Z_VIEW_GUARD_ATTRS    4
+#define SH2Z_VIEW_GUARD_MAX_IN   8
+#define SH2Z_VIEW_GUARD_MAX_OUT  16
+#define SH2Z_VIEW_GUARD_INVALID  (-1)
+#define SH2Z_VIEW_GUARD_OVERFLOW (-2)
+
+/** A polygon corner for the guard-band clip (36 bytes): v.x, v.y, v.z are
+ *  view space; attr holds caller-owned values (texture coordinates, shade,
+ *  colour) that are interpolated with the coordinates. On input only v.x,
+ *  v.y, v.z and attr[0..attrs-1] are read. */
+typedef struct {
+    sh2z_view_vertex_t v;
+    int32_t attr[SH2Z_VIEW_GUARD_ATTRS];
+} sh2z_view_guard_vertex_t;
+
+/** Clip a view-space polygon in[0..count-1] (3 <= count <= 8) against six
+ *  planes before projection, so that every output vertex projects inside the
+ *  caller's guard rectangle guard = {left, top, right, bottom} (inclusive
+ *  pixels). Choose the rectangle inside the target's representable range;
+ *  VDP1 command coordinates must lie in -1024..1023.
+ *
+ *  Planes, in this order; P is inside a plane when d(P) >= 0, all exact in
+ *  64 bits:
+ *      1 near    d = z - near_z
+ *      2 far     d = far_z - z
+ *      3 left    d = focal_x*x - 65536*(left - center_x)*z
+ *      4 right   d = 65536*(right - center_x)*z - focal_x*x
+ *      5 top     d = 65536*(center_y - top)*z - focal_y*y
+ *      6 bottom  d = focal_y*y - 65536*(center_y - bottom)*z
+ *  A point inside all six projects (by the sh2z_view_batch definition) to
+ *  left <= sx <= right and top <= sy <= bottom, with near_z <= z <= far_z.
+ *
+ *  Each plane is one Sutherland-Hodgman pass over the current polygon,
+ *  starting at its vertex 0: for each edge cur -> next, emit cur if inside,
+ *  then emit the crossing if exactly one end is inside. The crossing is
+ *  computed from the inside end I towards the outside end O, for x, y, z and
+ *  attr[0..attrs-1]:
+ *      a = I.a + sign(O.a - I.a) * offset(|O.a - I.a|)
+ *  with num = d(I) >= 0 and den = d(I) - d(O) > 0:
+ *      near, far:  offset(m) = trunc(m * num / den)       (exact)
+ *      sides:      offset(m) = floor(m * t / 2^30), where
+ *                  s = the least shift with (den >> s) < 2^31,
+ *                  t = floor((num >> s) * 2^30 / (den >> s))   (t <= 2^30)
+ *  Near crossings are therefore the same points sh2z_view_clip_near makes,
+ *  and every crossing depends only on the unordered pair of ends, so
+ *  polygons sharing an edge get identical points on it in either winding.
+ *  Each a lies between I.a and O.a; a side crossing is within
+ *  1 + 3*|O.a - I.a|/2^30 of the exact one.
+ *
+ *  Each output vertex is then projected as sh2z_view_batch would, and sx, sy
+ *  are clamped to the guard rectangle. Vertices inside all six planes already
+ *  project inside it; only crossings whose rounded position projects just
+ *  outside are moved. outcode is computed from the clamped sx, sy against
+ *  v->clip (never NEAR or FAR); reserved bytes and attr[attrs..3] are zero.
+ *
+ *  Returns:
+ *      0                         every point outside some plane
+ *      3 .. 16                   vertices written to out; corners may repeat
+ *                                when the polygon touches a plane
+ *      SH2Z_VIEW_GUARD_OVERFLOW  some pass would exceed 16 vertices
+ *      SH2Z_VIEW_GUARD_INVALID   v invalid, a null pointer, count outside
+ *                                3..8, attrs > 4, left > right, top > bottom,
+ *                                or a guard edge more than 16384 pixels from
+ *                                the centre
+ *  Nothing is written on a negative return. A planar convex polygon needs at
+ *  most count + 6 vertices, so it overflows only if rounding leaves corners
+ *  within a unit of a plane in a near-tangent arrangement; twisted or
+ *  non-convex polygons can need more. in is read before out is written, so
+ *  they may overlap. Output order follows the input winding. */
+int sh2z_view_clip_guard(sh2z_view_guard_vertex_t out[SH2Z_VIEW_GUARD_MAX_OUT],
+    const sh2z_view_t *v,const int16_t guard[4],
+    const sh2z_view_guard_vertex_t *in,unsigned count,unsigned attrs);
+
+/** The same result as sh2z_view_clip_guard; on SH-2 the side-plane fractions,
+ *  near and far crossings and projections use this CPU's hardware divider
+ *  (see divu_experimental.h for the caller promise). */
+int sh2z_view_clip_guard_divu(sh2z_view_guard_vertex_t out[SH2Z_VIEW_GUARD_MAX_OUT],
+    const sh2z_view_t *v,const int16_t guard[4],
+    const sh2z_view_guard_vertex_t *in,unsigned count,unsigned attrs);
+
 #ifdef __cplusplus
 }
 #endif

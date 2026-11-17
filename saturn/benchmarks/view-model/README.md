@@ -18,6 +18,8 @@ MODELLED. Not console timing, not emulator timing.
   4. `edges.h`, view-edges-1: edge steps on 8,192 random edges, the near clip
      on 65,536 quads (every in-front/behind pattern), view-space projection
      on 262,144 points, each against its own oracle, then timing.
+  5. `guard.h`, view-guard-1: the guard-band clip on 65,536 random polygons
+     against its own oracle, then timing on the port's camera and band.
 - `collect.py` checks the invariants (zero mismatches, two divisions per
   timing vertex, the ELF's embedded source commit, the interpreter pin) and
   writes the results file.

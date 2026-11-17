@@ -719,3 +719,149 @@ bool sh2z_view_project_divu(sh2z_view_vertex_t *out,const sh2z_view_t *v,
 #endif
     return true;
 }
+
+/* ---- view-guard-1: guard-band polygon clip ------------------------------ */
+enum { GUARD_COORDS=3+SH2Z_VIEW_GUARD_ATTRS };
+typedef struct { int32_t c[GUARD_COORDS]; } guard_point_t;   /* x y z attr0..3 */
+typedef struct {
+    int32_t near_z,far_z,fx,fy;
+    int32_t kl,kr,kt,kb;     /* 65536*(left-cx), 65536*(right-cx), 65536*(cy-top), 65536*(cy-bottom) */
+} guard_planes_t;
+
+/* Every corner's distance to one plane; returns how many are inside
+ * (d >= 0). |terms| <= 2^62 and 2^61, so every d fits int64. The switch is
+ * outside the loops so each plane runs a straight loop. */
+static unsigned guard_distances(int64_t *d,const guard_point_t *p,unsigned n,
+    const guard_planes_t *g,unsigned plane) {
+    unsigned inside=0;
+    switch(plane) {
+    case 0: for(unsigned i=0;i<n;++i){d[i]=(int64_t)p[i].c[2]-g->near_z;inside+=d[i]>=0;} break;
+    case 1: for(unsigned i=0;i<n;++i){d[i]=(int64_t)g->far_z-p[i].c[2];inside+=d[i]>=0;} break;
+    case 2: for(unsigned i=0;i<n;++i){d[i]=(int64_t)g->fx*p[i].c[0]-(int64_t)g->kl*p[i].c[2];inside+=d[i]>=0;} break;
+    case 3: for(unsigned i=0;i<n;++i){d[i]=(int64_t)g->kr*p[i].c[2]-(int64_t)g->fx*p[i].c[0];inside+=d[i]>=0;} break;
+    case 4: for(unsigned i=0;i<n;++i){d[i]=(int64_t)g->kt*p[i].c[2]-(int64_t)g->fy*p[i].c[1];inside+=d[i]>=0;} break;
+    default: for(unsigned i=0;i<n;++i){d[i]=(int64_t)g->fy*p[i].c[1]-(int64_t)g->kb*p[i].c[2];inside+=d[i]>=0;} break;
+    }
+    return inside;
+}
+static void guard_cross(guard_point_t *p,const guard_point_t *in,const guard_point_t *outside,
+    uint64_t num,uint64_t den,bool side,unsigned coords,bool divu) {
+    uint32_t t=0;
+    if(side) {
+        /* dn = num >> s, dd = den >> s for the least s with dd < 2^31, using
+         * constant shifts only (SH-2 has no barrel shifter): keep dd >= 2^31
+         * while removing the excess, then one final shift. */
+        uint64_t dn=num,dd=den;
+        if(dd>=UINT64_C(0x80000000)) {
+            if((dd>>32)>=UINT64_C(0x80000000)){dd>>=32;dn>>=32;}
+            if((dd>>16)>=UINT64_C(0x80000000)){dd>>=16;dn>>=16;}
+            if((dd>>8)>=UINT64_C(0x80000000)){dd>>=8;dn>>=8;}
+            if((dd>>4)>=UINT64_C(0x80000000)){dd>>=4;dn>>=4;}
+            if((dd>>2)>=UINT64_C(0x80000000)){dd>>=2;dn>>=2;}
+            if((dd>>1)>=UINT64_C(0x80000000)){dd>>=1;dn>>=1;}
+            dd>>=1;dn>>=1;
+        }
+        /* dn <= dd, 1 <= dd < 2^31 */
+#if SH2Z_DIVU_NATIVE
+        if(divu)t=(uint32_t)sh2z_divu_div64((int64_t)(dn<<30),(int32_t)dd,NULL);
+        else
+#endif
+        t=(uint32_t)((dn<<30)/dd);
+    }
+#if !SH2Z_DIVU_NATIVE
+    (void)divu;
+#endif
+    for(unsigned i=0;i<coords;++i) {
+        const int32_t a=in->c[i],b=outside->c[i];
+        const bool negative=b<a;
+        const uint64_t mag=negative?(uint64_t)((int64_t)a-b):(uint64_t)((int64_t)b-a);
+        const uint64_t off=side?(mag*t)>>30:crossing_offset(mag,num,den,divu);
+        p->c[i]=(int32_t)(negative?(int64_t)a-(int64_t)off:(int64_t)a+(int64_t)off);
+    }
+    for(unsigned i=coords;i<GUARD_COORDS;++i)p->c[i]=0;
+}
+/* One Sutherland-Hodgman pass for a plane with corners on both sides; d holds
+ * each corner's distance. Returns the new count, or -1 past capacity. */
+static int guard_pass(guard_point_t *dst,const guard_point_t *src,unsigned n,
+    const int64_t *d,unsigned plane,unsigned coords,bool divu) {
+    unsigned m=0;
+    for(unsigned i=0;i<n;++i) {
+        const unsigned j=i+1u==n?0u:i+1u;
+        const bool cur_in=d[i]>=0,next_in=d[j]>=0;
+        if(cur_in) {
+            if(m==SH2Z_VIEW_GUARD_MAX_OUT)return -1;
+            dst[m++]=src[i];
+        }
+        if(cur_in!=next_in) {
+            if(m==SH2Z_VIEW_GUARD_MAX_OUT)return -1;
+            const unsigned a=cur_in?i:j,b=cur_in?j:i;
+            /* d[a] >= 0 > d[b]; den = d[a] - d[b] < 2^64, exact modulo 2^64. */
+            const uint64_t num=(uint64_t)d[a],den=(uint64_t)d[a]-(uint64_t)d[b];
+            guard_cross(&dst[m++],&src[a],&src[b],num,den,plane>=2,coords,divu);
+        }
+    }
+    return (int)m;
+}
+static bool guard_edge_ok(int32_t edge,int32_t center) {
+    const int32_t delta=edge-center;
+    return delta>=-16384 && delta<=16384;
+}
+static int clip_guard(sh2z_view_guard_vertex_t *out,const sh2z_view_t *v,const int16_t guard[4],
+    const sh2z_view_guard_vertex_t *in,unsigned count,unsigned attrs,bool divu) {
+    if(!view_valid(v) || !out || !guard || !in || count<3u || count>SH2Z_VIEW_GUARD_MAX_IN ||
+       attrs>SH2Z_VIEW_GUARD_ATTRS)return SH2Z_VIEW_GUARD_INVALID;
+    const int16_t gl=guard[0],gt=guard[1],gr=guard[2],gb=guard[3];
+    if(gl>gr || gt>gb || !guard_edge_ok(gl,v->center_x) || !guard_edge_ok(gr,v->center_x) ||
+       !guard_edge_ok(gt,v->center_y) || !guard_edge_ok(gb,v->center_y))return SH2Z_VIEW_GUARD_INVALID;
+    const guard_planes_t g={v->near_z,v->far_z,v->focal_x,v->focal_y,
+        (gl-v->center_x)*65536,(gr-v->center_x)*65536,(v->center_y-gt)*65536,(v->center_y-gb)*65536};
+    const unsigned coords=3u+attrs;
+    guard_point_t buf[2][SH2Z_VIEW_GUARD_MAX_OUT];
+    for(unsigned k=0;k<count;++k) {
+        buf[0][k].c[0]=in[k].v.x;buf[0][k].c[1]=in[k].v.y;buf[0][k].c[2]=in[k].v.z;
+        for(unsigned i=0;i<SH2Z_VIEW_GUARD_ATTRS;++i)buf[0][k].c[3+i]=i<attrs?in[k].attr[i]:0;
+    }
+    int n=(int)count;
+    unsigned cur=0;
+    for(unsigned plane=0;plane<6u;++plane) {
+        /* A pass with every corner inside is the identity, and one with none
+         * inside empties the polygon: neither needs the copy. */
+        int64_t d[SH2Z_VIEW_GUARD_MAX_OUT];
+        const unsigned inside=guard_distances(d,buf[cur],(unsigned)n,&g,plane);
+        if(inside==(unsigned)n)continue;
+        if(!inside){n=0;break;}
+        n=guard_pass(buf[cur^1u],buf[cur],(unsigned)n,d,plane,coords,divu);
+        if(n<0)return SH2Z_VIEW_GUARD_OVERFLOW;
+        cur^=1u;
+    }
+    const sh2z_view_t c=*v;
+    for(int k=0;k<n;++k) {
+        const guard_point_t *p=&buf[cur][k];
+        /* Out-of-line projection: a few calls per polygon, and it keeps the
+         * clipper small enough for the benchmark image's RAM region. */
+#if SH2Z_DIVU_NATIVE
+        sh2z_view_vertex_t q=divu?project_divu(&c,p->c[0],p->c[1],p->c[2]):project(&c,p->c[0],p->c[1],p->c[2]);
+#else
+        sh2z_view_vertex_t q=project(&c,p->c[0],p->c[1],p->c[2]);
+#endif
+        if(q.sx<gl)q.sx=gl;
+        if(q.sx>gr)q.sx=gr;
+        if(q.sy<gt)q.sy=gt;
+        if(q.sy>gb)q.sy=gb;
+        q.outcode=(uint8_t)((q.sx<c.clip[0]?SH2Z_OUT_LEFT:0u)|(q.sx>c.clip[2]?SH2Z_OUT_RIGHT:0u)|
+            (q.sy<c.clip[1]?SH2Z_OUT_TOP:0u)|(q.sy>c.clip[3]?SH2Z_OUT_BOTTOM:0u));
+        out[k].v=q;
+        for(unsigned i=0;i<SH2Z_VIEW_GUARD_ATTRS;++i)out[k].attr[i]=p->c[3+i];
+    }
+    return n;
+}
+int sh2z_view_clip_guard(sh2z_view_guard_vertex_t out[SH2Z_VIEW_GUARD_MAX_OUT],
+    const sh2z_view_t *v,const int16_t guard[4],
+    const sh2z_view_guard_vertex_t *in,unsigned count,unsigned attrs) {
+    return clip_guard(out,v,guard,in,count,attrs,false);
+}
+int sh2z_view_clip_guard_divu(sh2z_view_guard_vertex_t out[SH2Z_VIEW_GUARD_MAX_OUT],
+    const sh2z_view_t *v,const int16_t guard[4],
+    const sh2z_view_guard_vertex_t *in,unsigned count,unsigned attrs) {
+    return clip_guard(out,v,guard,in,count,attrs,true);
+}

@@ -7,7 +7,7 @@
 #ifndef BENCH_COMMIT
 #define BENCH_COMMIT "host-test-only"
 #endif
-#define VIEW_CAPACITY 2048u
+#define VIEW_CAPACITY 1024u
 
 /* The harness writes these layouts as big-endian bytes; keep them pinned. */
 _Static_assert(offsetof(sh2z_view_t,t)==20,"view t offset");
@@ -23,7 +23,7 @@ const uint32_t view_capacity=VIEW_CAPACITY;
 sh2z_view_t view_camera;
 /* Positions for the batch, or view-space records for sh2z_view_project:
  * one buffer, so the ELF still fits the benchmark RAM region. */
-union { sh2z_pos16_t pos[VIEW_CAPACITY]; sh2z_view_vertex_t pts[512]; } view_input;
+union { sh2z_pos16_t pos[VIEW_CAPACITY]; sh2z_view_vertex_t pts[512]; sh2z_view_guard_vertex_t guard[SH2Z_VIEW_GUARD_MAX_IN]; } view_input;
 sh2z_view_vertex_t view_out_portable[VIEW_CAPACITY];
 sh2z_view_vertex_t view_out_divu[VIEW_CAPACITY];
 
@@ -63,6 +63,21 @@ uint32_t view_project_portable(uint32_t count) {
 }
 uint32_t view_project_divu(uint32_t count) {
     return sh2z_view_project_divu(view_out_divu,&view_camera,view_input.pts,count);
+}
+
+/* view-guard-1: polygon in view_input.guard, rectangle and {count, attrs}
+ * set by the harness; outputs reuse the start of the batch output buffers. */
+int16_t view_guard_rect[4];
+uint32_t view_guard_args[2];
+_Static_assert(sizeof(sh2z_view_guard_vertex_t)==36,"guard vertex size");
+_Static_assert(sizeof(view_out_portable)>=SH2Z_VIEW_GUARD_MAX_OUT*sizeof(sh2z_view_guard_vertex_t),"guard output room");
+int32_t view_guard_portable(void) {
+    return sh2z_view_clip_guard((sh2z_view_guard_vertex_t *)(void *)view_out_portable,&view_camera,view_guard_rect,
+        view_input.guard,view_guard_args[0],view_guard_args[1]);
+}
+int32_t view_guard_divu(void) {
+    return sh2z_view_clip_guard_divu((sh2z_view_guard_vertex_t *)(void *)view_out_divu,&view_camera,view_guard_rect,
+        view_input.guard,view_guard_args[0],view_guard_args[1]);
 }
 
 /* Divider helper checks: start64/finish and an interrupted division saved and
