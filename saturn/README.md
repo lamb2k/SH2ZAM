@@ -18,6 +18,8 @@ The maintained overview, build commands, API scope and upstream credits are in t
 - [Experimental explicit SH-2 divider](DIVU.md)
 - [Integer kernels: 68000 arithmetic, 2D box overlap, 16x16 cell placement](INTEGER_KERNELS.md)
 - [Integer-kernel instruction model](benchmarks/integer-model/README.md)
+- [Experimental shading kernels: per-normal light, Gouraud packing, face culling, depth fog](SHADE.md)
+- [Shading-kernel instruction model](benchmarks/shade-model/README.md)
 - [Remaining work](PORTING_PLAN.md)
 
 Both `cmake -S .` from the repository root and `cmake -S saturn` build the Saturn library. Batch transforms now select a specialized exact kernel when the matrix proves direct accumulation safe, with a general fallback for the remaining matrices. Full SH4ZAM API parity and physical-console performance qualification remain incomplete.
