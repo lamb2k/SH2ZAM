@@ -13,7 +13,7 @@ This is a functional-category comparison, not a percentage-complete claim. Scope
 | Complex/FFT | Not implemented | Defer until a concrete audio/signal workload and overflow/scaling contract exist |
 | Memory routines | Use platform SDK/libc | No speculative memcpy/memmove replacement, store queues or cache side effects |
 | C++ | C interop plus fixed/vec3 C++11 conveniences | Not complete upstream C++ feature parity |
-| Saturn game helpers | AABB/sphere collision, screen projection, batch and balanced partition helpers | No renderer, polygon clipping, DMA or master/slave scheduler |
+| Saturn game helpers | AABB/sphere collision, screen projection, batch and balanced partition helpers; 68000-exact MUL/DIV, 2D integer box overlap bitsets and 16x16 cell placement ([INTEGER_KERNELS.md](INTEGER_KERNELS.md), no SH4ZAM counterpart) | No renderer, polygon clipping, DMA or master/slave scheduler |
 | Validation | Host oracle/sanitizer suites; SH-2 compile/audit and Yaul-disc CI | Hardware execution, dual-CPU stress and console timing still required |
 
 ## Why this is a useful stopping point
