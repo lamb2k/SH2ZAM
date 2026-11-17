@@ -13,8 +13,14 @@
  * _trunc form run on the same inputs and must write the same bytes.
  * Timing: each view-round-1 timing fixture through the _trunc function
  * (centre 160, 112) and the _center function (centre 160, 112 + 1/65536)
- * back to back. Then guardsrc.h (view-guard-src-1), included by round.h
- * before its capture function, runs last. */
+ * back to back.
+ * Source-order guard clip (sh2z_view_clip_guard_src_center): random polygons
+ * and road quads (centre y 12648447 or 12648449) against the view-guard-src-1
+ * oracle written here with the Q16 centre, failures writing nothing; the
+ * _src_trunc and _src_center forms byte for byte at whole-pixel centres;
+ * guardsrc.h's timing fixtures through both back to back.
+ * Then guardsrc.h (view-guard-src-1), included by round.h before its capture
+ * function, runs last. */
 #define CENTER_BATCH_POSES 256u
 #define CENTER_BATCH_COUNT 1024u
 #define CENTER_PROJECT_TRIALS 256u
@@ -23,6 +29,9 @@
 #define CENTER_GUARD_TRIALS 16384u
 #define CENTER_EQUIV_TRIALS 1024u
 #define CENTER_TIME_TRIALS 64u
+#define CENTER_SRC_TRIALS 16384u
+#define CENTER_SRC_ROAD_TRIALS 8192u
+#define CENTER_SRC_EQUIV_TRIALS 512u
 
 struct center_cam {struct view_cam c;int32_t cx16,cy16;};
 
@@ -159,6 +168,221 @@ static int center_guard_oracle(struct guard_vtx *out,const struct center_cam *cc
 }
 /* Byte image of a target buffer, for the _trunc / _center comparison. */
 static void center_read(unsigned char *dst,u32 a,u32 n) {for(u32 i=0;i<n;i++)dst[i]=rb(&cpu,a+i);}
+
+/* ---- view-center-1 source-order guard clip --------------------------------
+ * The view-guard-src-1 oracle written again with the Q16 centre: planes from
+ * center_plane_d, snap bounds from KL = 65536*left - cx16 and so on, the
+ * projection center_project. */
+static int center_src_snap(struct guard_pt *p,unsigned plane,const struct center_cam *cc,const int16_t g[4]) {
+ const struct view_cam *c=&cc->c;
+ if(p->c[2]<c->near_z)p->c[2]=c->near_z;
+ if(plane>=1&&p->c[2]>c->far_z)p->c[2]=c->far_z;
+ const __int128 z=p->c[2];
+ const __int128 k[4]={(__int128)65536*g[0]-cc->cx16,(__int128)65536*g[2]-cc->cx16,(__int128)cc->cy16-(__int128)65536*g[1],
+  (__int128)cc->cy16-(__int128)65536*g[3]};
+ const __int128 n[4]={gsrc_ceil(k[0]*z,c->fx),view_floor(k[1]*z,c->fx),view_floor(k[2]*z,c->fy),gsrc_ceil(k[3]*z,c->fy)};
+ for(unsigned s=0;s<4;s++)if(plane>=2+s&&(n[s]<INT32_MIN||n[s]>INT32_MAX))return 0;
+ if(plane>=2&&p->c[0]<n[0])p->c[0]=n[0];
+ if(plane>=3&&p->c[0]>n[1])p->c[0]=n[1];
+ if(plane>=4&&p->c[1]>n[2])p->c[1]=n[2];
+ if(plane>=5&&p->c[1]<n[3])p->c[1]=n[3];
+ for(unsigned q=0;q<=plane;q++)if(center_plane_d(cc,g,q,p)<0)return 0;
+ return 1;
+}
+static int center_src_oracle(struct guard_vtx *out,const struct center_cam *cc,const int16_t g[4],const struct guard_vtx *in,unsigned n,
+ unsigned attrs,unsigned max_out,uint64_t *boundary) {
+ if(g[0]>g[2]||g[1]>g[3]||!center_edge_ok(g[0],cc->cx16)||!center_edge_ok(g[2],cc->cx16)||!center_edge_ok(g[1],cc->cy16)||!center_edge_ok(g[3],cc->cy16))
+  return -1;
+ struct guard_pt poly[GUARD_MAX_OUT],next[GUARD_MAX_OUT];
+ const unsigned coords=3+attrs;
+ for(unsigned k=0;k<n;k++){memset(&poly[k],0,sizeof(poly[k]));poly[k].c[0]=in[k].v.x;poly[k].c[1]=in[k].v.y;poly[k].c[2]=in[k].v.z;
+  for(unsigned a=0;a<attrs;a++)poly[k].c[3+a]=in[k].attr[a];}
+ for(unsigned plane=0;plane<6&&n;plane++) {
+  unsigned m=0,prev=n-1;
+  for(unsigned i=0;i<n;i++) {
+   const __int128 dp=center_plane_d(cc,g,plane,&poly[prev]),dc=center_plane_d(cc,g,plane,&poly[i]);
+   if((dp>=0)!=(dc>=0)) {
+    if(m==max_out)return -2;
+    const __int128 a=dp<0?-dp:dp,b=dc<0?-dc:dc,t=(a<<32)/(a+b);
+    struct guard_pt q;memset(&q,0,sizeof(q));
+    for(unsigned j=0;j<coords;j++){const __int128 d=poly[i].c[j]-poly[prev].c[j],s=((d<0?-d:d)*t)>>32;q.c[j]=poly[prev].c[j]+(d<0?-s:s);}
+    if(!center_src_snap(&q,plane,cc,g))return -3;
+    next[m++]=q;
+   }
+   if(dc>=0){if(m==max_out)return -2;next[m++]=poly[i];}
+   prev=i;
+  }
+  n=m;memcpy(poly,next,sizeof(poly[0])*m);
+ }
+ for(unsigned k=0;k<n;k++) {
+  struct view_vtx q=center_project(cc,poly[k].c);
+  if(q.sx<g[0]||q.sx>g[2]||q.sy<g[1]||q.sy>g[3])fail("Center source-order oracle left the rectangle",k);
+  q.code=(uint8_t)((q.sx<cc->c.clip[0]?4:0)|(q.sx>cc->c.clip[2]?8:0)|(q.sy<cc->c.clip[1]?16:0)|(q.sy>cc->c.clip[3]?32:0));
+  const __int128 qx=edge_trunc((__int128)cc->c.fx*poly[k].c[0],poly[k].c[2]),qy=edge_trunc((__int128)cc->c.fy*poly[k].c[1],poly[k].c[2]);
+  if(boundary)*boundary+=(((__int128)cc->cx16+qx)%65536==0)||(((__int128)cc->cy16-qy)%65536==0);
+  memset(&out[k],0,sizeof(out[k]));out[k].v=q;
+  for(unsigned a=0;a<attrs;a++)out[k].attr[a]=(int32_t)poly[k].c[3+a];
+ }
+ return (int)n;
+}
+/* A corner aimed through the Q16 centre at pixel boundary (px, py): exact
+ * when z equals the focal length. */
+static struct guard_vtx center_src_aim(const struct center_cam *cc,int32_t px,int32_t py,int32_t z) {
+ struct guard_vtx p;memset(&p,0,sizeof(p));
+ p.v.x=(int32_t)view_clamp(edge_trunc(((__int128)px*65536-cc->cx16)*z,cc->c.fx),INT32_MIN,INT32_MAX);
+ p.v.y=(int32_t)view_clamp(edge_trunc(((__int128)cc->cy16-(__int128)py*65536)*z,cc->c.fy),INT32_MIN,INT32_MAX);
+ p.v.z=z;
+ for(int i=0;i<4;i++)p.attr[i]=(int32_t)view_word();
+ return p;
+}
+static void center_src_store(const struct center_cam *cc,const int16_t g[4],const struct guard_vtx *in,unsigned n,unsigned attrs,unsigned max_out) {
+ gsrc_store(&cc->c,g,in,n,attrs,max_out);
+ center_store(cc);
+}
+/* Prints "srcGuard":{...}. */
+static void center_capture_src(void) {
+ const u32 op=sym("_view_out_portable"),od=sym("_view_out_divu");
+ uint64_t vertices=0,road_vertices=0,bad=0,overflows=0,snaps=0,invalid=0,empty=0,boundary=0,x_frac=0,y_frac=0,differ=0;
+ view_state=UINT32_C(0xce175c01);
+ for(unsigned t=0;t<CENTER_SRC_TRIALS+CENTER_SRC_ROAD_TRIALS;t++) {
+  const int is_road=t>=CENTER_SRC_TRIALS;
+  double m[3][3],eye[3];struct center_cam cc;
+  int16_t g[4];
+  struct guard_vtx in[8],want[GUARD_MAX_OUT];
+  unsigned n,attrs,max_out;
+  if(is_road) {
+   cc.c=view_random_cam(m,eye,1);
+   cc.cx16=center_pick(cc.c.cx);cc.cy16=t%2u?12648447:12648449;
+   if(view_word()%4u==0)cc.cy16=center_pick(cc.c.cy);
+   cc.c.cx=(int16_t)center_floor(cc.cx16);cc.c.cy=(int16_t)center_floor(cc.cy16);
+   g[0]=g[1]=-900;g[2]=g[3]=900;n=4;attrs=view_word()%3u;max_out=10;
+   gsrc_random_road(in);for(unsigned k=0;k<4;k++)for(int i=0;i<4;i++)in[k].attr[i]=(int32_t)view_word();
+  } else {
+   cc=center_random(m,eye);
+   if(view_word()%4u==0) {
+    /* thin rectangles near the centre and a shallow near plane: snap failures */
+    g[0]=(int16_t)view_range(cc.c.cx-3,cc.c.cx+3);g[2]=(int16_t)(g[0]+view_range(0,2));
+    g[1]=(int16_t)view_range(cc.c.cy-3,cc.c.cy+3);g[3]=(int16_t)(g[1]+view_range(0,2));
+    cc.c.near_z=view_range(1,64);
+   } else guard_random_rect(&cc.c,g);
+   n=3+view_word()%6u;attrs=view_word()%5u;
+   max_out=view_word()%4u==0?(unsigned)view_range(3,16):view_word()%2u?10u:16u;
+   const int32_t zf=cc.c.fx>=cc.c.near_z&&cc.c.fx<=cc.c.far_z?cc.c.fx:cc.c.near_z;
+   for(unsigned k=0;k<n;k++) {
+    const unsigned style=view_word()%4u;
+    if(style==0){in[k].v.x=edge_coord();in[k].v.y=edge_coord();in[k].v.z=edge_coord();for(int i=0;i<4;i++)in[k].attr[i]=(int32_t)view_word();}
+    else if(style==1)in[k]=center_src_aim(&cc,view_word()%2u?g[view_word()%2u?0:2]:view_range(g[0]-500,g[2]+500),
+     view_word()%2u?g[view_word()%2u?1:3]:view_range(g[1]-500,g[3]+500),zf);
+    else in[k]=guard_at(&cc.c,view_range(g[0]-3000,g[2]+3000),view_range(g[1]-3000,g[3]+3000),guard_depth(&cc.c));
+   }
+  }
+  x_frac+=(cc.cx16&0xFFFF)!=0;y_frac+=(cc.cy16&0xFFFF)!=0;
+  center_src_store(&cc,g,in,n,attrs,max_out);
+  for(unsigned i=0;i<9*GUARD_MAX_OUT;i++){wl(&cpu,op+4*i,UINT32_C(0xA5A5A5A5));wl(&cpu,od+4*i,UINT32_C(0xA5A5A5A5));}
+  const int w=center_src_oracle(want,&cc,g,in,n,attrs,max_out,&boundary);
+  const int rp=(int32_t)invoke("_view_center_src_guard_portable",0,0,0,0).result,rd=(int32_t)invoke("_view_center_src_guard_divu",0,0,0,0).result;
+  if(rp!=w||rd!=w)fail("Center source-order guard count",t);
+  if(w<=0) {
+   overflows+=w==-2;snaps+=w==-3;invalid+=w==-1;empty+=w==0;
+   for(unsigned i=0;i<9*GUARD_MAX_OUT;i++)if(rl(&cpu,op+4*i)!=UINT32_C(0xA5A5A5A5)||rl(&cpu,od+4*i)!=UINT32_C(0xA5A5A5A5))fail("Center source-order guard wrote on failure",t);
+   continue;
+  }
+  bad+=guard_compare(op,want,w)+guard_compare(od,want,w);
+  vertices+=(uint64_t)w;
+  if(is_road)road_vertices+=(uint64_t)w;
+  /* Polygons the fraction changes: the whole-pixel clip of the floor view. */
+  if(center_edge_ok(g[0],65536*cc.c.cx)&&center_edge_ok(g[2],65536*cc.c.cx)&&center_edge_ok(g[1],65536*cc.c.cy)&&center_edge_ok(g[3],65536*cc.c.cy)) {
+   struct guard_vtx wt[GUARD_MAX_OUT];
+   const int nt=gsrc_oracle(wt,&cc.c,g,in,n,attrs,max_out);
+   int same=nt==w;
+   for(int k=0;same&&k<w;k++)same=!memcmp(&wt[k],&want[k],sizeof(wt[k]));
+   differ+=!same;
+  }
+ }
+ /* Equivalence at whole-pixel centres: _src_trunc then _src_center on the
+  * same inputs, outputs poisoned alike. */
+ static unsigned char img[2][2][GUARD_MAX_OUT*36];
+ static const char *const eq_fn[4]={"_view_src_guard_portable","_view_src_guard_divu","_view_center_src_guard_portable","_view_center_src_guard_divu"};
+ uint64_t eq_calls=0,eq_bytes=0,eq_bad=0;
+ for(unsigned t=0;t<CENTER_SRC_EQUIV_TRIALS;t++) {
+  double m[3][3],eye[3];struct center_cam cc;cc.c=view_random_cam(m,eye,t%2u);
+  cc.cx16=(int32_t)((__int128)cc.c.cx*65536);cc.cy16=(int32_t)((__int128)cc.c.cy*65536);
+  int16_t g[4];struct guard_vtx in[8];unsigned n,attrs,max_out;
+  if(t%2u){g[0]=g[1]=-900;g[2]=g[3]=900;n=4;attrs=view_word()%3u;max_out=10;gsrc_random_road(in);}
+  else {guard_random_rect(&cc.c,g);n=3+view_word()%6u;attrs=view_word()%5u;max_out=view_word()%2u?10u:16u;
+   for(unsigned k=0;k<n;k++)in[k]=guard_at(&cc.c,view_range(g[0]-3000,g[2]+3000),view_range(g[1]-3000,g[3]+3000),guard_depth(&cc.c));}
+  center_src_store(&cc,g,in,n,attrs,max_out);
+  u32 result[4];
+  for(int k=0;k<4;k++) {
+   const u32 out=(k&1)?od:op;
+   for(u32 i=0;i<9*GUARD_MAX_OUT;i++)wl(&cpu,out+4*i,UINT32_C(0xA5A5A5A5));
+   result[k]=invoke(eq_fn[k],0,0,0,0).result;
+   center_read(img[k>>1][k&1],out,GUARD_MAX_OUT*36);
+  }
+  eq_calls+=2;eq_bytes+=2*GUARD_MAX_OUT*36;
+  eq_bad+=(result[0]!=result[2])+(result[1]!=result[3])+(memcmp(img[0][0],img[1][0],GUARD_MAX_OUT*36)!=0)+(memcmp(img[0][1],img[1][1],GUARD_MAX_OUT*36)!=0);
+ }
+ printf("\"srcGuard\":{\"trials\":%u,\"roadTrials\":%u,\"vertices\":%"PRIu64",\"roadVertices\":%"PRIu64",\"fractionalX\":%"PRIu64",\"fractionalY\":%"PRIu64","
+  "\"boundaryVertices\":%"PRIu64",\"differFromWholePixel\":%"PRIu64",\"overflows\":%"PRIu64",\"snapFailures\":%"PRIu64",\"invalid\":%"PRIu64",\"empty\":%"PRIu64","
+  "\"mismatches\":%"PRIu64",\"equivalence\":{\"calls\":%"PRIu64",\"bytes\":%"PRIu64",\"mismatches\":%"PRIu64"},",
+  CENTER_SRC_TRIALS,CENTER_SRC_ROAD_TRIALS,vertices,road_vertices,x_frac,y_frac,boundary,differ,overflows,snaps,invalid,empty,bad,eq_calls,eq_bytes,eq_bad);
+ if(bad)fail("Center source-order mismatch",(u32)bad);
+ if(eq_bad)fail("Center source-order equivalence mismatch",(u32)eq_bad);
+
+ /* Timing: guardsrc.h's fixtures (the view-round-1 guard quads, attrs 2,
+  * pass limit 16; a road quad from behind the camera, attrs 0, pass limit
+  * 10) through _src_trunc at (160, 112) and _src_center at
+  * (160, 112 + 1/65536). cyc[row][0 trunc portable, 1 trunc divu, 2 center
+  * portable, 3 center divu][trial]. */
+ static u32 cyc[4][4][CENTER_TIME_TRIALS];
+ static const char *const fn[4]={"_view_src_guard_portable","_view_src_guard_divu","_view_center_src_guard_portable","_view_center_src_guard_divu"};
+ static const char *const names[4]={"inside","side","nearSide","roadNear"};
+ uint64_t divisions[4][2]={{0}},outs[4]={0};
+ view_state=UINT32_C(0xce177140);
+ for(unsigned t=0;t<CENTER_TIME_TRIALS;t++) {
+  double m[3][3],eye[3];struct center_cam cc;cc.c=view_random_cam(m,eye,1);
+  cc.cx16=(int32_t)cc.c.cx*65536;cc.cy16=(int32_t)cc.c.cy*65536+1;
+  const struct view_cam c=cc.c;
+  const int16_t g[4]={-900,-900,900,900};
+  for(int row=0;row<4;row++) {
+   struct guard_vtx q[4];unsigned attrs=2,max_out=16;
+   if(row<3) {
+    const int32_t z0=(int32_t)((20.0+(view_word()%65536)/65536.0*200.0)*16384.0);
+    q[0]=guard_at(&c,40,40,z0);q[1]=guard_at(&c,280,40,z0);q[2]=guard_at(&c,280,180,z0);q[3]=guard_at(&c,40,180,z0);
+    if(row>=1)q[0]=guard_at(&c,-2840,112,z0);
+    if(row==2){q[2]=guard_at(&c,280,180,z0);q[2].v.z=-z0;q[3].v.z=-z0;q[3].v.x=-q[3].v.x;}
+   } else {
+    const double u=16384.0,x0=((view_word()%65536)/65536.0-0.5)*200.0*u;
+    gsrc_road(q,(10.0+(view_word()%65536)/65536.0*20.0)*u,x0-300.0*u,x0+300.0*u,-40.0*u,300.0*u,0.05);
+    attrs=0;max_out=10;
+   }
+   center_src_store(&cc,g,q,4,attrs,max_out);
+   struct guard_vtx want[2][GUARD_MAX_OUT];
+   const int wt=gsrc_oracle(want[0],&c,g,q,4,attrs,max_out),wc=center_src_oracle(want[1],&cc,g,q,4,attrs,max_out,NULL);
+   const int ws[2]={wt,wc};
+   if(wt<3||wc<3)fail("Center source-order timing shape",(u32)row);
+   outs[row]+=(uint64_t)wc;
+   for(int k=0;k<4;k++) {
+    divu_reset();
+    const struct cost cs=invoke(fn[k],0,0,0,0);
+    cyc[row][k][t]=cs.cycles;
+    if(k&1)divisions[row][k>>1]+=divu_divisions;
+    if((int32_t)cs.result!=ws[k>>1]||guard_compare((k&1)?od:op,want[k>>1],ws[k>>1]))fail("Center source-order timing result",t);
+   }
+  }
+ }
+ printf("\"timing\":{\"trials\":%u,\"band\":[-900,-900,900,900],\"centerQ16\":[10485760,7340033]",CENTER_TIME_TRIALS);
+ for(int row=0;row<4;row++) {
+  for(int k=0;k<4;k++)qsort(cyc[row][k],CENTER_TIME_TRIALS,4,view_cmp_u32);
+  const unsigned mid=CENTER_TIME_TRIALS/2;
+  printf(",\"%s\":{\"attrs\":%u,\"maxOut\":%u,\"meanOutputVertices\":%.2f,\"divisionsPerCall\":{\"trunc\":%.2f,\"center\":%.2f},"
+   "\"median\":{\"truncPortable\":%u,\"truncDivu\":%u,\"centerPortable\":%u,\"centerDivu\":%u},\"max\":{\"truncDivu\":%u,\"centerDivu\":%u}}",
+   names[row],row<3?2u:0u,row<3?16u:10u,(double)outs[row]/CENTER_TIME_TRIALS,(double)divisions[row][0]/CENTER_TIME_TRIALS,
+   (double)divisions[row][1]/CENTER_TIME_TRIALS,cyc[row][0][mid],cyc[row][1][mid],cyc[row][2][mid],cyc[row][3][mid],
+   cyc[row][1][CENTER_TIME_TRIALS-1],cyc[row][3][CENTER_TIME_TRIALS-1]);
+ }
+ printf("}}");
+}
 
 static int capture_center(void) {
  const u32 op=sym("_view_out_portable"),od=sym("_view_out_divu"),pts=sym("_view_input");
@@ -369,6 +593,8 @@ static int capture_center(void) {
   printf(",\"%s\":{\"per\":%.0f,\"divisions\":%"PRIu64",\"median\":{\"truncPortable\":%.2f,\"truncDivu\":%.2f,\"centerPortable\":%.2f,\"centerDivu\":%.2f}}",
    names[row],per[row],divisions[row][1],cyc[row][0][mid]/per[row],cyc[row][1][mid]/per[row],cyc[row][2][mid]/per[row],cyc[row][3][mid]/per[row]);
  }
- printf("}},");
+ printf("},");
+ center_capture_src();
+ printf("},");
  return capture_guard_src();
 }

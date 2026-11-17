@@ -193,6 +193,16 @@ int32_t view_center_guard_divu(void) {
     return sh2z_view_clip_guard_center_divu((sh2z_view_guard_vertex_t *)(void *)view_out_divu,&view_center,view_guard_rect,
         view_input.guard,view_guard_args[0],view_guard_args[1]);
 }
+/* The source-order clip with the centre view, pass limit in
+ * view_src_guard_args[0]. */
+int32_t view_center_src_guard_portable(void) {
+    return sh2z_view_clip_guard_src_center((sh2z_view_guard_vertex_t *)(void *)view_out_portable,&view_center,view_guard_rect,
+        view_input.guard,view_guard_args[0],view_guard_args[1],view_src_guard_args[0]);
+}
+int32_t view_center_src_guard_divu(void) {
+    return sh2z_view_clip_guard_src_center_divu((sh2z_view_guard_vertex_t *)(void *)view_out_divu,&view_center,view_guard_rect,
+        view_input.guard,view_guard_args[0],view_guard_args[1],view_src_guard_args[0]);
+}
 
 /* Divider helper checks: start64/finish and an interrupted division saved and
  * restored around a second one. Arguments are the dividend halves and
