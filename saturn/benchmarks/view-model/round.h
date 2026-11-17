@@ -9,7 +9,8 @@
  * view-space projection (points aimed exactly at pixels and between them),
  * edge steps, near clip and guard clip.
  * Timing: the same fixtures run through the view-contract-1 function and its
- * _trunc form back to back, so each row is a paired comparison. */
+ * _trunc form back to back, so each row is a paired comparison. Then
+ * guardsrc.h (view-guard-src-1), which reuses this file's projection oracle. */
 #define ROUND_BATCH_POSES 256u
 #define ROUND_BATCH_COUNT 1024u
 #define ROUND_PROJECT_TRIALS 256u
@@ -93,6 +94,7 @@ static int round_guard_oracle(struct guard_vtx *out,const struct view_cam *c,con
 }
 static void round_median(u32 *a,unsigned n) {qsort(a,n,4,view_cmp_u32);}
 
+#include "guardsrc.h"
 static int capture_round(void) {
  const u32 op=sym("_view_out_portable"),od=sym("_view_out_divu"),pts=sym("_view_input");
  const u32 ends=sym("_view_edge_ends"),cin=sym("_view_clip_in");
@@ -254,6 +256,6 @@ static int capture_round(void) {
   printf(",\"%s\":{\"per\":%.0f,\"divisions\":%"PRIu64",\"median\":{\"floorPortable\":%.2f,\"floorDivu\":%.2f,\"truncPortable\":%.2f,\"truncDivu\":%.2f}}",
    names[row],per[row],divisions[row][1],cyc[row][0][mid]/per[row],cyc[row][1][mid]/per[row],cyc[row][2][mid]/per[row],cyc[row][3][mid]/per[row]);
  }
- printf("}}}\n");
- return 0;
+ printf("}},");
+ return capture_guard_src();
 }
