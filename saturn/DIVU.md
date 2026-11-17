@@ -84,3 +84,6 @@ model shows SH2ZAM keeps its promises; it is not evidence about the console.
 - **HARDWARE:** none. A console run should confirm the register behaviour,
   the latency and the read-holds behaviour before the cycle figures in
   [VIEW_BATCH.md](VIEW_BATCH.md) are trusted.
+
+The [calibration image](benchmarks/yaul/calibration/README.md) checks truncation and the fit rule
+on a console (4,096 random divisions against C) and times one division. Unrun so far.
