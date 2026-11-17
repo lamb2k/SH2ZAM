@@ -27,9 +27,15 @@ MODELLED. Not console timing, not emulator timing.
      edge steps, near clip, guard clip; portable and divider forms) against
      its own oracle, then each timing fixture through the old function and
      its `_trunc` form back to back.
+  8. `center.h`, view-center-1: every `_center` entry point against its own
+     oracle with fractional centres (points aimed at exact row boundaries),
+     the `_center` and `_trunc` forms byte for byte at whole-pixel centres,
+     then each timing fixture through the `_trunc` form and its `_center`
+     form back to back.
 - `collect.py` checks the invariants (zero mismatches, two divisions per
   timing vertex, merge runs covering every repetition, both view-round-1
-  differences occurring, the ELF's embedded
+  differences occurring, view-center-1 exact and equal to view-round-1 at
+  whole-pixel centres, the ELF's embedded
   source commit, the interpreter pin) and
   writes the results file.
 
