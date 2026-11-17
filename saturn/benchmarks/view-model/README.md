@@ -29,4 +29,9 @@ MODEL_SUITE=view bash saturn/benchmarks/sh2-model/run.sh \
   build/sh2-model/view-results.json
 ```
 
-[results.json](results.json) is the capture from the CI run it names.
+[results.json](results.json) is the capture from
+[SH-2 cross compile run 43989876956](https://github.com/lamb2k/SH2ZAM/actions/runs/43989876956)
+(artifact `sh2-compile-evidence`, id 14286877894), whose ELF embeds source commit
+`5f015510520acadefc4f162cd98bdcd61d1f3018`. Median cycles per vertex at 512
+vertices: portable 681.02; divider path 130.15 raw, 134.68 stall model, 208.15
+with a full 39 cycles per division.
