@@ -2,12 +2,12 @@
  "schema": 1,
  "kernel": "view_batch",
  "tier": "MODELLED",
- "sourceCommit": "145723544191a8cc9a0e7fbbe3196ca869bd1c78",
+ "sourceCommit": "cd1ca6b7e2b755024a2eb36c3f69430c6355da9b",
  "run": {
   "environment": "isolated-sh2-interpreter",
-  "elfSHA256": "404dc3b53fc144b364a9a63ddac8d258b837e2facb07db0dfc18624c95348815",
-  "symbolSHA256": "629db99e99d1a23c6fffaa46547f67be57f75795585b37d2f3e05db729630203",
-  "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44086440203",
+  "elfSHA256": "7162c4077a226a63366cb473899e97609721d67fef59af2ee95e7001c71fa4a4",
+  "symbolSHA256": "d789e44d47122617911ee0d7c9a893be1c9e9579e230b6cdf114f40a8d880b85",
+  "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44106829365",
   "interpreterRepository": "https://github.com/Yabause/yabause",
   "interpreterCommit": "7e38821dbac265490f115e163c523a939acda759",
   "interpreterSourceSHA256": "28f938f95842d0127c31c01a23ccffc3a53243786b405a4afbbc2f34764ce36c",
@@ -33,9 +33,10 @@
   "edgesCaptureSourceSHA256": "62b617ae4691c5437a4dd173a1f381be5058eed34b4dc729fa74b974e3e727e8",
   "guardCaptureSourceSHA256": "50a305fe2b1adab1b767ec3d585f4f61eab633b1aa0977729623b68f5a8c7713",
   "mergeCaptureSourceSHA256": "075d434c324cc41653baf46d1f8e2877788b93ec72969c7aac07ac458555760f",
-  "roundCaptureSourceSHA256": "92c876c1b8bf7ba47d34b1300891ce48c756c0f4d29deae12e1ddd8c9461b4c1",
-  "bridgeSourceSHA256": "ad2637b455581f86b65d2219a174917f6a9c6cde1fa73c0fcbf06f45d0482535",
-  "collectorSourceSHA256": "2532e4ad869f437d17b35ac49a5e9f7bc14bc16488aa81d10c9412944a9ffe20"
+  "roundCaptureSourceSHA256": "e1e8fb93b2ee0136f12bc6f71243c5342ae0f9ee60d26eb3c3462ec4c5c1c4e2",
+  "centerCaptureSourceSHA256": "76d32d2511bbf7daeff1e3c740e4f98c104f174591385cc9cc587862a56249e5",
+  "bridgeSourceSHA256": "d32dd230f15c5a59b39ec6fdda56fcd6e93fff223e545975a9f2ff7954dc29d3",
+  "collectorSourceSHA256": "e741b6d8fffb321a760b8220b62942993f10d8e81abcfdec2f9601c07cf150f6"
  },
  "dividerProbes": {
   "count": 2023,
@@ -999,6 +1000,83 @@
    "trunc_portable": 11620.0,
    "trunc_divu_stall_model": 7595.0,
    "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_center_batch",
+   "unit": "cycles per vertex",
+   "per": 512,
+   "tier": "MODELLED",
+   "trunc_portable": 691.27,
+   "trunc_divu_stall_model": 143.12,
+   "center_portable": 699.03,
+   "center_divu_stall_model": 147.45,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_center_project",
+   "unit": "cycles per vertex",
+   "per": 512,
+   "tier": "MODELLED",
+   "trunc_portable": 617.53,
+   "trunc_divu_stall_model": 103.96,
+   "center_portable": 625.05,
+   "center_divu_stall_model": 106.04,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_center_edgeSteps",
+   "unit": "cycles per vertex",
+   "per": 64,
+   "tier": "MODELLED",
+   "trunc_portable": 720.44,
+   "trunc_divu_stall_model": 180.02,
+   "center_portable": 729.5,
+   "center_divu_stall_model": 182.64,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_center_clipNear",
+   "unit": "cycles per call",
+   "per": 1,
+   "tier": "MODELLED",
+   "trunc_portable": 3128.0,
+   "trunc_divu_stall_model": 1696.0,
+   "center_portable": 3206.0,
+   "center_divu_stall_model": 1776.0,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_center_guardInside",
+   "unit": "cycles per call",
+   "per": 1,
+   "tier": "MODELLED",
+   "trunc_portable": 4522.0,
+   "trunc_divu_stall_model": 2834.0,
+   "center_portable": 4633.0,
+   "center_divu_stall_model": 2955.0,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_center_guardSide",
+   "unit": "cycles per call",
+   "per": 1,
+   "tier": "MODELLED",
+   "trunc_portable": 6905.0,
+   "trunc_divu_stall_model": 4501.0,
+   "center_portable": 7053.0,
+   "center_divu_stall_model": 4669.0,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_center_guardNearSide",
+   "unit": "cycles per call",
+   "per": 1,
+   "tier": "MODELLED",
+   "trunc_portable": 11620.0,
+   "trunc_divu_stall_model": 7592.0,
+   "center_portable": 11770.0,
+   "center_divu_stall_model": 7758.0,
+   "outputs_equal_oracle": true
   }
  ],
  "edges": {
@@ -1326,6 +1404,105 @@
      "floorDivu": 7494.0,
      "truncPortable": 11620.0,
      "truncDivu": 7595.0
+    }
+   }
+  }
+ },
+ "center": {
+  "batchVertices": 262144,
+  "batchNear": 147352,
+  "fractionalX": 219,
+  "fractionalY": 217,
+  "projectedPoints": 131072,
+  "rowBoundaryPoints": 7044,
+  "steppedPoints": 202714,
+  "clipQuads": 16384,
+  "clipVertices": 65536,
+  "guardPolygons": 16384,
+  "guardVertices": 55282,
+  "guardOverflows": 1,
+  "guardInvalid": 2210,
+  "guardInsidePlanes": 46663,
+  "mismatches": 0,
+  "equivalence": {
+   "calls": 2048,
+   "bytes": 13404208,
+   "mismatches": 0
+  },
+  "timing": {
+   "trials": 64,
+   "centerQ16": [
+    10485760,
+    7340033
+   ],
+   "batch": {
+    "per": 512,
+    "divisions": 65536,
+    "median": {
+     "truncPortable": 691.27,
+     "truncDivu": 143.12,
+     "centerPortable": 699.03,
+     "centerDivu": 147.45
+    }
+   },
+   "project": {
+    "per": 512,
+    "divisions": 65536,
+    "median": {
+     "truncPortable": 617.53,
+     "truncDivu": 103.96,
+     "centerPortable": 625.05,
+     "centerDivu": 106.04
+    }
+   },
+   "edgeSteps": {
+    "per": 64,
+    "divisions": 8960,
+    "median": {
+     "truncPortable": 720.44,
+     "truncDivu": 180.02,
+     "centerPortable": 729.5,
+     "centerDivu": 182.64
+    }
+   },
+   "clipNear": {
+    "per": 1,
+    "divisions": 512,
+    "median": {
+     "truncPortable": 3128.0,
+     "truncDivu": 1696.0,
+     "centerPortable": 3206.0,
+     "centerDivu": 1776.0
+    }
+   },
+   "guardInside": {
+    "per": 1,
+    "divisions": 512,
+    "median": {
+     "truncPortable": 4522.0,
+     "truncDivu": 2834.0,
+     "centerPortable": 4633.0,
+     "centerDivu": 2955.0
+    }
+   },
+   "guardSide": {
+    "per": 1,
+    "divisions": 768,
+    "median": {
+     "truncPortable": 6905.0,
+     "truncDivu": 4501.0,
+     "centerPortable": 7053.0,
+     "centerDivu": 4669.0
+    }
+   },
+   "guardNearSide": {
+    "per": 1,
+    "divisions": 1485,
+    "median": {
+     "truncPortable": 11620.0,
+     "truncDivu": 7592.0,
+     "centerPortable": 11770.0,
+     "centerDivu": 7758.0
     }
    }
   }
