@@ -9,7 +9,8 @@
  * view-space projection (points aimed exactly at pixels and between them),
  * edge steps, near clip and guard clip.
  * Timing: the same fixtures run through the view-contract-1 function and its
- * _trunc form back to back, so each row is a paired comparison. */
+ * _trunc form back to back, so each row is a paired comparison. Then
+ * center.h (view-center-1), included at the end. */
 #define ROUND_BATCH_POSES 256u
 #define ROUND_BATCH_COUNT 1024u
 #define ROUND_PROJECT_TRIALS 256u
@@ -17,6 +18,8 @@
 #define ROUND_CLIP_TRIALS 16384u
 #define ROUND_GUARD_TRIALS 16384u
 #define ROUND_TIME_TRIALS 64u
+
+static int capture_center(void);   /* center.h, view-center-1 */
 
 /* view_project with the view-round-1 pixel rule. */
 static struct view_vtx round_project(const struct view_cam *c,const __int128 v[3]) {
@@ -254,6 +257,7 @@ static int capture_round(void) {
   printf(",\"%s\":{\"per\":%.0f,\"divisions\":%"PRIu64",\"median\":{\"floorPortable\":%.2f,\"floorDivu\":%.2f,\"truncPortable\":%.2f,\"truncDivu\":%.2f}}",
    names[row],per[row],divisions[row][1],cyc[row][0][mid]/per[row],cyc[row][1][mid]/per[row],cyc[row][2][mid]/per[row],cyc[row][3][mid]/per[row]);
  }
- printf("}}}\n");
- return 0;
+ printf("}},");
+ return capture_center();
 }
+#include "center.h"

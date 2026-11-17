@@ -141,6 +141,47 @@ int32_t view_round_guard_divu(void) {
         view_input.guard,view_guard_args[0],view_guard_args[1]);
 }
 
+/* view-center-1: the _center forms on the same buffers and arguments, with
+ * the harness writing the centre view (the camera, then center_x16 and
+ * center_y16) to view_center. */
+sh2z_view_center_t view_center;
+_Static_assert(offsetof(sh2z_view_center_t,center_x16)==60,"center_x16 offset");
+_Static_assert(sizeof(sh2z_view_center_t)==68,"centre view size");
+uint32_t view_center_batch_portable(uint32_t count) {
+    return sh2z_view_batch_center(view_out_portable,&view_center,view_input.pos,sizeof(view_input.pos[0]),count);
+}
+uint32_t view_center_batch_divu(uint32_t count) {
+    return sh2z_view_batch_center_divu(view_out_divu,&view_center,view_input.pos,sizeof(view_input.pos[0]),count);
+}
+uint32_t view_center_project_portable(uint32_t count) {
+    return sh2z_view_project_center(view_out_portable,&view_center,view_input.pts,count);
+}
+uint32_t view_center_project_divu(uint32_t count) {
+    return sh2z_view_project_center_divu(view_out_divu,&view_center,view_input.pts,count);
+}
+uint32_t view_center_edges_portable(void) {
+    return sh2z_view_edge_steps_center(view_out_portable,&view_center,&view_edge_ends[0],&view_edge_ends[1],
+        (uint16_t)view_edge_args[0],(uint16_t)view_edge_args[1],(uint16_t)view_edge_args[2],view_edge_args[3]);
+}
+uint32_t view_center_edges_divu(void) {
+    return sh2z_view_edge_steps_center_divu(view_out_divu,&view_center,&view_edge_ends[0],&view_edge_ends[1],
+        (uint16_t)view_edge_args[0],(uint16_t)view_edge_args[1],(uint16_t)view_edge_args[2],view_edge_args[3]);
+}
+uint32_t view_center_clip_portable(void) {
+    return sh2z_view_clip_near_center(view_out_portable,&view_center,view_clip_in);
+}
+uint32_t view_center_clip_divu(void) {
+    return sh2z_view_clip_near_center_divu(view_out_divu,&view_center,view_clip_in);
+}
+int32_t view_center_guard_portable(void) {
+    return sh2z_view_clip_guard_center((sh2z_view_guard_vertex_t *)(void *)view_out_portable,&view_center,view_guard_rect,
+        view_input.guard,view_guard_args[0],view_guard_args[1]);
+}
+int32_t view_center_guard_divu(void) {
+    return sh2z_view_clip_guard_center_divu((sh2z_view_guard_vertex_t *)(void *)view_out_divu,&view_center,view_guard_rect,
+        view_input.guard,view_guard_args[0],view_guard_args[1]);
+}
+
 /* Divider helper checks: start64/finish and an interrupted division saved and
  * restored around a second one. Arguments are the dividend halves and
  * divisor; results land in view_divu_result. */

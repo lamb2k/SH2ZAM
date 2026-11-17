@@ -61,6 +61,17 @@ rt=rd['timing']
 for k in ('batch','project','edgeSteps','clipNear','guardInside','guardSide','guardNearSide'):
     assert set(rt[k]['median'])=={'floorPortable','floorDivu','truncPortable','truncDivu'}
 assert rt['batch']['divisions']==2*512*rt['trials'],'round timing batch must cost two divisions per vertex'
+cd=raw['center']
+assert cd['mismatches']==0,'view-center-1 must be exact'
+assert cd['batchVertices']>=262144 and cd['projectedPoints']>=131072 and cd['steppedPoints']>=100000
+assert cd['clipQuads']>=16384 and cd['guardPolygons']>=16384 and cd['guardVertices']>=50000 and cd['guardInsidePlanes']>0
+assert cd['fractionalX']>0 and cd['fractionalY']>0 and cd['rowBoundaryPoints']>0,'fractional centres and exact row boundaries must occur'
+ce=cd['equivalence']
+assert ce['mismatches']==0 and ce['calls']>=2000,'_center must equal _trunc at whole-pixel centres'
+ct=cd['timing']
+for k in ('batch','project','edgeSteps','clipNear','guardInside','guardSide','guardNearSide'):
+    assert set(ct[k]['median'])=={'truncPortable','truncDivu','centerPortable','centerDivu'}
+assert ct['batch']['divisions']==2*512*ct['trials'],'center timing batch must cost two divisions per vertex'
 
 here=Path(__file__).resolve().parent
 model=here.parent/'sh2-model'
@@ -82,6 +93,7 @@ result=dict(schema=1,kernel='view_batch',tier='MODELLED',sourceCommit=raw['sourc
       guardCaptureSourceSHA256=sha((here/'guard.h').read_bytes()),
       mergeCaptureSourceSHA256=sha((here/'merge.h').read_bytes()),
       roundCaptureSourceSHA256=sha((here/'round.h').read_bytes()),
+      centerCaptureSourceSHA256=sha((here/'center.h').read_bytes()),
       bridgeSourceSHA256=sha((here/'view_bridge.c').read_bytes()),
       collectorSourceSHA256=sha(Path(__file__).read_bytes())),
     dividerProbes=dict(count=raw['dividerProbeCount'],hardwarePath=raw['dividerProbeHardwarePath'],table=raw['dividerProbes']),
@@ -115,8 +127,13 @@ result=dict(schema=1,kernel='view_batch',tier='MODELLED',sourceCommit=raw['sourc
            'per':rt[k]['per'],'tier':'MODELLED','floor_portable':rt[k]['median']['floorPortable'],
            'floor_divu_stall_model':rt[k]['median']['floorDivu'],'trunc_portable':rt[k]['median']['truncPortable'],
            'trunc_divu_stall_model':rt[k]['median']['truncDivu'],'outputs_equal_oracle':True}
+          for k in ('batch','project','edgeSteps','clipNear','guardInside','guardSide','guardNearSide')]+
+         [{'kernel':'view_center_'+k,'unit':'cycles per vertex' if ct[k]['per']>1 else 'cycles per call',
+           'per':ct[k]['per'],'tier':'MODELLED','trunc_portable':ct[k]['median']['truncPortable'],
+           'trunc_divu_stall_model':ct[k]['median']['truncDivu'],'center_portable':ct[k]['median']['centerPortable'],
+           'center_divu_stall_model':ct[k]['median']['centerDivu'],'outputs_equal_oracle':True}
           for k in ('batch','project','edgeSteps','clipNear','guardInside','guardSide','guardNearSide')],
-    edges=e,guard=gd,merge=mg,round=rd)
+    edges=e,guard=gd,merge=mg,round=rd,center=cd)
 a.output.parent.mkdir(parents=True,exist_ok=True)
 a.output.write_text(json.dumps(result,indent=1)+'\n')
 print('PASS: %d sweep vertices exact on both paths (%d strided); %d divider probes (%d hardware path)'%(
@@ -136,3 +153,6 @@ print('view-merge-1: %d strips, %d runs exact (%d merged), %d rejected calls wro
 print('view-round-1: %d batch, %d projected, %d stepped, %d near-clip, %d guard vertices exact (sx+1 %d, sy-1 %d); floor/trunc divu: '%(
     rd['batchVertices'],rd['projectedPoints'],rd['steppedPoints'],rd['clipVertices'],rd['guardVertices'],rd['xUp'],rd['yDown'])+
     ', '.join('%s %.2f/%.2f'%(k,rt[k]['median']['floorDivu'],rt[k]['median']['truncDivu']) for k in ('batch','project','edgeSteps','clipNear','guardInside','guardSide','guardNearSide')))
+print('view-center-1: %d batch, %d projected (%d on row boundaries), %d stepped, %d near-clip, %d guard vertices exact; %d paired _trunc/_center calls identical; trunc/center divu: '%(
+    cd['batchVertices'],cd['projectedPoints'],cd['rowBoundaryPoints'],cd['steppedPoints'],cd['clipVertices'],cd['guardVertices'],ce['calls'])+
+    ', '.join('%s %.2f/%.2f'%(k,ct[k]['median']['truncDivu'],ct[k]['median']['centerDivu']) for k in ('batch','project','edgeSteps','clipNear','guardInside','guardSide','guardNearSide')))
