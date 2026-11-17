@@ -14,7 +14,7 @@ The maintained overview, build commands, API scope and upstream credits are in t
 - [Exact math optimizations and SH-2 model results](MATH_OPTIMIZATIONS.md)
 - [48-operation native math comparison and reproduction](benchmarks/math-model/README.md)
 - [Exact rotation batches, static spatial queries and workload comparison](benchmarks/workload-model/README.md)
-- [Experimental view batch: transform, project, clip codes, guard clip, texture-merge planner, final-coordinate truncation](VIEW_BATCH.md)
+- [Experimental view batch: transform, project, clip codes, guard clip, texture-merge planner, final-coordinate truncation, source-order guard clip](VIEW_BATCH.md)
 - [Experimental explicit SH-2 divider](DIVU.md)
 - [Integer kernels: 68000 arithmetic, 2D box overlap, 16x16 cell placement](INTEGER_KERNELS.md)
 - [Integer-kernel instruction model](benchmarks/integer-model/README.md)
