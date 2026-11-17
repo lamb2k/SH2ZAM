@@ -23,7 +23,16 @@ const uint32_t view_capacity=VIEW_CAPACITY;
 sh2z_view_t view_camera;
 /* Positions for the batch, or view-space records for sh2z_view_project:
  * one buffer, so the ELF still fits the benchmark RAM region. */
-union { sh2z_pos16_t pos[VIEW_CAPACITY]; sh2z_view_vertex_t pts[512]; sh2z_view_guard_vertex_t guard[SH2Z_VIEW_GUARD_MAX_IN]; } view_input;
+#define VIEW_MERGE_CAPACITY 200u
+union {
+    sh2z_pos16_t pos[VIEW_CAPACITY];
+    sh2z_view_vertex_t pts[512];
+    sh2z_view_guard_vertex_t guard[SH2Z_VIEW_GUARD_MAX_IN];
+    struct {
+        sh2z_view_vertex_t left[VIEW_MERGE_CAPACITY],right[VIEW_MERGE_CAPACITY];
+        uint32_t rows[VIEW_MERGE_CAPACITY],ends[VIEW_MERGE_CAPACITY];
+    } merge;
+} view_input;
 sh2z_view_vertex_t view_out_portable[VIEW_CAPACITY];
 sh2z_view_vertex_t view_out_divu[VIEW_CAPACITY];
 
@@ -78,6 +87,21 @@ int32_t view_guard_portable(void) {
 int32_t view_guard_divu(void) {
     return sh2z_view_clip_guard_divu((sh2z_view_guard_vertex_t *)(void *)view_out_divu,&view_camera,view_guard_rect,
         view_input.guard,view_guard_args[0],view_guard_args[1]);
+}
+
+/* view-merge-1: rails, rows and end masks in view_input.merge (left at 0,
+ * right at 4000, rows at 8000, end masks at 8800) and
+ * {count, run_mask, tol_q8, mode, use end masks} set by the harness; the
+ * runs go to the start of view_out_portable. No new buffers: the merge
+ * layout fits inside the existing input union. */
+const uint32_t view_merge_capacity=VIEW_MERGE_CAPACITY;
+uint32_t view_merge_args[5];
+_Static_assert(sizeof(view_input.merge)<=sizeof(view_input.pts),"merge input fits the existing union");
+_Static_assert(offsetof(sh2z_view_vertex_t,outcode)==16,"outcode offset");
+int32_t view_merge(void) {
+    return sh2z_view_merge_runs((uint8_t *)(void *)view_out_portable,view_input.merge.left,view_input.merge.right,
+        view_input.merge.rows,view_merge_args[4]?view_input.merge.ends:NULL,view_merge_args[0],view_merge_args[1],
+        view_merge_args[2],view_merge_args[3]);
 }
 
 /* Divider helper checks: start64/finish and an interrupted division saved and
