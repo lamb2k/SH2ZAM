@@ -74,19 +74,24 @@ static void view_positions(int16_t (*p)[3],unsigned n,const double m[3][3],const
   for(int j=0;j<3;j++)p[k][j]=(int16_t)(q[j]<INT16_MIN?INT16_MIN:q[j]>INT16_MAX?INT16_MAX:q[j]);
  }
 }
-static struct view_vtx view_oracle(const struct view_cam *c,const int16_t p[3],uint64_t *saturated) {
+/* Projection of a view-space point, from the contract text. */
+static struct view_vtx view_project(const struct view_cam *c,const __int128 v[3],uint64_t *saturated) {
  struct view_vtx o;memset(&o,0,sizeof(o));
- __int128 v[3];
- for(int i=0;i<3;i++){v[i]=c->t[i];for(int j=0;j<3;j++)v[i]+=(__int128)c->r[i][j]*p[j];if(v[i]<INT32_MIN||v[i]>INT32_MAX)fail("View oracle bound",i);}
+ for(int i=0;i<3;i++)if(v[i]<INT32_MIN||v[i]>INT32_MAX)fail("View oracle bound",i);
  o.x=(int32_t)v[0];o.y=(int32_t)v[1];o.z=(int32_t)v[2];
  if(v[2]<c->near_z){o.code=1;return o;}
  __int128 n[2]={(__int128)c->fx*v[0],(__int128)c->fy*v[1]},q[2];
  for(int i=0;i<2;i++){__int128 a=n[i]<0?-n[i]:n[i];q[i]=(n[i]<0?-1:1)*(a/v[2]);
-  if(q[i]<INT32_MIN||q[i]>INT32_MAX)(*saturated)++;q[i]=view_clamp(q[i],INT32_MIN,INT32_MAX);}
+  if((q[i]<INT32_MIN||q[i]>INT32_MAX)&&saturated)(*saturated)++;q[i]=view_clamp(q[i],INT32_MIN,INT32_MAX);}
  o.sx=(int16_t)view_clamp(c->cx+view_floor(q[0],65536),INT16_MIN,INT16_MAX);
  o.sy=(int16_t)view_clamp(c->cy-view_floor(q[1],65536),INT16_MIN,INT16_MAX);
  o.code=(uint8_t)((v[2]>c->far_z?2:0)|(o.sx<c->clip[0]?4:0)|(o.sx>c->clip[2]?8:0)|(o.sy<c->clip[1]?16:0)|(o.sy>c->clip[3]?32:0));
  return o;
+}
+static struct view_vtx view_oracle(const struct view_cam *c,const int16_t p[3],uint64_t *saturated) {
+ __int128 v[3];
+ for(int i=0;i<3;i++){v[i]=c->t[i];for(int j=0;j<3;j++)v[i]+=(__int128)c->r[i][j]*p[j];}
+ return view_project(c,v,saturated);
 }
 static void view_store_cam(const struct view_cam *c) {
  u32 a=sym("_view_camera");
@@ -110,6 +115,7 @@ static uint64_t view_compare(u32 out,const struct view_vtx *want,unsigned n) {
 static void view_poison(u32 out,unsigned n) {for(unsigned i=0;i<5*n;i++)wl(&cpu,out+4*i,UINT32_C(0xA5A5A5A5));}
 static int view_cmp_u32(const void *a,const void *b) {u32 x=*(const u32*)a,y=*(const u32*)b;return x<y?-1:x>y;}
 
+#include "edges.h"
 struct view_probe {int64_t n;int32_t d;};
 static int capture_view(void) {
  if(rl(&cpu,sym("_view_capacity"))<VIEW_SWEEP_COUNT)fail("View capacity",0);
@@ -207,7 +213,7 @@ static int capture_view(void) {
  const unsigned mid=VIEW_TIME_POSES/2;const double nv=VIEW_TIME_COUNT;
  printf("],\"near\":%"PRIu64",\"divisions\":%"PRIu64",\"stallCycles\":%"PRIu64",\"medianCyclesPerVertex\":{\"portable\":%.2f,\"divuRaw\":%.2f,\"divuStallModel\":%.2f,\"divuPlusLatencyPerDivision\":%.2f},",
   tnear,tdiv,tstall,cyc[0][mid]/nv,raw[mid]/nv,cyc[1][mid]/nv,plus[mid]/nv);
- printf("\"maxCyclesPerVertex\":{\"portable\":%.2f,\"divuStallModel\":%.2f,\"divuPlusLatencyPerDivision\":%.2f},\"instructionsPerVertex\":{\"portable\":%.2f,\"divu\":%.2f}}}\n",
+ printf("\"maxCyclesPerVertex\":{\"portable\":%.2f,\"divuStallModel\":%.2f,\"divuPlusLatencyPerDivision\":%.2f},\"instructionsPerVertex\":{\"portable\":%.2f,\"divu\":%.2f}},",
   cyc[0][VIEW_TIME_POSES-1]/nv,cyc[1][VIEW_TIME_POSES-1]/nv,plus[VIEW_TIME_POSES-1]/nv,tinst[0]/(nv*VIEW_TIME_POSES),tinst[1]/(nv*VIEW_TIME_POSES));
- return 0;
+ return capture_edges();
 }

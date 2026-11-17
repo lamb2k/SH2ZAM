@@ -2,12 +2,12 @@
  "schema": 1,
  "kernel": "view_batch",
  "tier": "MODELLED",
- "sourceCommit": "5f015510520acadefc4f162cd98bdcd61d1f3018",
+ "sourceCommit": "2496b96e3b0ef3d756b559be5df71fca41b70c4f",
  "run": {
   "environment": "isolated-sh2-interpreter",
-  "elfSHA256": "f8a5bab8be30ac52c2adbd482457f18c03911f76786a4495525e63f9f87254f4",
-  "symbolSHA256": "fb7ac0ddfe58760a0b8fe035d0336e38e4e57c60d35a418cbfff0c8d074058af",
-  "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/43989876956",
+  "elfSHA256": "b519745909f951d815ea99f91fd6e22b04bc443eb410a52b37f21a872db3c787",
+  "symbolSHA256": "84aaf0a51446bf07eb5ae0ec82602b2532ed6d3abeff663d69a945c8a4548414",
+  "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/43995583849",
   "interpreterRepository": "https://github.com/Yabause/yabause",
   "interpreterCommit": "7e38821dbac265490f115e163c523a939acda759",
   "interpreterSourceSHA256": "28f938f95842d0127c31c01a23ccffc3a53243786b405a4afbbc2f34764ce36c",
@@ -29,9 +29,10 @@
   ],
   "harnessSourceSHA256": "2858d53b33acf3cd61092d29e11c5e672e56fb99ef76a893f2153f43e3df78b9",
   "dividerModelSourceSHA256": "afa130ede190f211d047e1637a3fccbbfe87c5f43aa56f4e43b0af7e9290e18d",
-  "captureSourceSHA256": "1d55189ec774dc2e64defa82d1a994817b2b6f22abe72b1b6fb42857352b582e",
-  "bridgeSourceSHA256": "897648bbce2f34937a60e5a91eca53863b3d94262f7fdb995866239612e89f93",
-  "collectorSourceSHA256": "6d08ddfc8cf20c6a41d02af5ae0337d9d7c2351e75a2dfefb1fe3dbe22830e52"
+  "captureSourceSHA256": "9fc7b12f3b0e6e8aeb0b2b630b2ffe7a808c9a149922d5e4dc0aba52afe3ded3",
+  "edgesCaptureSourceSHA256": "388c247c7d0e177f5ac34cc67f0b03a4206e99b4377a8f37fe744f47d833fac0",
+  "bridgeSourceSHA256": "59f2a5ad2b7aa4049ee1a04d3ae7c8a4262af68feb6affb925552ae755520749",
+  "collectorSourceSHA256": "137abbc23a15953199924a3b38c2e22b8bb55fa2d7479d30195bf13722ef95bd"
  },
  "dividerProbes": {
   "count": 2023,
@@ -194,7 +195,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348438,
+    "portableCycles": 349003,
     "divuCycles": 68945,
     "divuStallCycles": 2308,
     "divuInstructions": 64543
@@ -202,7 +203,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348876,
+    "portableCycles": 349426,
     "divuCycles": 68948,
     "divuStallCycles": 2311,
     "divuInstructions": 64545
@@ -210,7 +211,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 349112,
+    "portableCycles": 349670,
     "divuCycles": 68968,
     "divuStallCycles": 2325,
     "divuInstructions": 64557
@@ -218,7 +219,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348827,
+    "portableCycles": 349267,
     "divuCycles": 68955,
     "divuStallCycles": 2334,
     "divuInstructions": 64507
@@ -226,7 +227,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348649,
+    "portableCycles": 349200,
     "divuCycles": 68955,
     "divuStallCycles": 2314,
     "divuInstructions": 64551
@@ -234,7 +235,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348860,
+    "portableCycles": 349520,
     "divuCycles": 68956,
     "divuStallCycles": 2302,
     "divuInstructions": 64576
@@ -242,7 +243,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348420,
+    "portableCycles": 349054,
     "divuCycles": 68948,
     "divuStallCycles": 2297,
     "divuInstructions": 64571
@@ -250,7 +251,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348823,
+    "portableCycles": 349328,
     "divuCycles": 68957,
     "divuStallCycles": 2326,
     "divuInstructions": 64530
@@ -258,7 +259,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348982,
+    "portableCycles": 349561,
     "divuCycles": 68938,
     "divuStallCycles": 2303,
     "divuInstructions": 64539
@@ -266,7 +267,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348484,
+    "portableCycles": 348974,
     "divuCycles": 68960,
     "divuStallCycles": 2330,
     "divuInstructions": 64527
@@ -274,7 +275,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348740,
+    "portableCycles": 349340,
     "divuCycles": 68953,
     "divuStallCycles": 2308,
     "divuInstructions": 64558
@@ -282,7 +283,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348750,
+    "portableCycles": 349304,
     "divuCycles": 68958,
     "divuStallCycles": 2319,
     "divuInstructions": 64545
@@ -290,7 +291,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348681,
+    "portableCycles": 349167,
     "divuCycles": 68953,
     "divuStallCycles": 2324,
     "divuInstructions": 64525
@@ -298,7 +299,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348517,
+    "portableCycles": 349046,
     "divuCycles": 68963,
     "divuStallCycles": 2324,
     "divuInstructions": 64548
@@ -306,7 +307,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348453,
+    "portableCycles": 349059,
     "divuCycles": 68959,
     "divuStallCycles": 2314,
     "divuInstructions": 64556
@@ -314,7 +315,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 349093,
+    "portableCycles": 349651,
     "divuCycles": 68950,
     "divuStallCycles": 2319,
     "divuInstructions": 64530
@@ -322,7 +323,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348843,
+    "portableCycles": 349518,
     "divuCycles": 68953,
     "divuStallCycles": 2295,
     "divuInstructions": 64583
@@ -330,7 +331,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348360,
+    "portableCycles": 348987,
     "divuCycles": 68965,
     "divuStallCycles": 2309,
     "divuInstructions": 64580
@@ -338,7 +339,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 349104,
+    "portableCycles": 349741,
     "divuCycles": 68954,
     "divuStallCycles": 2303,
     "divuInstructions": 64573
@@ -346,7 +347,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348653,
+    "portableCycles": 349214,
     "divuCycles": 68971,
     "divuStallCycles": 2327,
     "divuInstructions": 64556
@@ -354,7 +355,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348528,
+    "portableCycles": 349166,
     "divuCycles": 68961,
     "divuStallCycles": 2309,
     "divuInstructions": 64575
@@ -362,7 +363,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348260,
+    "portableCycles": 348751,
     "divuCycles": 68925,
     "divuStallCycles": 2309,
     "divuInstructions": 64500
@@ -370,7 +371,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348827,
+    "portableCycles": 349450,
     "divuCycles": 68946,
     "divuStallCycles": 2299,
     "divuInstructions": 64562
@@ -378,7 +379,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348898,
+    "portableCycles": 349431,
     "divuCycles": 68955,
     "divuStallCycles": 2318,
     "divuInstructions": 64546
@@ -386,7 +387,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348483,
+    "portableCycles": 348978,
     "divuCycles": 68947,
     "divuStallCycles": 2320,
     "divuInstructions": 64521
@@ -394,7 +395,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348895,
+    "portableCycles": 349488,
     "divuCycles": 68964,
     "divuStallCycles": 2317,
     "divuInstructions": 64562
@@ -402,7 +403,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348193,
+    "portableCycles": 348740,
     "divuCycles": 68978,
     "divuStallCycles": 2333,
     "divuInstructions": 64557
@@ -410,7 +411,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348453,
+    "portableCycles": 348983,
     "divuCycles": 68955,
     "divuStallCycles": 2319,
     "divuInstructions": 64539
@@ -418,7 +419,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348946,
+    "portableCycles": 349514,
     "divuCycles": 68960,
     "divuStallCycles": 2319,
     "divuInstructions": 64549
@@ -426,7 +427,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348013,
+    "portableCycles": 348594,
     "divuCycles": 68946,
     "divuStallCycles": 2311,
     "divuInstructions": 64539
@@ -434,7 +435,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348811,
+    "portableCycles": 349351,
     "divuCycles": 68956,
     "divuStallCycles": 2323,
     "divuInstructions": 64533
@@ -442,7 +443,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348607,
+    "portableCycles": 349147,
     "divuCycles": 68953,
     "divuStallCycles": 2321,
     "divuInstructions": 64531
@@ -450,7 +451,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348133,
+    "portableCycles": 348700,
     "divuCycles": 68953,
     "divuStallCycles": 2315,
     "divuInstructions": 64545
@@ -458,7 +459,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348689,
+    "portableCycles": 349210,
     "divuCycles": 68955,
     "divuStallCycles": 2322,
     "divuInstructions": 64533
@@ -466,7 +467,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348625,
+    "portableCycles": 349120,
     "divuCycles": 68956,
     "divuStallCycles": 2328,
     "divuInstructions": 64524
@@ -474,7 +475,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348774,
+    "portableCycles": 349140,
     "divuCycles": 68947,
     "divuStallCycles": 2343,
     "divuInstructions": 64477
@@ -482,7 +483,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348958,
+    "portableCycles": 349623,
     "divuCycles": 68964,
     "divuStallCycles": 2303,
     "divuInstructions": 64591
@@ -490,7 +491,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348383,
+    "portableCycles": 348824,
     "divuCycles": 68947,
     "divuStallCycles": 2327,
     "divuInstructions": 64507
@@ -498,7 +499,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348848,
+    "portableCycles": 349323,
     "divuCycles": 68945,
     "divuStallCycles": 2323,
     "divuInstructions": 64512
@@ -506,7 +507,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 349106,
+    "portableCycles": 349660,
     "divuCycles": 68952,
     "divuStallCycles": 2315,
     "divuInstructions": 64546
@@ -514,7 +515,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348652,
+    "portableCycles": 349102,
     "divuCycles": 68956,
     "divuStallCycles": 2334,
     "divuInstructions": 64510
@@ -522,7 +523,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348634,
+    "portableCycles": 349142,
     "divuCycles": 68963,
     "divuStallCycles": 2328,
     "divuInstructions": 64538
@@ -530,7 +531,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 349084,
+    "portableCycles": 349767,
     "divuCycles": 68961,
     "divuStallCycles": 2302,
     "divuInstructions": 64587
@@ -538,7 +539,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348488,
+    "portableCycles": 349040,
     "divuCycles": 68935,
     "divuStallCycles": 2304,
     "divuInstructions": 64533
@@ -546,7 +547,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348496,
+    "portableCycles": 349077,
     "divuCycles": 68967,
     "divuStallCycles": 2318,
     "divuInstructions": 64563
@@ -554,7 +555,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348739,
+    "portableCycles": 349319,
     "divuCycles": 68954,
     "divuStallCycles": 2315,
     "divuInstructions": 64546
@@ -562,7 +563,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 347923,
+    "portableCycles": 348446,
     "divuCycles": 68945,
     "divuStallCycles": 2317,
     "divuInstructions": 64527
@@ -570,7 +571,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 349117,
+    "portableCycles": 349745,
     "divuCycles": 68954,
     "divuStallCycles": 2303,
     "divuInstructions": 64572
@@ -578,7 +579,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348495,
+    "portableCycles": 349048,
     "divuCycles": 68960,
     "divuStallCycles": 2318,
     "divuInstructions": 64550
@@ -586,7 +587,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348250,
+    "portableCycles": 348840,
     "divuCycles": 68955,
     "divuStallCycles": 2310,
     "divuInstructions": 64558
@@ -594,7 +595,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348651,
+    "portableCycles": 349201,
     "divuCycles": 68945,
     "divuStallCycles": 2316,
     "divuInstructions": 64525
@@ -602,7 +603,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348637,
+    "portableCycles": 349200,
     "divuCycles": 68964,
     "divuStallCycles": 2322,
     "divuInstructions": 64551
@@ -610,7 +611,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348305,
+    "portableCycles": 348869,
     "divuCycles": 68953,
     "divuStallCycles": 2314,
     "divuInstructions": 64548
@@ -618,7 +619,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348528,
+    "portableCycles": 349085,
     "divuCycles": 68934,
     "divuStallCycles": 2304,
     "divuInstructions": 64528
@@ -626,7 +627,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348819,
+    "portableCycles": 349460,
     "divuCycles": 68964,
     "divuStallCycles": 2308,
     "divuInstructions": 64578
@@ -634,7 +635,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 349174,
+    "portableCycles": 349778,
     "divuCycles": 68966,
     "divuStallCycles": 2316,
     "divuInstructions": 64570
@@ -642,7 +643,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348124,
+    "portableCycles": 348641,
     "divuCycles": 68954,
     "divuStallCycles": 2321,
     "divuInstructions": 64533
@@ -650,7 +651,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 349153,
+    "portableCycles": 349680,
     "divuCycles": 68958,
     "divuStallCycles": 2325,
     "divuInstructions": 64537
@@ -658,7 +659,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348335,
+    "portableCycles": 348787,
     "divuCycles": 68949,
     "divuStallCycles": 2326,
     "divuInstructions": 64518
@@ -666,7 +667,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348922,
+    "portableCycles": 349567,
     "divuCycles": 68974,
     "divuStallCycles": 2312,
     "divuInstructions": 64593
@@ -674,7 +675,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348236,
+    "portableCycles": 348748,
     "divuCycles": 68967,
     "divuStallCycles": 2331,
     "divuInstructions": 64541
@@ -682,7 +683,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 349012,
+    "portableCycles": 349639,
     "divuCycles": 68950,
     "divuStallCycles": 2302,
     "divuInstructions": 64564
@@ -690,7 +691,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 349082,
+    "portableCycles": 349650,
     "divuCycles": 68963,
     "divuStallCycles": 2319,
     "divuInstructions": 64556
@@ -698,7 +699,7 @@
    {
     "near": 0,
     "divisions": 1024,
-    "portableCycles": 348753,
+    "portableCycles": 349422,
     "divuCycles": 68965,
     "divuStallCycles": 2306,
     "divuInstructions": 64586
@@ -708,18 +709,18 @@
   "divisions": 65536,
   "stallCycles": 148237,
   "medianCyclesPerVertex": {
-   "portable": 681.02,
+   "portable": 682.03,
    "divuRaw": 130.15,
    "divuStallModel": 134.68,
    "divuPlusLatencyPerDivision": 208.15
   },
   "maxCyclesPerVertex": {
-   "portable": 681.98,
+   "portable": 683.16,
    "divuStallModel": 134.72,
    "divuPlusLatencyPerDivision": 208.2
   },
   "instructionsPerVertex": {
-   "portable": 584.35,
+   "portable": 585.92,
    "divu": 126.07
   }
  },
@@ -728,7 +729,7 @@
    "kernel": "view_batch",
    "vertices": 512,
    "path": "portable (libgcc 64-bit divide)",
-   "cycles_model": 681.02,
+   "cycles_model": 682.03,
    "tier": "MODELLED",
    "outputs_equal_oracle": true
   },
@@ -741,6 +742,89 @@
    "cycles_model_plus_divide_latency": 208.15,
    "tier": "MODELLED",
    "outputs_equal_portable": true
+  },
+  {
+   "kernel": "view_project",
+   "points": 512,
+   "unit": "cycles per point",
+   "tier": "MODELLED",
+   "portable": 612.4,
+   "divu_stall_model": 101.44,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_edge_steps",
+   "points": 64,
+   "unit": "cycles per point",
+   "tier": "MODELLED",
+   "portable": 713.25,
+   "divu_stall_model": 177.28,
+   "one_point_call_cycles": {
+    "portable": 4327,
+    "divuStallModel": 2148
+   },
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_clip_near",
+   "crossings": 2,
+   "unit": "cycles per quad",
+   "tier": "MODELLED",
+   "portable": 3099,
+   "divu_stall_model": 1647,
+   "outputs_equal_oracle": true
   }
- ]
+ ],
+ "edges": {
+  "edgeTrials": 8192,
+  "points": 268025,
+  "mismatches": 0,
+  "quads": 65536,
+  "clipMismatches": 0,
+  "projectedPoints": 262144,
+  "projectMismatches": 0,
+  "patterns": [
+   4096,
+   4096,
+   4096,
+   4096,
+   4096,
+   4096,
+   4096,
+   4096,
+   4096,
+   4096,
+   4096,
+   4096,
+   4096,
+   4096,
+   4096,
+   4096
+  ],
+  "timing": {
+   "trials": 64,
+   "medianCyclesPerProjectedPoint": {
+    "portable": 612.4,
+    "divuStallModel": 101.44
+   },
+   "projectStallCycles": 377060,
+   "pointsPerEdge": 64,
+   "edgeDivisions": 8960,
+   "edgeStallCycles": 73460,
+   "medianCyclesPerPoint": {
+    "portable": 713.25,
+    "divuStallModel": 177.28
+   },
+   "medianCyclesOnePointCall": {
+    "portable": 4327,
+    "divuStallModel": 2148
+   },
+   "clipCrossingsPerQuad": 2,
+   "clipDivisions": 512,
+   "medianCyclesPerQuad": {
+    "portable": 3099,
+    "divuStallModel": 1647
+   }
+  }
+ }
 }

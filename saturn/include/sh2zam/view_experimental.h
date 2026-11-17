@@ -112,6 +112,75 @@ bool sh2z_view_batch(sh2z_view_vertex_t *out,const sh2z_view_t *v,
 bool sh2z_view_batch_divu(sh2z_view_vertex_t *out,const sh2z_view_t *v,
     const void *positions,size_t in_stride,size_t count);
 
+/* ---- Contract tag view-edges-1 ------------------------------------------- */
+
+/** Project and classify view-space points: for each in[k], only x, y, z are
+ *  read, and out[k] is exactly what sh2z_view_batch writes after its
+ *  transform for that view position. in == out is allowed (projection in
+ *  place); otherwise the arrays must not overlap. Returns false, writing
+ *  nothing, if v is invalid, count > 0 with a null pointer, or the arrays
+ *  partly overlap. count == 0 succeeds. The _divu form uses this CPU's
+ *  hardware divider on SH-2 (see divu_experimental.h). */
+bool sh2z_view_project(sh2z_view_vertex_t *out,const sh2z_view_t *v,
+    const sh2z_view_vertex_t *in,size_t count);
+bool sh2z_view_project_divu(sh2z_view_vertex_t *out,const sh2z_view_t *v,
+    const sh2z_view_vertex_t *in,size_t count);
+
+/** Points along the view-space segment from -> to, projected.
+ *
+ *  Only the x, y, z of from and to are read. For each axis, with
+ *  delta = to - from (exact, 64-bit) and 16 extra fraction bits:
+ *      F = trunc(delta * first_num * 65536 / den)
+ *      S = trunc(delta * step_num  * 65536 / den)
+ *      P(k) = from + trunc((F + k * S) / 65536),   k = 0 .. count-1
+ *  Each P(k) is then projected and classified exactly as sh2z_view_batch does
+ *  after its transform. Six divisions per call; none per point beyond the
+ *  projection. |P(k) - exact| < 1 + (k + 1) / 65536 units per axis, where
+ *  exact = from + delta * (first_num + k * step_num) / den.
+ *
+ *  Requires den > 0 and first_num + (count - 1) * step_num <= den, so every
+ *  point lies between from and to. Points are a function of the direction:
+ *  stepping a shared edge from its other end can differ by one unit, so step
+ *  shared edges in one canonical direction.
+ *
+ *  from and to are read before anything is written; they may point into out.
+ *  Returns false, writing nothing, if v is invalid, count > 0 with a null
+ *  pointer, den == 0 or the bound above fails. count == 0 succeeds. */
+bool sh2z_view_edge_steps(sh2z_view_vertex_t *out,const sh2z_view_t *v,
+    const sh2z_view_vertex_t *from,const sh2z_view_vertex_t *to,
+    uint16_t first_num,uint16_t step_num,uint16_t den,size_t count);
+
+/** Clip a quad against the near plane only; side clipping is left to VDP1.
+ *
+ *  in[0..3] are the quad's vertices in order, as written by sh2z_view_batch
+ *  with the same view. A vertex is inside when z >= near_z. Walking the edges
+ *  in[i] -> in[(i+1) % 4] from i = 0, each inside vertex is copied unchanged
+ *  and each edge with exactly one inside end adds its crossing point:
+ *      with i the inside end and o the outside end,
+ *      z = near_z,
+ *      a = i.a + trunc((o.a - i.a) * (i.z - near_z) / (i.z - o.z))  for x, y,
+ *  projected as sh2z_view_batch would (so never NEAR). The crossing depends
+ *  only on the unordered pair of ends, so two quads sharing an edge produce
+ *  the same point.
+ *
+ *  Returns the number of vertices written:
+ *      0  all behind, or v invalid / a pointer null (nothing written)
+ *      3  one in front          4  two adjacent in front, or all four
+ *      5  three in front        6  two opposite in front (only possible for a
+ *                                  non-planar or non-convex quad)
+ *  in is read before anything is written; it may alias out. */
+unsigned sh2z_view_clip_near(sh2z_view_vertex_t out[6],const sh2z_view_t *v,
+    const sh2z_view_vertex_t in[4]);
+
+/** The same results as sh2z_view_edge_steps and sh2z_view_clip_near, but on
+ *  SH-2 each projection uses this CPU's hardware divider (see
+ *  divu_experimental.h for the caller promise). Portable builds compute in C. */
+bool sh2z_view_edge_steps_divu(sh2z_view_vertex_t *out,const sh2z_view_t *v,
+    const sh2z_view_vertex_t *from,const sh2z_view_vertex_t *to,
+    uint16_t first_num,uint16_t step_num,uint16_t den,size_t count);
+unsigned sh2z_view_clip_near_divu(sh2z_view_vertex_t out[6],const sh2z_view_t *v,
+    const sh2z_view_vertex_t in[4]);
+
 #ifdef __cplusplus
 }
 #endif

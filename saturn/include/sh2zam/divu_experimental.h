@@ -65,10 +65,13 @@ typedef struct { uint32_t dvsr,dvdnth,dvdntl; } sh2z_divu_state_t;
  *  divisor != 0 and |n| < |divisor| * 2^31. Exact; no division. */
 static inline bool sh2z_divu_fits(int32_t hi,uint32_t lo,int32_t divisor) {
     if(divisor==0)return false;
-    const uint64_t raw=((uint64_t)(uint32_t)hi<<32)|lo;
-    const uint64_t magnitude=hi<0?(uint64_t)0-raw:raw;   /* |n|, exact for n=-2^63 */
+    /* |n| as two 32-bit words (no 64-bit shifts, which SH-2 GCC may call
+     * libgcc for); n = -2^63 gives mh = 2^31. */
+    uint32_t mh=(uint32_t)hi,ml=lo;
+    if(hi<0) {ml=(uint32_t)0-lo;mh=~mh+(lo==0u?1u:0u);}
     const uint32_t d=divisor<0?(uint32_t)0-(uint32_t)divisor:(uint32_t)divisor;
-    return (magnitude>>31)<d;
+    if(mh>=UINT32_C(0x80000000))return false;     /* |n| >> 31 >= 2^32 > |d| */
+    return ((mh<<1)|(ml>>31))<d;                  /* (|n| >> 31) < |d| */
 }
 
 /** The software answer for a division that does not fit (see above). */
