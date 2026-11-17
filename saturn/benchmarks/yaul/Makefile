@@ -41,7 +41,10 @@ SH_LDFLAGS += -Wl,--undefined=_workload_prepare,--undefined=_workload_run \
   -Wl,--undefined=_workload_compile_flags
 SH_LDFLAGS += -Wl,--undefined=_view_run_portable,--undefined=_view_run_divu,--undefined=_view_run_divu_stride12 \
   -Wl,--undefined=_view_divu_probe,--undefined=_view_capacity \
-  -Wl,--undefined=_view_source_commit
+  -Wl,--undefined=_view_source_commit \
+  -Wl,--undefined=_view_edges_portable,--undefined=_view_edges_divu \
+  -Wl,--undefined=_view_clip_portable,--undefined=_view_clip_divu \
+  -Wl,--undefined=_view_project_portable,--undefined=_view_project_divu
 IP_VERSION := V0.200
 IP_RELEASE_DATE := 20261113
 IP_AREAS := JTUBKAEL

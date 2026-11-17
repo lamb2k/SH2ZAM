@@ -15,6 +15,9 @@ MODELLED. Not console timing, not emulator timing.
   2. an exactness sweep of 512 cameras x 2,048 positions, plus a 12-byte
      stride run on every eighth camera;
   3. timing on 64 cameras x 512 positions placed inside the view volume.
+  4. `edges.h`, view-edges-1: edge steps on 8,192 random edges, the near clip
+     on 65,536 quads (every in-front/behind pattern), view-space projection
+     on 262,144 points, each against its own oracle, then timing.
 - `collect.py` checks the invariants (zero mismatches, two divisions per
   timing vertex, the ELF's embedded source commit, the interpreter pin) and
   writes the results file.

@@ -32,6 +32,11 @@ assert t['verticesPerBatch']==512 and len(t['batches'])==t['poses']
 assert t['near']==0 and t['divisions']==2*512*t['poses'],'timing fixture must cost two divisions per vertex'
 m=t['medianCyclesPerVertex']
 assert m['divuRaw']<=m['divuStallModel']<=m['divuPlusLatencyPerDivision']
+e=raw['edges']
+assert e['points']>=200000 and e['mismatches']==0 and e['quads']>=65536 and e['clipMismatches']==0
+assert e['projectedPoints']>=262144 and e['projectMismatches']==0
+assert len(e['patterns'])==16 and min(e['patterns'])>0,'every near-clip in/out pattern must run'
+et=e['timing']
 
 here=Path(__file__).resolve().parent
 model=here.parent/'sh2-model'
@@ -49,6 +54,7 @@ result=dict(schema=1,kernel='view_batch',tier='MODELLED',sourceCommit=raw['sourc
       harnessSourceSHA256=sha((model/'harness.c').read_bytes()),
       dividerModelSourceSHA256=sha((model/'divider_model.h').read_bytes()),
       captureSourceSHA256=sha((here/'capture.h').read_bytes()),
+      edgesCaptureSourceSHA256=sha((here/'edges.h').read_bytes()),
       bridgeSourceSHA256=sha((here/'view_bridge.c').read_bytes()),
       collectorSourceSHA256=sha(Path(__file__).read_bytes())),
     dividerProbes=dict(count=raw['dividerProbeCount'],hardwarePath=raw['dividerProbeHardwarePath'],table=raw['dividerProbes']),
@@ -59,10 +65,23 @@ result=dict(schema=1,kernel='view_batch',tier='MODELLED',sourceCommit=raw['sourc
           {'kernel':'view_batch_divu','vertices':512,'path':'sh2-divu',
            'cycles_model':m['divuRaw'],'cycles_model_stall':m['divuStallModel'],
            'cycles_model_plus_divide_latency':m['divuPlusLatencyPerDivision'],'tier':'MODELLED',
-           'outputs_equal_portable':True}])
+           'outputs_equal_portable':True},
+          {'kernel':'view_project','points':512,'unit':'cycles per point','tier':'MODELLED',
+           'portable':et['medianCyclesPerProjectedPoint']['portable'],'divu_stall_model':et['medianCyclesPerProjectedPoint']['divuStallModel'],
+           'outputs_equal_oracle':True},
+          {'kernel':'view_edge_steps','points':64,'unit':'cycles per point','tier':'MODELLED',
+           'portable':et['medianCyclesPerPoint']['portable'],'divu_stall_model':et['medianCyclesPerPoint']['divuStallModel'],
+           'one_point_call_cycles':et['medianCyclesOnePointCall'],'outputs_equal_oracle':True},
+          {'kernel':'view_clip_near','crossings':2,'unit':'cycles per quad','tier':'MODELLED',
+           'portable':et['medianCyclesPerQuad']['portable'],'divu_stall_model':et['medianCyclesPerQuad']['divuStallModel'],
+           'outputs_equal_oracle':True}],
+    edges=e)
 a.output.parent.mkdir(parents=True,exist_ok=True)
 a.output.write_text(json.dumps(result,indent=1)+'\n')
 print('PASS: %d sweep vertices exact on both paths (%d strided); %d divider probes (%d hardware path)'%(
     s['vertices'],s['stride12Vertices'],raw['dividerProbeCount'],raw['dividerProbeHardwarePath']))
 print('cycles/vertex at 512 (median): portable %.2f, divu raw %.2f, stall model %.2f, +39/division %.2f'%(
     m['portable'],m['divuRaw'],m['divuStallModel'],m['divuPlusLatencyPerDivision']))
+print('view-edges-1: %d stepped points, %d clipped quads, %d projected points exact; project %.2f/%.2f, steps %.2f/%.2f per point, clip %d/%d per quad (portable/divu)'%(
+    e['points'],e['quads'],e['projectedPoints'],et['medianCyclesPerProjectedPoint']['portable'],et['medianCyclesPerProjectedPoint']['divuStallModel'],
+    et['medianCyclesPerPoint']['portable'],et['medianCyclesPerPoint']['divuStallModel'],et['medianCyclesPerQuad']['portable'],et['medianCyclesPerQuad']['divuStallModel']))

@@ -21,19 +21,48 @@ _Static_assert(sizeof(sh2z_view_vertex_t)==20,"vertex size");
 const char view_source_commit[]=BENCH_COMMIT;
 const uint32_t view_capacity=VIEW_CAPACITY;
 sh2z_view_t view_camera;
-sh2z_pos16_t view_input[VIEW_CAPACITY];
+/* Positions for the batch, or view-space records for sh2z_view_project:
+ * one buffer, so the ELF still fits the benchmark RAM region. */
+union { sh2z_pos16_t pos[VIEW_CAPACITY]; sh2z_view_vertex_t pts[512]; } view_input;
 sh2z_view_vertex_t view_out_portable[VIEW_CAPACITY];
 sh2z_view_vertex_t view_out_divu[VIEW_CAPACITY];
 
 uint32_t view_run_portable(uint32_t count) {
-    return sh2z_view_batch(view_out_portable,&view_camera,view_input,sizeof(view_input[0]),count);
+    return sh2z_view_batch(view_out_portable,&view_camera,view_input.pos,sizeof(view_input.pos[0]),count);
 }
 uint32_t view_run_divu(uint32_t count) {
-    return sh2z_view_batch_divu(view_out_divu,&view_camera,view_input,sizeof(view_input[0]),count);
+    return sh2z_view_batch_divu(view_out_divu,&view_camera,view_input.pos,sizeof(view_input.pos[0]),count);
 }
 
 uint32_t view_run_divu_stride12(uint32_t count) {
-    return sh2z_view_batch_divu(view_out_divu,&view_camera,view_input,2*sizeof(view_input[0]),count);
+    return sh2z_view_batch_divu(view_out_divu,&view_camera,view_input.pos,2*sizeof(view_input.pos[0]),count);
+}
+
+/* view-edges-1: the harness writes the two edge ends, the four quad corners
+ * and {first_num, step_num, den, count}. */
+sh2z_view_vertex_t view_edge_ends[2];
+sh2z_view_vertex_t view_clip_in[4];
+uint32_t view_edge_args[4];
+uint32_t view_edges_portable(void) {
+    return sh2z_view_edge_steps(view_out_portable,&view_camera,&view_edge_ends[0],&view_edge_ends[1],
+        (uint16_t)view_edge_args[0],(uint16_t)view_edge_args[1],(uint16_t)view_edge_args[2],view_edge_args[3]);
+}
+uint32_t view_edges_divu(void) {
+    return sh2z_view_edge_steps_divu(view_out_divu,&view_camera,&view_edge_ends[0],&view_edge_ends[1],
+        (uint16_t)view_edge_args[0],(uint16_t)view_edge_args[1],(uint16_t)view_edge_args[2],view_edge_args[3]);
+}
+uint32_t view_clip_portable(void) {
+    return sh2z_view_clip_near(view_out_portable,&view_camera,view_clip_in);
+}
+uint32_t view_clip_divu(void) {
+    return sh2z_view_clip_near_divu(view_out_divu,&view_camera,view_clip_in);
+}
+/* View-space points for sh2z_view_project[_divu], in view_input. */
+uint32_t view_project_portable(uint32_t count) {
+    return sh2z_view_project(view_out_portable,&view_camera,view_input.pts,count);
+}
+uint32_t view_project_divu(uint32_t count) {
+    return sh2z_view_project_divu(view_out_divu,&view_camera,view_input.pts,count);
 }
 
 /* Divider helper checks: start64/finish and an interrupted division saved and

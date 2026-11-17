@@ -15,6 +15,7 @@ ctest --test-dir build --output-on-failure
 ./build/saturn/sh2zam_batch
 ./build/saturn/sh2zam_smoke_main
 ./build/saturn/sh2zam_view
+./build/saturn/sh2zam_edges
 ```
 
 **Orbit:** `orbit.c` calls `sh2z_example_orbit()`. Expected quarter-cycle positions are (240,112), (160,168), (80,112), (160,56). Use the resulting integer position in your sprite command construction; the sample does not write VRAM.
@@ -24,6 +25,8 @@ ctest --test-dir build --output-on-failure
 **Two-job batch:** `batch.c` partitions 17 vertices into disjoint ranges and verifies identical results to the serial transform. It executes those jobs sequentially. To dispatch on two SH-2 CPUs, use your engine's scheduler and cache/ownership protocol; do not share writable matrix-stack state between jobs.
 
 **View batch:** `view.c` places a camera with `sh2z_view_place`, projects two road quads with `sh2z_view_batch`, draws the one in front and rejects the one behind the camera by ANDing outcodes. It then checks that `sh2z_view_batch_divu`, the SH-2 hardware-divider entry point, writes the same bytes. See [VIEW_BATCH.md](../VIEW_BATCH.md) and [DIVU.md](../DIVU.md); the API is experimental.
+
+**Edges and near clip:** `edges.c` cuts both side edges of a road quad where a 6-unit texture restarts with `sh2z_view_edge_steps`, and clips a quad that passes the camera with `sh2z_view_clip_near`. See [VIEW_BATCH.md](../VIEW_BATCH.md).
 
 **Hardware smoke kernel:** `saturn_smoke.c` exports `sh2z_saturn_smoke()`. The host runner prints a mask; zero is expected. The same C function can be called inside an existing Saturn game. Mask meanings are in [HARDWARE.md](../HARDWARE.md).
 
