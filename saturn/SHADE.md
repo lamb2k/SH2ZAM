@@ -123,8 +123,11 @@ division by 255 (4,496), mix without the `+32512` rounding (65,535).
 ## Evidence (MODELLED)
 
 [`benchmarks/shade-model`](benchmarks/shade-model/README.md): the library compiled for
-`-m2 -mb -O2` (GCC 13.2), executed in the pinned Yabause SH-2 interpreter (flat RAM, no
-caches or wait states; not Saturn timing). Before timing, every output of every library
+`-m2 -mb -O2` (GCC 13.2 from the pinned Yaul image), executed in the pinned Yabause SH-2
+interpreter (flat RAM, no caches or wait states; not Saturn timing). The committed
+capture [`results.json`](benchmarks/shade-model/results.json) is from
+[CI run 44107090315](https://github.com/lamb2k/SH2ZAM/actions/runs/44107090315) (source
+commit `c654d25`) and equals a local run of the same source. Before timing, every output of every library
 entry and every plain-C control is checked against the oracle: 632,538 normals, 2,574,879
 Gouraud pairs, 509,311 faces, 4,000 fog tables, 2,555,263 fog lookups, 5,172,842 fade
 colours and 205,072 frame corners.
