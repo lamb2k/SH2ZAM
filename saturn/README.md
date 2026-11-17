@@ -20,6 +20,8 @@ The maintained overview, build commands, API scope and upstream credits are in t
 - [Integer-kernel instruction model](benchmarks/integer-model/README.md)
 - [Experimental shading kernels: per-normal light, Gouraud packing, face culling, depth fog](SHADE.md)
 - [Shading-kernel instruction model](benchmarks/shade-model/README.md)
+- [Experimental variable-length decoding: bounded bit reader, length-limited canonical codes, SH-2 table decoder](VLC.md)
+- [vlc instruction model](benchmarks/vlc-model/README.md)
 - [Remaining work](PORTING_PLAN.md)
 
 Both `cmake -S .` from the repository root and `cmake -S saturn` build the Saturn library. Batch transforms now select a specialized exact kernel when the matrix proves direct accumulation safe, with a general fallback for the remaining matrices. Full SH4ZAM API parity and physical-console performance qualification remain incomplete.
