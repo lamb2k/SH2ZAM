@@ -2,12 +2,12 @@
  "schema": 1,
  "kernel": "view_batch",
  "tier": "MODELLED",
- "sourceCommit": "145723544191a8cc9a0e7fbbe3196ca869bd1c78",
+ "sourceCommit": "5faf9d23132d6b05e2db163174680c4b11bae5f0",
  "run": {
   "environment": "isolated-sh2-interpreter",
-  "elfSHA256": "404dc3b53fc144b364a9a63ddac8d258b837e2facb07db0dfc18624c95348815",
-  "symbolSHA256": "629db99e99d1a23c6fffaa46547f67be57f75795585b37d2f3e05db729630203",
-  "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44086440203",
+  "elfSHA256": "04a1ed0805c04d6d8fea3d32ea6bd35f0d8e3db7853b31a847e848e4df474fcc",
+  "symbolSHA256": "97492fe0087cd73b10b8ae8e31f5629561399ca2ed848a6cf2e816280b28f61c",
+  "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44106757612",
   "interpreterRepository": "https://github.com/Yabause/yabause",
   "interpreterCommit": "7e38821dbac265490f115e163c523a939acda759",
   "interpreterSourceSHA256": "28f938f95842d0127c31c01a23ccffc3a53243786b405a4afbbc2f34764ce36c",
@@ -33,9 +33,10 @@
   "edgesCaptureSourceSHA256": "62b617ae4691c5437a4dd173a1f381be5058eed34b4dc729fa74b974e3e727e8",
   "guardCaptureSourceSHA256": "50a305fe2b1adab1b767ec3d585f4f61eab633b1aa0977729623b68f5a8c7713",
   "mergeCaptureSourceSHA256": "075d434c324cc41653baf46d1f8e2877788b93ec72969c7aac07ac458555760f",
-  "roundCaptureSourceSHA256": "92c876c1b8bf7ba47d34b1300891ce48c756c0f4d29deae12e1ddd8c9461b4c1",
-  "bridgeSourceSHA256": "ad2637b455581f86b65d2219a174917f6a9c6cde1fa73c0fcbf06f45d0482535",
-  "collectorSourceSHA256": "2532e4ad869f437d17b35ac49a5e9f7bc14bc16488aa81d10c9412944a9ffe20"
+  "roundCaptureSourceSHA256": "de97e6fec702aadaf731207cdfef157f3c8b1579db1c4b473102f64eef9ee354",
+  "guardSrcCaptureSourceSHA256": "fb332a90ddcbda72b5cfa5532c1303ca38b570773f83dda5174d14efb8a8b457",
+  "bridgeSourceSHA256": "f6a4e24271f37d1ce38055eea327c0ec3d0461a3dcf6cc9e515c521e92cce7c9",
+  "collectorSourceSHA256": "2e76bb2005fd8a37493b63322a91f6f039fcc21f20ad4a1993396323b80e74d6"
  },
  "dividerProbes": {
   "count": 2023,
@@ -999,6 +1000,82 @@
    "trunc_portable": 11620.0,
    "trunc_divu_stall_model": 7595.0,
    "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_guard_src_inside",
+   "unit": "cycles per call",
+   "band": [
+    -900,
+    -900,
+    900,
+    900
+   ],
+   "attrs": 2,
+   "max_out": 16,
+   "tier": "MODELLED",
+   "output_vertices": 4.0,
+   "trunc_portable": 4518,
+   "trunc_divu_stall_model": 2834,
+   "src_portable": 4277,
+   "src_divu_stall_model": 2873,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_guard_src_side",
+   "unit": "cycles per call",
+   "band": [
+    -900,
+    -900,
+    900,
+    900
+   ],
+   "attrs": 2,
+   "max_out": 16,
+   "tier": "MODELLED",
+   "output_vertices": 5.0,
+   "trunc_portable": 6896,
+   "trunc_divu_stall_model": 4496,
+   "src_portable": 6774,
+   "src_divu_stall_model": 4577,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_guard_src_nearSide",
+   "unit": "cycles per call",
+   "band": [
+    -900,
+    -900,
+    900,
+    900
+   ],
+   "attrs": 2,
+   "max_out": 16,
+   "tier": "MODELLED",
+   "output_vertices": 5.0,
+   "trunc_portable": 11617,
+   "trunc_divu_stall_model": 7598,
+   "src_portable": 9790,
+   "src_divu_stall_model": 6865,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_guard_src_roadNear",
+   "unit": "cycles per call",
+   "band": [
+    -900,
+    -900,
+    900,
+    900
+   ],
+   "attrs": 0,
+   "max_out": 10,
+   "tier": "MODELLED",
+   "output_vertices": 6.0,
+   "trunc_portable": 12636,
+   "trunc_divu_stall_model": 8347,
+   "src_portable": 12544,
+   "src_divu_stall_model": 8856,
+   "outputs_equal_oracle": true
   }
  ],
  "edges": {
@@ -1326,6 +1403,121 @@
      "floorDivu": 7494.0,
      "truncPortable": 11620.0,
      "truncDivu": 7595.0
+    }
+   }
+  }
+ },
+ "guardSrc": {
+  "trials": 32768,
+  "roadTrials": 16384,
+  "vertices": 134608,
+  "roadPolygons": 16155,
+  "roadVertices": 65133,
+  "mismatches": 0,
+  "overflows": 3645,
+  "snapFailures": 3055,
+  "empty": 12791,
+  "sizes": [
+   0,
+   0,
+   0,
+   1413,
+   21632,
+   2494,
+   1270,
+   933,
+   915,
+   512,
+   289,
+   98,
+   61,
+   27,
+   14,
+   3,
+   0
+  ],
+  "timing": {
+   "trials": 64,
+   "band": [
+    -900,
+    -900,
+    900,
+    900
+   ],
+   "inside": {
+    "attrs": 2,
+    "maxOut": 16,
+    "meanOutputVertices": 4.0,
+    "divisionsPerCall": {
+     "trunc": 8.0,
+     "src": 8.0
+    },
+    "median": {
+     "truncPortable": 4518,
+     "truncDivu": 2834,
+     "srcPortable": 4277,
+     "srcDivu": 2873
+    },
+    "max": {
+     "truncDivu": 2834,
+     "srcDivu": 2873
+    }
+   },
+   "side": {
+    "attrs": 2,
+    "maxOut": 16,
+    "meanOutputVertices": 5.0,
+    "divisionsPerCall": {
+     "trunc": 12.0,
+     "src": 13.0
+    },
+    "median": {
+     "truncPortable": 6896,
+     "truncDivu": 4496,
+     "srcPortable": 6774,
+     "srcDivu": 4577
+    },
+    "max": {
+     "truncDivu": 4519,
+     "srcDivu": 4639
+    }
+   },
+   "nearSide": {
+    "attrs": 2,
+    "maxOut": 16,
+    "meanOutputVertices": 5.0,
+    "divisionsPerCall": {
+     "trunc": 23.12,
+     "src": 18.0
+    },
+    "median": {
+     "truncPortable": 11617,
+     "truncDivu": 7598,
+     "srcPortable": 9790,
+     "srcDivu": 6865
+    },
+    "max": {
+     "truncDivu": 7927,
+     "srcDivu": 6924
+    }
+   },
+   "roadNear": {
+    "attrs": 0,
+    "maxOut": 10,
+    "meanOutputVertices": 6.0,
+    "divisionsPerCall": {
+     "trunc": 24.0,
+     "src": 22.64
+    },
+    "median": {
+     "truncPortable": 12636,
+     "truncDivu": 8347,
+     "srcPortable": 12544,
+     "srcDivu": 8856
+    },
+    "max": {
+     "truncDivu": 8380,
+     "srcDivu": 8920
     }
    }
   }

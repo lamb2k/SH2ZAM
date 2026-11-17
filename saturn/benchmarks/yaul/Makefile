@@ -9,7 +9,8 @@ SH_SRCS := main.c ../../../exhibits/bridge.c \
   ../../src/sh2zam_angles.c ../../src/sh2zam_transform.c ../../src/sh2zam_geometry.c \
   ../../src/sh2zam_prepared.c ../../src/sh2zam_batch_sh2.c ../../src/sh2zam_reuse.c \
   ../../src/sh2zam_rotation_batch.c ../../src/sh2zam_spatial.c \
-  ../../src/sh2zam_view.c ../../src/sh2zam_view_round.c ../../src/sh2zam_divu.c
+  ../../src/sh2zam_view.c ../../src/sh2zam_view_round.c ../../src/sh2zam_view_guard_src.c \
+  ../../src/sh2zam_divu.c
 SH_SRCS += ../view-model/view_bridge.c
 SH_SRCS += ../math-model/math_bridge.c ../math-model/legacy_sh2zam.c \
   ../math-model/legacy_sh2zam_trig.c ../math-model/legacy_sh2zam_angles.c \
@@ -51,7 +52,8 @@ SH_LDFLAGS += -Wl,--undefined=_view_run_portable,--undefined=_view_run_divu,--un
   -Wl,--undefined=_view_round_project_portable,--undefined=_view_round_project_divu \
   -Wl,--undefined=_view_round_edges_portable,--undefined=_view_round_edges_divu \
   -Wl,--undefined=_view_round_clip_portable,--undefined=_view_round_clip_divu \
-  -Wl,--undefined=_view_round_guard_portable,--undefined=_view_round_guard_divu
+  -Wl,--undefined=_view_round_guard_portable,--undefined=_view_round_guard_divu \
+  -Wl,--undefined=_view_src_guard_portable,--undefined=_view_src_guard_divu,--undefined=_view_src_guard_args
 IP_VERSION := V0.200
 IP_RELEASE_DATE := 20261113
 IP_AREAS := JTUBKAEL

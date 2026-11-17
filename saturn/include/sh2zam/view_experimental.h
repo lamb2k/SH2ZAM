@@ -383,6 +383,80 @@ int sh2z_view_clip_guard_trunc_divu(sh2z_view_guard_vertex_t out[SH2Z_VIEW_GUARD
     const sh2z_view_t *v,const int16_t guard[4],
     const sh2z_view_guard_vertex_t *in,unsigned count,unsigned attrs);
 
+/* ---- Contract tag view-guard-src-1 --------------------------------------- */
+
+#define SH2Z_VIEW_GUARD_SNAP (-3)
+
+/** Guard-band clip in a source clipper's order (opt-in). A renderer that
+ *  draws each clipped polygon as a fan with the whole texture mapped onto
+ *  every fan piece shows the polygon's starting vertex, its order and every
+ *  coordinate. sh2z_view_clip_guard_trunc makes the same cyclic polygon up
+ *  to rounding, but often rotated. These functions reproduce a source
+ *  clipper vertex for vertex.
+ *
+ *  Planes, their order and the inside test (d >= 0) are those of
+ *  sh2z_view_clip_guard, written with a Q16 centre (Cx, Cy):
+ *      left    d = focal_x*x - KL*z     KL = 65536*left - Cx
+ *      right   d = KR*z - focal_x*x     KR = 65536*right - Cx
+ *      top     d = KT*z - focal_y*y     KT = Cy - 65536*top
+ *      bottom  d = focal_y*y - KB*z     KB = Cy - 65536*bottom
+ *  These entry points use Cx = 65536*center_x and Cy = 65536*center_y.
+ *  Three things differ from sh2z_view_clip_guard_trunc:
+ *
+ *  1. Order. Each pass walks the edges previous -> current, starting with
+ *     (last, first), then (first, second), and so on. For each edge it emits
+ *     the crossing if exactly one end is inside, then the current corner if
+ *     it is inside. A pass with every corner inside changes nothing.
+ *  2. Crossing, measured from the previous corner P towards the current
+ *     corner Q, with dP and dQ their distances to the plane:
+ *         t = floor(|dP| * 2^32 / (|dP| + |dQ|))        (exact; 2^32 if dQ = 0)
+ *         a = P.a + sign(Q.a - P.a) * floor(|Q.a - P.a| * t / 2^32)
+ *     for x, y, z and attr[0..attrs-1]. The crossing depends on the edge's
+ *     direction: a shared edge walked the other way can differ by a unit.
+ *  3. Snap. Then x, y and z (not the attributes) are moved inside every
+ *     plane clipped so far, this pass's included, in this order:
+ *         z = max(z, near_z);  once far is done:  z = min(z, far_z)
+ *         left done:    x = max(x, ceil(KL*z / focal_x))
+ *         right done:   x = min(x, floor(KR*z / focal_x))
+ *         top done:     y = min(y, floor(KT*z / focal_y))
+ *         bottom done:  y = max(y, ceil(KB*z / focal_y))
+ *     computed exactly. The call fails with SH2Z_VIEW_GUARD_SNAP if one of
+ *     those ceil or floor values for a plane done falls outside int32, used
+ *     or not, or if the moved point is outside a plane done. That happens
+ *     only when no integer x (or y) lies between left and right (top and
+ *     bottom) at that depth.
+ *
+ *  Every output vertex then lies inside all six planes and is projected by
+ *  the view-round-1 rule with the Q16 centre:
+ *      sx = trunc((Cx + trunc(focal_x*x/z)) / 65536)
+ *      sy = trunc((Cy - trunc(focal_y*y/z)) / 65536)
+ *  which here is exactly sh2z_view_project_trunc. sx and sy fall inside the
+ *  guard rectangle without a clamp. outcode is computed from sx and sy
+ *  against v->clip (never NEAR or FAR); reserved bytes and attr[attrs..3]
+ *  are zero.
+ *
+ *  max_out (3..16) is the most vertices any pass may produce. A pass that
+ *  would produce more fails with SH2Z_VIEW_GUARD_OVERFLOW, so passing a
+ *  source's own buffer size makes the call fail exactly where it fails. A
+ *  pass that keeps every corner counts too: a polygon of more than max_out
+ *  corners fails unless the near plane empties it or cuts it to max_out
+ *  corners or fewer.
+ *
+ *  Returns 0 (every point outside some plane), 3..max_out vertices written,
+ *  or, with nothing written: SH2Z_VIEW_GUARD_INVALID under the argument
+ *  rules of sh2z_view_clip_guard or with max_out outside 3..16,
+ *  SH2Z_VIEW_GUARD_OVERFLOW, or SH2Z_VIEW_GUARD_SNAP. Of these two, the
+ *  first one the passes meet in the order above is returned. in is read
+ *  before out is written, so they may overlap. The _divu form gives the same
+ *  bytes and uses this CPU's hardware divider on SH-2 (see
+ *  divu_experimental.h). */
+int sh2z_view_clip_guard_src_trunc(sh2z_view_guard_vertex_t out[SH2Z_VIEW_GUARD_MAX_OUT],
+    const sh2z_view_t *v,const int16_t guard[4],
+    const sh2z_view_guard_vertex_t *in,unsigned count,unsigned attrs,unsigned max_out);
+int sh2z_view_clip_guard_src_trunc_divu(sh2z_view_guard_vertex_t out[SH2Z_VIEW_GUARD_MAX_OUT],
+    const sh2z_view_t *v,const int16_t guard[4],
+    const sh2z_view_guard_vertex_t *in,unsigned count,unsigned attrs,unsigned max_out);
+
 #ifdef __cplusplus
 }
 #endif
