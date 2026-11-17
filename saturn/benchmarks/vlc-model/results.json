@@ -1,0 +1,497 @@
+{
+ "schema": 1,
+ "kind": "Yabause isolated SH2 interpreter flat-RAM model, not Saturn timing",
+ "verified": {
+  "builds": 2000,
+  "refusals": 728,
+  "streams": 8000,
+  "truncatedStreams": 2000,
+  "randomFormatTables": 501,
+  "oddAddressStreams": 2000,
+  "symbolsPerEntry": 3355101,
+  "entries": "fast_build, plain_build, fast_lengths tables; fast_decode, portable_decode, plain_decode symbols and return values, fast and portable reader state, against tests/vlc_oracle.h; no read past any stream"
+ },
+ "rows": {
+  "zipf256_w6_l12": {
+   "description": "256 symbols, frequency 1/rank (Zipf)",
+   "w": 6,
+   "lmax": 12,
+   "corpora": 16,
+   "symbols": 4096,
+   "meanBitsPerSymbol": 6.2543,
+   "decode": {
+    "fast": {
+     "cyclesPerSymbol": 40.51,
+     "cyclesPerBit": 6.48,
+     "instructionsPerSymbol": 34.1,
+     "call1": {
+      "meanCycles": 171.44,
+      "medianCycles": 163.0,
+      "minCycles": 163,
+      "maxCycles": 190,
+      "meanInstructions": 155.94
+     },
+     "call4096": {
+      "meanCycles": 166067.38,
+      "medianCycles": 165599.5,
+      "minCycles": 163715,
+      "maxCycles": 168699,
+      "meanInstructions": 139784.56
+     }
+    },
+    "portable": {
+     "cyclesPerSymbol": 73.92,
+     "cyclesPerBit": 11.82,
+     "instructionsPerSymbol": 63.06,
+     "call1": {
+      "meanCycles": 193.88,
+      "medianCycles": 180.0,
+      "minCycles": 179,
+      "maxCycles": 227,
+      "meanInstructions": 176.81
+     },
+     "call4096": {
+      "meanCycles": 302900.25,
+      "medianCycles": 302126.5,
+      "minCycles": 299065,
+      "maxCycles": 307063,
+      "meanInstructions": 258413.38
+     }
+    },
+    "plain": {
+     "cyclesPerSymbol": 75.31,
+     "cyclesPerBit": 12.04,
+     "instructionsPerSymbol": 63.97,
+     "call1": {
+      "meanCycles": 162.25,
+      "medianCycles": 149.0,
+      "minCycles": 148,
+      "maxCycles": 194,
+      "meanInstructions": 142.19
+     },
+     "call4096": {
+      "meanCycles": 308560.19,
+      "medianCycles": 307724.5,
+      "minCycles": 304959,
+      "maxCycles": 312737,
+      "meanInstructions": 262086.56
+     }
+    }
+   },
+   "build": {
+    "fast": {
+     "meanCycles": 140645.0,
+     "medianCycles": 140645.0,
+     "minCycles": 140645,
+     "maxCycles": 140645,
+     "meanInstructions": 125375.0
+    },
+    "plain": {
+     "meanCycles": 2818306.38,
+     "medianCycles": 2818835.0,
+     "minCycles": 2814846,
+     "maxCycles": 2820615,
+     "meanInstructions": 2371588.38
+    },
+    "fromLengths": {
+     "meanCycles": 68801.0,
+     "medianCycles": 68801.0,
+     "minCycles": 68801,
+     "maxCycles": 68801,
+     "meanInstructions": 60338.0
+    }
+   },
+   "fastSpeedup": {
+    "portable": 1.82,
+    "plain": 1.86
+   },
+   "buildSpeedup": 20.04
+  },
+  "uniform256_w8_l8": {
+   "description": "256 symbols, near-uniform frequencies",
+   "w": 8,
+   "lmax": 8,
+   "corpora": 16,
+   "symbols": 4096,
+   "meanBitsPerSymbol": 8.0,
+   "decode": {
+    "fast": {
+     "cyclesPerSymbol": 31.0,
+     "cyclesPerBit": 3.87,
+     "instructionsPerSymbol": 26.0,
+     "call1": {
+      "meanCycles": 163.0,
+      "medianCycles": 163.0,
+      "minCycles": 163,
+      "maxCycles": 163,
+      "meanInstructions": 149.0
+     },
+     "call4096": {
+      "meanCycles": 127097.0,
+      "medianCycles": 127097.0,
+      "minCycles": 127097,
+      "maxCycles": 127097,
+      "meanInstructions": 106608.0
+     }
+    },
+    "portable": {
+     "cyclesPerSymbol": 53.0,
+     "cyclesPerBit": 6.62,
+     "instructionsPerSymbol": 46.0,
+     "call1": {
+      "meanCycles": 172.0,
+      "medianCycles": 172.0,
+      "minCycles": 172,
+      "maxCycles": 172,
+      "meanInstructions": 159.0
+     },
+     "call4096": {
+      "meanCycles": 217192.0,
+      "medianCycles": 217192.0,
+      "minCycles": 217192,
+      "maxCycles": 217192,
+      "meanInstructions": 188510.0
+     }
+    },
+    "plain": {
+     "cyclesPerSymbol": 53.49,
+     "cyclesPerBit": 6.69,
+     "instructionsPerSymbol": 45.99,
+     "call1": {
+      "meanCycles": 141.0,
+      "medianCycles": 141.0,
+      "minCycles": 141,
+      "maxCycles": 141,
+      "meanInstructions": 125.0
+     },
+     "call4096": {
+      "meanCycles": 219194.0,
+      "medianCycles": 219194.0,
+      "minCycles": 219194,
+      "maxCycles": 219194,
+      "meanInstructions": 188470.0
+     }
+    }
+   },
+   "build": {
+    "fast": {
+     "meanCycles": 111818.94,
+     "medianCycles": 111881.0,
+     "minCycles": 111153,
+     "maxCycles": 112329,
+     "meanInstructions": 100195.0
+    },
+    "plain": {
+     "meanCycles": 3200757.81,
+     "medianCycles": 3202454.0,
+     "minCycles": 3175426,
+     "maxCycles": 3220891,
+     "meanInstructions": 2639950.38
+    },
+    "fromLengths": {
+     "meanCycles": 50593.0,
+     "medianCycles": 50593.0,
+     "minCycles": 50593,
+     "maxCycles": 50593,
+     "meanInstructions": 44664.0
+    }
+   },
+   "fastSpeedup": {
+    "portable": 1.71,
+    "plain": 1.73
+   },
+   "buildSpeedup": 28.62
+  },
+  "longtail256_w6_l12": {
+   "description": "30 frequent symbols (doubling every two), 226 rare",
+   "w": 6,
+   "lmax": 12,
+   "corpora": 16,
+   "symbols": 4096,
+   "meanBitsPerSymbol": 3.2586,
+   "decode": {
+    "fast": {
+     "cyclesPerSymbol": 24.99,
+     "cyclesPerBit": 7.67,
+     "instructionsPerSymbol": 20.91,
+     "call1": {
+      "meanCycles": 163.0,
+      "medianCycles": 163.0,
+      "minCycles": 163,
+      "maxCycles": 163,
+      "meanInstructions": 149.0
+     },
+     "call4096": {
+      "meanCycles": 102510.12,
+      "medianCycles": 102472.5,
+      "minCycles": 101620,
+      "maxCycles": 103671,
+      "meanInstructions": 85795.88
+     }
+    },
+    "portable": {
+     "cyclesPerSymbol": 48.21,
+     "cyclesPerBit": 14.79,
+     "instructionsPerSymbol": 40.27,
+     "call1": {
+      "meanCycles": 177.88,
+      "medianCycles": 179.0,
+      "minCycles": 176,
+      "maxCycles": 179,
+      "meanInstructions": 163.25
+     },
+     "call4096": {
+      "meanCycles": 197594.69,
+      "medianCycles": 197510.5,
+      "minCycles": 196101,
+      "maxCycles": 199484,
+      "meanInstructions": 165062.38
+     }
+    },
+    "plain": {
+     "cyclesPerSymbol": 50.62,
+     "cyclesPerBit": 15.53,
+     "instructionsPerSymbol": 42.93,
+     "call1": {
+      "meanCycles": 146.88,
+      "medianCycles": 148.0,
+      "minCycles": 145,
+      "maxCycles": 148,
+      "meanInstructions": 129.25
+     },
+     "call4096": {
+      "meanCycles": 207430.88,
+      "medianCycles": 207361.0,
+      "minCycles": 205967,
+      "maxCycles": 209322,
+      "meanInstructions": 175936.06
+     }
+    }
+   },
+   "build": {
+    "fast": {
+     "meanCycles": 150769.0,
+     "medianCycles": 150769.0,
+     "minCycles": 150769,
+     "maxCycles": 150769,
+     "meanInstructions": 134472.0
+    },
+    "plain": {
+     "meanCycles": 2853780.25,
+     "medianCycles": 2854380.0,
+     "minCycles": 2846687,
+     "maxCycles": 2857553,
+     "meanInstructions": 2400162.94
+    },
+    "fromLengths": {
+     "meanCycles": 74471.0,
+     "medianCycles": 74471.0,
+     "minCycles": 74471,
+     "maxCycles": 74471,
+     "meanInstructions": 65113.0
+    }
+   },
+   "fastSpeedup": {
+    "portable": 1.93,
+    "plain": 2.03
+   },
+   "buildSpeedup": 18.93
+  },
+  "few40_w5_l10": {
+   "description": "40 draws of random symbols with weights 2^0..2^13",
+   "w": 5,
+   "lmax": 10,
+   "corpora": 16,
+   "symbols": 4096,
+   "meanBitsPerSymbol": 3.6096,
+   "decode": {
+    "fast": {
+     "cyclesPerSymbol": 25.61,
+     "cyclesPerBit": 7.09,
+     "instructionsPerSymbol": 21.45,
+     "call1": {
+      "meanCycles": 164.69,
+      "medianCycles": 163.0,
+      "minCycles": 163,
+      "maxCycles": 190,
+      "meanInstructions": 150.38
+     },
+     "call4096": {
+      "meanCycles": 105037.56,
+      "medianCycles": 104708.5,
+      "minCycles": 100808,
+      "maxCycles": 113076,
+      "meanInstructions": 87975.56
+     }
+    },
+    "portable": {
+     "cyclesPerSymbol": 50.14,
+     "cyclesPerBit": 13.89,
+     "instructionsPerSymbol": 41.81,
+     "call1": {
+      "meanCycles": 181.56,
+      "medianCycles": 179.0,
+      "minCycles": 176,
+      "maxCycles": 228,
+      "meanInstructions": 166.31
+     },
+     "call4096": {
+      "meanCycles": 205525.12,
+      "medianCycles": 205299.0,
+      "minCycles": 196615,
+      "maxCycles": 217446,
+      "meanInstructions": 171376.12
+     }
+    },
+    "plain": {
+     "cyclesPerSymbol": 52.55,
+     "cyclesPerBit": 14.56,
+     "instructionsPerSymbol": 44.38,
+     "call1": {
+      "meanCycles": 150.44,
+      "medianCycles": 148.0,
+      "minCycles": 145,
+      "maxCycles": 195,
+      "meanInstructions": 132.19
+     },
+     "call4096": {
+      "meanCycles": 215351.38,
+      "medianCycles": 215146.0,
+      "minCycles": 206567,
+      "maxCycles": 226750,
+      "meanInstructions": 181866.56
+     }
+    }
+   },
+   "build": {
+    "fast": {
+     "meanCycles": 40621.75,
+     "medianCycles": 40607.0,
+     "minCycles": 38704,
+     "maxCycles": 42416,
+     "meanInstructions": 35523.75
+    },
+    "plain": {
+     "meanCycles": 187935.38,
+     "medianCycles": 188780.5,
+     "minCycles": 169063,
+     "maxCycles": 195793,
+     "meanInstructions": 154754.56
+    },
+    "fromLengths": {
+     "meanCycles": 24271.56,
+     "medianCycles": 24302.0,
+     "minCycles": 23788,
+     "maxCycles": 24808,
+     "meanInstructions": 21073.5
+    }
+   },
+   "fastSpeedup": {
+    "portable": 1.96,
+    "plain": 2.05
+   },
+   "buildSpeedup": 4.63
+  },
+  "geometric16_w8_l12": {
+   "description": "16 symbols, each half as frequent as the last",
+   "w": 8,
+   "lmax": 12,
+   "corpora": 16,
+   "symbols": 4096,
+   "meanBitsPerSymbol": 1.5354,
+   "decode": {
+    "fast": {
+     "cyclesPerSymbol": 20.49,
+     "cyclesPerBit": 13.35,
+     "instructionsPerSymbol": 17.11,
+     "call1": {
+      "meanCycles": 163.0,
+      "medianCycles": 163.0,
+      "minCycles": 163,
+      "maxCycles": 163,
+      "meanInstructions": 149.0
+     },
+     "call4096": {
+      "meanCycles": 84078.38,
+      "medianCycles": 84067.0,
+      "minCycles": 83963,
+      "maxCycles": 84249,
+      "meanInstructions": 70207.62
+     }
+    },
+    "portable": {
+     "cyclesPerSymbol": 40.38,
+     "cyclesPerBit": 26.3,
+     "instructionsPerSymbol": 33.27,
+     "call1": {
+      "meanCycles": 172.38,
+      "medianCycles": 172.0,
+      "minCycles": 172,
+      "maxCycles": 175,
+      "meanInstructions": 159.25
+     },
+     "call4096": {
+      "meanCycles": 165509.5,
+      "medianCycles": 165522.0,
+      "minCycles": 165272,
+      "maxCycles": 165783,
+      "meanInstructions": 136415.62
+     }
+    },
+    "plain": {
+     "cyclesPerSymbol": 43.03,
+     "cyclesPerBit": 28.02,
+     "instructionsPerSymbol": 36.61,
+     "call1": {
+      "meanCycles": 141.38,
+      "medianCycles": 141.0,
+      "minCycles": 141,
+      "maxCycles": 144,
+      "meanInstructions": 125.25
+     },
+     "call4096": {
+      "meanCycles": 176337.69,
+      "medianCycles": 176334.0,
+      "minCycles": 176090,
+      "maxCycles": 176629,
+      "meanInstructions": 150029.0
+     }
+    }
+   },
+   "build": {
+    "fast": {
+     "meanCycles": 27938.38,
+     "medianCycles": 27928.5,
+     "minCycles": 27666,
+     "maxCycles": 28285,
+     "meanInstructions": 23882.62
+    },
+    "plain": {
+     "meanCycles": 584280.5,
+     "medianCycles": 584302.0,
+     "minCycles": 584110,
+     "maxCycles": 584400,
+     "meanInstructions": 447180.25
+    },
+    "fromLengths": {
+     "meanCycles": 23949.06,
+     "medianCycles": 23949.0,
+     "minCycles": 23949,
+     "maxCycles": 23950,
+     "meanInstructions": 20305.12
+    }
+   },
+   "fastSpeedup": {
+    "portable": 1.97,
+    "plain": 2.1
+   },
+   "buildSpeedup": 20.91
+  }
+ },
+ "label": "MODELLED: executed SH-2 instructions in the Yabause interpreter; flat RAM, no caches or wait states; not Saturn hardware",
+ "sourceCommit": "5a5f54bdf69172424df42aea04e64b2a46fda6f6",
+ "elfSha256": "fa2178a77064836f2111b779d95f11f77f30e4540994ad74e798c2ddd0f9cc18",
+ "toolchain": "Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)",
+ "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44179557524",
+ "yabauseCommit": "7e38821dbac265490f115e163c523a939acda759"
+}

@@ -195,6 +195,16 @@ reciprocal multiplies in place of its divisions. Host-exact tested against an in
 and costed in the SH-2 instruction model (modelled, no console run). See
 [the shading guide](saturn/SHADE.md).
 
+## Variable-length decoding
+
+[`sh2zam/vlc_experimental.h`](saturn/include/sh2zam/vlc_experimental.h) (contract tag `vlc-1`)
+decodes prefix-coded byte symbols from a 16-bit-unit bit stream: a bounded marker-bit reader
+that never reads past the stream and reports truncation, a length-limited canonical code
+builder (from frequencies or from code lengths), a table check for untrusted tables, and a
+two-level table decoder with a hand-written SH-2 kernel (`DMULU.L` in place of variable
+shifts). Host-exact tested against an independent oracle under ASan/UBSan and costed in the
+SH-2 instruction model (modelled, no console run). See [the vlc guide](saturn/VLC.md).
+
 ## Git submodule
 
 ```sh
