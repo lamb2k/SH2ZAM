@@ -2,12 +2,12 @@
  "schema": 1,
  "kernel": "view_batch",
  "tier": "MODELLED",
- "sourceCommit": "2496b96e3b0ef3d756b559be5df71fca41b70c4f",
+ "sourceCommit": "b6306fe92db00ad2f232e94b37dfde7642ce6dd4",
  "run": {
   "environment": "isolated-sh2-interpreter",
-  "elfSHA256": "b519745909f951d815ea99f91fd6e22b04bc443eb410a52b37f21a872db3c787",
-  "symbolSHA256": "84aaf0a51446bf07eb5ae0ec82602b2532ed6d3abeff663d69a945c8a4548414",
-  "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/43995583849",
+  "elfSHA256": "f50fdc7c53a2959abf1e486750b1ba676ba3be7b51f7b1abb4734e0fa825f19d",
+  "symbolSHA256": "035263e80a4aa1d29bc035319e169e9aa113a789d723587358f0ce2ab3c7df10",
+  "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44011781668",
   "interpreterRepository": "https://github.com/Yabause/yabause",
   "interpreterCommit": "7e38821dbac265490f115e163c523a939acda759",
   "interpreterSourceSHA256": "28f938f95842d0127c31c01a23ccffc3a53243786b405a4afbbc2f34764ce36c",
@@ -29,10 +29,11 @@
   ],
   "harnessSourceSHA256": "2858d53b33acf3cd61092d29e11c5e672e56fb99ef76a893f2153f43e3df78b9",
   "dividerModelSourceSHA256": "afa130ede190f211d047e1637a3fccbbfe87c5f43aa56f4e43b0af7e9290e18d",
-  "captureSourceSHA256": "9fc7b12f3b0e6e8aeb0b2b630b2ffe7a808c9a149922d5e4dc0aba52afe3ded3",
-  "edgesCaptureSourceSHA256": "388c247c7d0e177f5ac34cc67f0b03a4206e99b4377a8f37fe744f47d833fac0",
-  "bridgeSourceSHA256": "59f2a5ad2b7aa4049ee1a04d3ae7c8a4262af68feb6affb925552ae755520749",
-  "collectorSourceSHA256": "137abbc23a15953199924a3b38c2e22b8bb55fa2d7479d30195bf13722ef95bd"
+  "captureSourceSHA256": "28a0e5498c9fea913758fae8dd1f73271896e58aef88fc0a8fbd82ab2aebf6c2",
+  "edgesCaptureSourceSHA256": "62b617ae4691c5437a4dd173a1f381be5058eed34b4dc729fa74b974e3e727e8",
+  "guardCaptureSourceSHA256": "8719b349e3de3d0328eafe6ee0509b24900e95055e3bb3648a5249d8513570bc",
+  "bridgeSourceSHA256": "a8ba71ad3b885a73e586448fd13a7830188ac0fc2df0c04e21f6d01918e280f8",
+  "collectorSourceSHA256": "f319422b1cbc0510fcbfa2c67a91dea5479b3f42e586b010ae13651e909032c5"
  },
  "dividerProbes": {
   "count": 2023,
@@ -773,6 +774,57 @@
    "portable": 3099,
    "divu_stall_model": 1647,
    "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_clip_guard",
+   "shape": "inside",
+   "band": [
+    -900,
+    -900,
+    900,
+    900
+   ],
+   "attrs": 2,
+   "unit": "cycles per quad",
+   "tier": "MODELLED",
+   "output_vertices": 4.0,
+   "portable": 4484,
+   "divu_stall_model": 2752,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_clip_guard",
+   "shape": "side",
+   "band": [
+    -900,
+    -900,
+    900,
+    900
+   ],
+   "attrs": 2,
+   "unit": "cycles per quad",
+   "tier": "MODELLED",
+   "output_vertices": 5.0,
+   "portable": 6809,
+   "divu_stall_model": 4371,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_clip_guard",
+   "shape": "nearSide",
+   "band": [
+    -900,
+    -900,
+    900,
+    900
+   ],
+   "attrs": 2,
+   "unit": "cycles per quad",
+   "tier": "MODELLED",
+   "output_vertices": 5.0,
+   "portable": 11556,
+   "divu_stall_model": 7498,
+   "outputs_equal_oracle": true
   }
  ],
  "edges": {
@@ -824,6 +876,67 @@
    "medianCyclesPerQuad": {
     "portable": 3099,
     "divuStallModel": 1647
+   }
+  }
+ },
+ "guard": {
+  "trials": 65536,
+  "vertices": 261395,
+  "mismatches": 0,
+  "overflows": 3,
+  "empty": 19290,
+  "countChanged": 57616,
+  "sizes": [
+   19290,
+   0,
+   0,
+   3849,
+   17370,
+   6951,
+   4376,
+   3733,
+   3723,
+   2594,
+   1646,
+   997,
+   591,
+   266,
+   99,
+   35,
+   13
+  ],
+  "timing": {
+   "trials": 64,
+   "band": [
+    -900,
+    -900,
+    900,
+    900
+   ],
+   "attrs": 2,
+   "inside": {
+    "meanOutputVertices": 4.0,
+    "medianCycles": {
+     "portable": 4484,
+     "divuStallModel": 2752
+    },
+    "divisionsPerCall": 8.0
+   },
+   "side": {
+    "meanOutputVertices": 5.0,
+    "medianCycles": {
+     "portable": 6809,
+     "divuStallModel": 4371
+    },
+    "divisionsPerCall": 12.0
+   },
+   "nearSide": {
+    "meanOutputVertices": 5.0,
+    "medianCycles": {
+     "portable": 11556,
+     "divuStallModel": 7498
+    },
+    "divisionsPerCall": 22.94
    }
   }
  }
