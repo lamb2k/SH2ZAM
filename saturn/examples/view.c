@@ -20,6 +20,10 @@ int main(void) {
                                 {-4,0,-30},{4,0,-30},{4,0,-20},{-4,0,-20}};
     sh2z_view_vertex_t out[8];
     if(!sh2z_view_batch(out,&view,road,sizeof(road[0]),8))return 1;
+    /* Same bytes from the hardware-divider entry point (portable on a host). */
+    sh2z_view_vertex_t fast[8];
+    if(!sh2z_view_batch_divu(fast,&view,road,sizeof(road[0]),8) ||
+       memcmp(out,fast,sizeof(out)))return 1;
 
     for(unsigned q=0;q<2;++q) {
         unsigned all=0x3f;

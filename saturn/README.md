@@ -15,6 +15,7 @@ The maintained overview, build commands, API scope and upstream credits are in t
 - [48-operation native math comparison and reproduction](benchmarks/math-model/README.md)
 - [Exact rotation batches, static spatial queries and workload comparison](benchmarks/workload-model/README.md)
 - [Experimental view batch: transform, project, clip codes](VIEW_BATCH.md)
+- [Experimental explicit SH-2 divider](DIVU.md)
 - [Remaining work](PORTING_PLAN.md)
 
 Both `cmake -S .` from the repository root and `cmake -S saturn` build the Saturn library. Batch transforms now select a specialized exact kernel when the matrix proves direct accumulation safe, with a general fallback for the remaining matrices. Full SH4ZAM API parity and physical-console performance qualification remain incomplete.

@@ -104,6 +104,14 @@ bool sh2z_view_place(sh2z_view_t *v,sh2z_vec3_t eye);
 bool sh2z_view_batch(sh2z_view_vertex_t *out,const sh2z_view_t *v,
     const void *positions,size_t in_stride,size_t count);
 
+/** Identical arguments, failures and output bytes to sh2z_view_batch, but on
+ *  SH-2 it uses this CPU's hardware divider (see divu_experimental.h for the
+ *  caller promise about interrupt handlers). Every division sent to the
+ *  divider is proven in software to fit, so no hardware overflow or
+ *  divide-by-zero result is ever used. Portable builds compute in C. */
+bool sh2z_view_batch_divu(sh2z_view_vertex_t *out,const sh2z_view_t *v,
+    const void *positions,size_t in_stride,size_t count);
+
 #ifdef __cplusplus
 }
 #endif
