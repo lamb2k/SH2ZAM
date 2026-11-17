@@ -1,0 +1,943 @@
+{
+ "schema": 1,
+ "kernel": "view_batch",
+ "tier": "MODELLED",
+ "sourceCommit": "b6306fe92db00ad2f232e94b37dfde7642ce6dd4",
+ "run": {
+  "environment": "isolated-sh2-interpreter",
+  "elfSHA256": "f50fdc7c53a2959abf1e486750b1ba676ba3be7b51f7b1abb4734e0fa825f19d",
+  "symbolSHA256": "035263e80a4aa1d29bc035319e169e9aa113a789d723587358f0ce2ab3c7df10",
+  "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44011781668",
+  "interpreterRepository": "https://github.com/Yabause/yabause",
+  "interpreterCommit": "7e38821dbac265490f115e163c523a939acda759",
+  "interpreterSourceSHA256": "28f938f95842d0127c31c01a23ccffc3a53243786b405a4afbbc2f34764ce36c",
+  "interpreterModified": false,
+  "memoryModel": "flat RAM",
+  "dividerModel": "harness code: 39-cycle latency, reads before completion hold the CPU (assumption, not hardware evidence)",
+  "cycleUnit": "upstream interpreter per-opcode modeled cycles",
+  "includes": [
+   "argument and view validation",
+   "camera block preparation",
+   "all output writes"
+  ],
+  "limitations": [
+   "Not physical Saturn timing or full-system emulator timing",
+   "No cache or bus wait-state model",
+   "No pipeline or multiplier-latency model",
+   "Divider behaviour is the harness model, not the console",
+   "No interrupts, DMA or second CPU"
+  ],
+  "harnessSourceSHA256": "2858d53b33acf3cd61092d29e11c5e672e56fb99ef76a893f2153f43e3df78b9",
+  "dividerModelSourceSHA256": "afa130ede190f211d047e1637a3fccbbfe87c5f43aa56f4e43b0af7e9290e18d",
+  "captureSourceSHA256": "28a0e5498c9fea913758fae8dd1f73271896e58aef88fc0a8fbd82ab2aebf6c2",
+  "edgesCaptureSourceSHA256": "62b617ae4691c5437a4dd173a1f381be5058eed34b4dc729fa74b974e3e727e8",
+  "guardCaptureSourceSHA256": "8719b349e3de3d0328eafe6ee0509b24900e95055e3bb3648a5249d8513570bc",
+  "bridgeSourceSHA256": "a8ba71ad3b885a73e586448fd13a7830188ac0fc2df0c04e21f6d01918e280f8",
+  "collectorSourceSHA256": "f319422b1cbc0510fcbfa2c67a91dea5479b3f42e586b010ae13651e909032c5"
+ },
+ "dividerProbes": {
+  "count": 2023,
+  "hardwarePath": 1673,
+  "table": [
+   {
+    "n": "100",
+    "d": 7,
+    "q": 14,
+    "overflow": false
+   },
+   {
+    "n": "-100",
+    "d": 7,
+    "q": -14,
+    "overflow": false
+   },
+   {
+    "n": "100",
+    "d": -7,
+    "q": -14,
+    "overflow": false
+   },
+   {
+    "n": "-100",
+    "d": -7,
+    "q": 14,
+    "overflow": false
+   },
+   {
+    "n": "0",
+    "d": 5,
+    "q": 0,
+    "overflow": false
+   },
+   {
+    "n": "5",
+    "d": 0,
+    "q": 2147483647,
+    "overflow": true
+   },
+   {
+    "n": "-5",
+    "d": 0,
+    "q": -2147483648,
+    "overflow": true
+   },
+   {
+    "n": "0",
+    "d": 0,
+    "q": 2147483647,
+    "overflow": true
+   },
+   {
+    "n": "15032385535",
+    "d": 7,
+    "q": 2147483647,
+    "overflow": false
+   },
+   {
+    "n": "15032385536",
+    "d": 7,
+    "q": 2147483647,
+    "overflow": true
+   },
+   {
+    "n": "-15032385535",
+    "d": 7,
+    "q": -2147483647,
+    "overflow": false
+   },
+   {
+    "n": "-15032385536",
+    "d": 7,
+    "q": -2147483648,
+    "overflow": true
+   },
+   {
+    "n": "-15032385537",
+    "d": 7,
+    "q": -2147483648,
+    "overflow": true
+   },
+   {
+    "n": "15032385535",
+    "d": -7,
+    "q": -2147483647,
+    "overflow": false
+   },
+   {
+    "n": "-9223372036854775808",
+    "d": 1,
+    "q": -2147483648,
+    "overflow": true
+   },
+   {
+    "n": "-9223372036854775808",
+    "d": -1,
+    "q": 2147483647,
+    "overflow": true
+   },
+   {
+    "n": "9223372036854775807",
+    "d": 2147483647,
+    "q": 2147483647,
+    "overflow": true
+   },
+   {
+    "n": "4611686018427387904",
+    "d": -2147483648,
+    "q": -2147483648,
+    "overflow": true
+   },
+   {
+    "n": "-4611686018427387904",
+    "d": -2147483648,
+    "q": 2147483647,
+    "overflow": true
+   },
+   {
+    "n": "4611686014132420609",
+    "d": 2147483647,
+    "q": 2147483647,
+    "overflow": false
+   },
+   {
+    "n": "-4611686014132420609",
+    "d": 2147483647,
+    "q": -2147483647,
+    "overflow": false
+   },
+   {
+    "n": "123456789012",
+    "d": -98765,
+    "q": -1250005,
+    "overflow": false
+   },
+   {
+    "n": "-1",
+    "d": -2147483648,
+    "q": 0,
+    "overflow": false
+   }
+  ]
+ },
+ "sweep": {
+  "poses": 512,
+  "vertices": 1048576,
+  "near": 589846,
+  "saturatedQuotients": 6796,
+  "divisions": 917460,
+  "stride12Vertices": 65536,
+  "portableMismatches": 0,
+  "divuMismatches": 0
+ },
+ "timing": {
+  "poses": 64,
+  "verticesPerBatch": 512,
+  "batches": [
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349003,
+    "divuCycles": 68945,
+    "divuStallCycles": 2308,
+    "divuInstructions": 64543
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349426,
+    "divuCycles": 68948,
+    "divuStallCycles": 2311,
+    "divuInstructions": 64545
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349670,
+    "divuCycles": 68968,
+    "divuStallCycles": 2325,
+    "divuInstructions": 64557
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349267,
+    "divuCycles": 68955,
+    "divuStallCycles": 2334,
+    "divuInstructions": 64507
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349200,
+    "divuCycles": 68955,
+    "divuStallCycles": 2314,
+    "divuInstructions": 64551
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349520,
+    "divuCycles": 68956,
+    "divuStallCycles": 2302,
+    "divuInstructions": 64576
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349054,
+    "divuCycles": 68948,
+    "divuStallCycles": 2297,
+    "divuInstructions": 64571
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349328,
+    "divuCycles": 68957,
+    "divuStallCycles": 2326,
+    "divuInstructions": 64530
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349561,
+    "divuCycles": 68938,
+    "divuStallCycles": 2303,
+    "divuInstructions": 64539
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 348974,
+    "divuCycles": 68960,
+    "divuStallCycles": 2330,
+    "divuInstructions": 64527
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349340,
+    "divuCycles": 68953,
+    "divuStallCycles": 2308,
+    "divuInstructions": 64558
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349304,
+    "divuCycles": 68958,
+    "divuStallCycles": 2319,
+    "divuInstructions": 64545
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349167,
+    "divuCycles": 68953,
+    "divuStallCycles": 2324,
+    "divuInstructions": 64525
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349046,
+    "divuCycles": 68963,
+    "divuStallCycles": 2324,
+    "divuInstructions": 64548
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349059,
+    "divuCycles": 68959,
+    "divuStallCycles": 2314,
+    "divuInstructions": 64556
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349651,
+    "divuCycles": 68950,
+    "divuStallCycles": 2319,
+    "divuInstructions": 64530
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349518,
+    "divuCycles": 68953,
+    "divuStallCycles": 2295,
+    "divuInstructions": 64583
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 348987,
+    "divuCycles": 68965,
+    "divuStallCycles": 2309,
+    "divuInstructions": 64580
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349741,
+    "divuCycles": 68954,
+    "divuStallCycles": 2303,
+    "divuInstructions": 64573
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349214,
+    "divuCycles": 68971,
+    "divuStallCycles": 2327,
+    "divuInstructions": 64556
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349166,
+    "divuCycles": 68961,
+    "divuStallCycles": 2309,
+    "divuInstructions": 64575
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 348751,
+    "divuCycles": 68925,
+    "divuStallCycles": 2309,
+    "divuInstructions": 64500
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349450,
+    "divuCycles": 68946,
+    "divuStallCycles": 2299,
+    "divuInstructions": 64562
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349431,
+    "divuCycles": 68955,
+    "divuStallCycles": 2318,
+    "divuInstructions": 64546
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 348978,
+    "divuCycles": 68947,
+    "divuStallCycles": 2320,
+    "divuInstructions": 64521
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349488,
+    "divuCycles": 68964,
+    "divuStallCycles": 2317,
+    "divuInstructions": 64562
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 348740,
+    "divuCycles": 68978,
+    "divuStallCycles": 2333,
+    "divuInstructions": 64557
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 348983,
+    "divuCycles": 68955,
+    "divuStallCycles": 2319,
+    "divuInstructions": 64539
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349514,
+    "divuCycles": 68960,
+    "divuStallCycles": 2319,
+    "divuInstructions": 64549
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 348594,
+    "divuCycles": 68946,
+    "divuStallCycles": 2311,
+    "divuInstructions": 64539
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349351,
+    "divuCycles": 68956,
+    "divuStallCycles": 2323,
+    "divuInstructions": 64533
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349147,
+    "divuCycles": 68953,
+    "divuStallCycles": 2321,
+    "divuInstructions": 64531
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 348700,
+    "divuCycles": 68953,
+    "divuStallCycles": 2315,
+    "divuInstructions": 64545
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349210,
+    "divuCycles": 68955,
+    "divuStallCycles": 2322,
+    "divuInstructions": 64533
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349120,
+    "divuCycles": 68956,
+    "divuStallCycles": 2328,
+    "divuInstructions": 64524
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349140,
+    "divuCycles": 68947,
+    "divuStallCycles": 2343,
+    "divuInstructions": 64477
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349623,
+    "divuCycles": 68964,
+    "divuStallCycles": 2303,
+    "divuInstructions": 64591
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 348824,
+    "divuCycles": 68947,
+    "divuStallCycles": 2327,
+    "divuInstructions": 64507
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349323,
+    "divuCycles": 68945,
+    "divuStallCycles": 2323,
+    "divuInstructions": 64512
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349660,
+    "divuCycles": 68952,
+    "divuStallCycles": 2315,
+    "divuInstructions": 64546
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349102,
+    "divuCycles": 68956,
+    "divuStallCycles": 2334,
+    "divuInstructions": 64510
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349142,
+    "divuCycles": 68963,
+    "divuStallCycles": 2328,
+    "divuInstructions": 64538
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349767,
+    "divuCycles": 68961,
+    "divuStallCycles": 2302,
+    "divuInstructions": 64587
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349040,
+    "divuCycles": 68935,
+    "divuStallCycles": 2304,
+    "divuInstructions": 64533
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349077,
+    "divuCycles": 68967,
+    "divuStallCycles": 2318,
+    "divuInstructions": 64563
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349319,
+    "divuCycles": 68954,
+    "divuStallCycles": 2315,
+    "divuInstructions": 64546
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 348446,
+    "divuCycles": 68945,
+    "divuStallCycles": 2317,
+    "divuInstructions": 64527
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349745,
+    "divuCycles": 68954,
+    "divuStallCycles": 2303,
+    "divuInstructions": 64572
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349048,
+    "divuCycles": 68960,
+    "divuStallCycles": 2318,
+    "divuInstructions": 64550
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 348840,
+    "divuCycles": 68955,
+    "divuStallCycles": 2310,
+    "divuInstructions": 64558
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349201,
+    "divuCycles": 68945,
+    "divuStallCycles": 2316,
+    "divuInstructions": 64525
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349200,
+    "divuCycles": 68964,
+    "divuStallCycles": 2322,
+    "divuInstructions": 64551
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 348869,
+    "divuCycles": 68953,
+    "divuStallCycles": 2314,
+    "divuInstructions": 64548
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349085,
+    "divuCycles": 68934,
+    "divuStallCycles": 2304,
+    "divuInstructions": 64528
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349460,
+    "divuCycles": 68964,
+    "divuStallCycles": 2308,
+    "divuInstructions": 64578
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349778,
+    "divuCycles": 68966,
+    "divuStallCycles": 2316,
+    "divuInstructions": 64570
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 348641,
+    "divuCycles": 68954,
+    "divuStallCycles": 2321,
+    "divuInstructions": 64533
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349680,
+    "divuCycles": 68958,
+    "divuStallCycles": 2325,
+    "divuInstructions": 64537
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 348787,
+    "divuCycles": 68949,
+    "divuStallCycles": 2326,
+    "divuInstructions": 64518
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349567,
+    "divuCycles": 68974,
+    "divuStallCycles": 2312,
+    "divuInstructions": 64593
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 348748,
+    "divuCycles": 68967,
+    "divuStallCycles": 2331,
+    "divuInstructions": 64541
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349639,
+    "divuCycles": 68950,
+    "divuStallCycles": 2302,
+    "divuInstructions": 64564
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349650,
+    "divuCycles": 68963,
+    "divuStallCycles": 2319,
+    "divuInstructions": 64556
+   },
+   {
+    "near": 0,
+    "divisions": 1024,
+    "portableCycles": 349422,
+    "divuCycles": 68965,
+    "divuStallCycles": 2306,
+    "divuInstructions": 64586
+   }
+  ],
+  "near": 0,
+  "divisions": 65536,
+  "stallCycles": 148237,
+  "medianCyclesPerVertex": {
+   "portable": 682.03,
+   "divuRaw": 130.15,
+   "divuStallModel": 134.68,
+   "divuPlusLatencyPerDivision": 208.15
+  },
+  "maxCyclesPerVertex": {
+   "portable": 683.16,
+   "divuStallModel": 134.72,
+   "divuPlusLatencyPerDivision": 208.2
+  },
+  "instructionsPerVertex": {
+   "portable": 585.92,
+   "divu": 126.07
+  }
+ },
+ "rows": [
+  {
+   "kernel": "view_batch",
+   "vertices": 512,
+   "path": "portable (libgcc 64-bit divide)",
+   "cycles_model": 682.03,
+   "tier": "MODELLED",
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_batch_divu",
+   "vertices": 512,
+   "path": "sh2-divu",
+   "cycles_model": 130.15,
+   "cycles_model_stall": 134.68,
+   "cycles_model_plus_divide_latency": 208.15,
+   "tier": "MODELLED",
+   "outputs_equal_portable": true
+  },
+  {
+   "kernel": "view_project",
+   "points": 512,
+   "unit": "cycles per point",
+   "tier": "MODELLED",
+   "portable": 612.4,
+   "divu_stall_model": 101.44,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_edge_steps",
+   "points": 64,
+   "unit": "cycles per point",
+   "tier": "MODELLED",
+   "portable": 713.25,
+   "divu_stall_model": 177.28,
+   "one_point_call_cycles": {
+    "portable": 4327,
+    "divuStallModel": 2148
+   },
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_clip_near",
+   "crossings": 2,
+   "unit": "cycles per quad",
+   "tier": "MODELLED",
+   "portable": 3099,
+   "divu_stall_model": 1647,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_clip_guard",
+   "shape": "inside",
+   "band": [
+    -900,
+    -900,
+    900,
+    900
+   ],
+   "attrs": 2,
+   "unit": "cycles per quad",
+   "tier": "MODELLED",
+   "output_vertices": 4.0,
+   "portable": 4484,
+   "divu_stall_model": 2752,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_clip_guard",
+   "shape": "side",
+   "band": [
+    -900,
+    -900,
+    900,
+    900
+   ],
+   "attrs": 2,
+   "unit": "cycles per quad",
+   "tier": "MODELLED",
+   "output_vertices": 5.0,
+   "portable": 6809,
+   "divu_stall_model": 4371,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_clip_guard",
+   "shape": "nearSide",
+   "band": [
+    -900,
+    -900,
+    900,
+    900
+   ],
+   "attrs": 2,
+   "unit": "cycles per quad",
+   "tier": "MODELLED",
+   "output_vertices": 5.0,
+   "portable": 11556,
+   "divu_stall_model": 7498,
+   "outputs_equal_oracle": true
+  }
+ ],
+ "edges": {
+  "edgeTrials": 8192,
+  "points": 268025,
+  "mismatches": 0,
+  "quads": 65536,
+  "clipMismatches": 0,
+  "projectedPoints": 262144,
+  "projectMismatches": 0,
+  "patterns": [
+   4096,
+   4096,
+   4096,
+   4096,
+   4096,
+   4096,
+   4096,
+   4096,
+   4096,
+   4096,
+   4096,
+   4096,
+   4096,
+   4096,
+   4096,
+   4096
+  ],
+  "timing": {
+   "trials": 64,
+   "medianCyclesPerProjectedPoint": {
+    "portable": 612.4,
+    "divuStallModel": 101.44
+   },
+   "projectStallCycles": 377060,
+   "pointsPerEdge": 64,
+   "edgeDivisions": 8960,
+   "edgeStallCycles": 73460,
+   "medianCyclesPerPoint": {
+    "portable": 713.25,
+    "divuStallModel": 177.28
+   },
+   "medianCyclesOnePointCall": {
+    "portable": 4327,
+    "divuStallModel": 2148
+   },
+   "clipCrossingsPerQuad": 2,
+   "clipDivisions": 512,
+   "medianCyclesPerQuad": {
+    "portable": 3099,
+    "divuStallModel": 1647
+   }
+  }
+ },
+ "guard": {
+  "trials": 65536,
+  "vertices": 261395,
+  "mismatches": 0,
+  "overflows": 3,
+  "empty": 19290,
+  "countChanged": 57616,
+  "sizes": [
+   19290,
+   0,
+   0,
+   3849,
+   17370,
+   6951,
+   4376,
+   3733,
+   3723,
+   2594,
+   1646,
+   997,
+   591,
+   266,
+   99,
+   35,
+   13
+  ],
+  "timing": {
+   "trials": 64,
+   "band": [
+    -900,
+    -900,
+    900,
+    900
+   ],
+   "attrs": 2,
+   "inside": {
+    "meanOutputVertices": 4.0,
+    "medianCycles": {
+     "portable": 4484,
+     "divuStallModel": 2752
+    },
+    "divisionsPerCall": 8.0
+   },
+   "side": {
+    "meanOutputVertices": 5.0,
+    "medianCycles": {
+     "portable": 6809,
+     "divuStallModel": 4371
+    },
+    "divisionsPerCall": 12.0
+   },
+   "nearSide": {
+    "meanOutputVertices": 5.0,
+    "medianCycles": {
+     "portable": 11556,
+     "divuStallModel": 7498
+    },
+    "divisionsPerCall": 22.94
+   }
+  }
+ }
+}
