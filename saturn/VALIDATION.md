@@ -13,7 +13,7 @@ canonical code builder and a two-level table decoder with a hand-written SH-2 ke
 - **MODELLED:** the compiled SH-2 kernel, the library's C path and a plain C decoder match
   the oracle on 3,355,101 symbols each (tables, return values, reader state, no read past
   any stream) in the Yabause interpreter before timing
-  ([results](benchmarks/vlc-model/results.json)). The kernel decodes in 20.5 to 40.5 modelled
+  ([results](benchmarks/vlc-model/results.json), captured by [CI run 44179557524](https://github.com/lamb2k/SH2ZAM/actions/runs/44179557524)). The kernel decodes in 20.5 to 40.5 modelled
   cycles per symbol, 1.7 to 2.0 times fewer than C. Cycle numbers are modelled, not Saturn
   timings.
 - **Not done:** console or emulator execution, cache and memory timing, a whole tile decode.

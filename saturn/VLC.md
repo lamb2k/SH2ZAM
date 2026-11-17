@@ -151,8 +151,11 @@ The builder makes byte-identical tables to the contributed one; it is faster bec
 once (radix or insertion sort), merges Huffman nodes from two queues, keeps a cursor per
 length when lengthening, and fills the pool in one pass over the symbols.
 
-The numbers above are from the local run with the pinned Yaul GCC 13.2. The committed capture
-[`results.json`](benchmarks/vlc-model/results.json) is the one from CI.
+All numbers above are from the committed capture
+[`results.json`](benchmarks/vlc-model/results.json), taken by
+[CI run 44179557524](https://github.com/lamb2k/SH2ZAM/actions/runs/44179557524) on source
+`5a5f54b` with the pinned Yaul GCC 13.2 (ELF SHA-256 `fa2178a7...`); a local run with the same
+toolchain gave identical values.
 
 ## Not included
 
