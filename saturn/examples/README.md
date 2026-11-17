@@ -17,6 +17,7 @@ ctest --test-dir build --output-on-failure
 ./build/saturn/sh2zam_view
 ./build/saturn/sh2zam_edges
 ./build/saturn/sh2zam_merge
+./build/saturn/sh2zam_shade
 ```
 
 **Orbit:** `orbit.c` calls `sh2z_example_orbit()`. Expected quarter-cycle positions are (240,112), (160,168), (80,112), (160,56). Use the resulting integer position in your sprite command construction; the sample does not write VRAM.
@@ -30,6 +31,8 @@ ctest --test-dir build --output-on-failure
 **Edges and near clip:** `edges.c` cuts both side edges of a road quad where a 6-unit texture restarts with `sh2z_view_edge_steps`, and clips a quad that passes the camera with `sh2z_view_clip_near`. See [VIEW_BATCH.md](../VIEW_BATCH.md).
 
 **Texture merges:** `merge.c` projects the boundaries of a curving road strip whose texture repeats every 2 units and plans with `sh2z_view_merge_runs` which repetitions to draw as one quad (runs of 1, 2 or 4) so that every texel stays within 1 pixel of the one-quad-per-repetition drawing. It prints the plan: 32 repetitions as 20 quads at 1 px, 24 at 0.5 px. See [VIEW_BATCH.md](../VIEW_BATCH.md).
+
+**Shading:** `shade.c` culls the faces of a cube against an integer eye with `sh2z_shade_cull`, lights its six normals with `sh2z_shade_light_normals`, packs one Gouraud colour per kept face with `sh2z_shade_gouraud`, then builds a perspective fog table with `sh2z_shade_fog_build` and fades and colours a row of depths with `sh2z_shade_fog_lookup` and `sh2z_shade_fade_mix`. It keeps 3 of 6 faces. See [SHADE.md](../SHADE.md).
 
 **Hardware smoke kernel:** `saturn_smoke.c` exports `sh2z_saturn_smoke()`. The host runner prints a mask; zero is expected. The same C function can be called inside an existing Saturn game. Mask meanings are in [HARDWARE.md](../HARDWARE.md).
 
