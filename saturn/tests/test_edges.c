@@ -17,7 +17,10 @@ static void check(bool value,const char *what) {
     }
 }
 static uint32_t random_word(void) {state^=state<<13;state^=state>>17;state^=state<<5;return state;}
-static int32_t random_range(int32_t lo,int32_t hi) {return lo+(int32_t)(random_word()%(uint32_t)((int64_t)hi-lo+1));}
+static int32_t random_range(int32_t lo,int32_t hi) {
+    /* In 64 bits: lo + offset can exceed int32 before it lands back in range. */
+    return (int32_t)((int64_t)lo+(int64_t)(random_word()%(uint64_t)((int64_t)hi-lo+1)));
+}
 static int32_t random_coord(void) {
     switch(random_word()%4u) {
     case 0: return (int32_t)random_word();                  /* full int32 */
