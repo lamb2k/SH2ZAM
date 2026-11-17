@@ -23,8 +23,13 @@ MODELLED. Not console timing, not emulator timing.
   6. `merge.h`, view-merge-1: the texture-merge planner on 16,384 random
      strips (road and adversarial) against its own oracle, rejected calls
      writing nothing, then cycles per boundary on 64-boundary road strips.
+  7. `round.h`, view-round-1: every `_trunc` entry point (batch, projection,
+     edge steps, near clip, guard clip; portable and divider forms) against
+     its own oracle, then each timing fixture through the old function and
+     its `_trunc` form back to back.
 - `collect.py` checks the invariants (zero mismatches, two divisions per
-  timing vertex, merge runs covering every repetition, the ELF's embedded
+  timing vertex, merge runs covering every repetition, both view-round-1
+  differences occurring, the ELF's embedded
   source commit, the interpreter pin) and
   writes the results file.
 

@@ -15,6 +15,7 @@ planes per vertex in 64-bit arithmetic. Contract tag: `view-contract-1`.
 | View-space projection, edge stepper, near clip | Landed, `view-edges-1` (see below) |
 | Guard-band polygon clip (near, far, sides; attributes) | Landed, `view-guard-1` (see below) |
 | Bounded texture-merge planner (pixel or row tolerance) | Landed, `view-merge-1` (see below): HOST and MODELLED; 223 modelled cycles per boundary at 1 px |
+| Final-coordinate truncation (`_trunc` forms of every projecting path) | `view-round-1` (see below): HOST and MODELLED; +8.4 modelled cycles per batch vertex |
 | Console or emulator timing | Unrun; the [calibration image](benchmarks/yaul/calibration/README.md) times the batch on a console |
 
 `sh2z_view_batch` is the definition of correct and never touches the hardware
@@ -482,3 +483,196 @@ or emulator run.
   corners with `sh2z_view_batch_divu` (2 × 134.7). Rows
   mode costs 2.4 times as much and merges far less, because the row test is
   strict where the road is minified.
+
+## Final-coordinate truncation (`view-round-1`)
+
+Every `view-contract-1` projection rounds the Q16 quotient to a pixel first:
+`sx = center_x + (qx >> 16)` and `sy = center_y - (qy >> 16)`. Some source
+renderers keep the screen position in Q16.16 and truncate it at the end,
+`s = (65536 * center +/- q) / 65536` with C division. For a port that must
+reproduce such a renderer's coordinates exactly, the `_trunc` forms of every
+projecting entry point apply that rule instead:
+
+```c
+bool sh2z_view_batch_trunc(...);        bool sh2z_view_batch_trunc_divu(...);
+bool sh2z_view_project_trunc(...);      bool sh2z_view_project_trunc_divu(...);
+bool sh2z_view_edge_steps_trunc(...);   bool sh2z_view_edge_steps_trunc_divu(...);
+unsigned sh2z_view_clip_near_trunc(...); unsigned sh2z_view_clip_near_trunc_divu(...);
+int sh2z_view_clip_guard_trunc(...);    int sh2z_view_clip_guard_trunc_divu(...);
+```
+
+Each takes the same arguments, has the same failures and writes the same
+bytes as the function without `_trunc`, except for `sx`, `sy` and the outcode
+bits that follow from them. The old functions and their output are
+unchanged.
+
+### Matching sources that truncate the final coordinate
+
+**The source rule.** With an integer centre `c`, focal length `F` (Q16.16)
+and view-space `a`, `z`:
+
+```
+Wx = 65536 * c_x + trunc(F_x * x / z)      sx = trunc(Wx / 65536)
+Wy = 65536 * c_y - trunc(F_y * y / z)      sy = trunc(Wy / 65536)
+```
+
+`view-contract-1` gives `sx = floor(Wx / 65536)` and `sy = ceil(Wy / 65536)`,
+because the centre is whole and `>>` floors. Truncation is floor for a
+positive position and ceiling for a negative one. So `view-contract-1`
+already matches the source for `x` right of column 0 and for `y` above row 0.
+It is one pixel off where the position is not a whole pixel and lies left of
+column 0 (`sx` one lower) or below row 0 (`sy` one higher). The second case
+covers almost the whole screen.
+
+**Caller adaptations, and why they are not enough.**
+
+- *Centre minus one.* Passing `center_y - 1` gives `ceil(Wy) - 1`. That is
+  `floor(Wy)` only when `Wy` is not a whole pixel. On whole pixels it is one
+  too low, for example source centre 112, focal 160 px, `y = -600`,
+  `z = 1000`: the source gives 208, the adapter 207. It is also one too low
+  everywhere above row 0.
+- *Mirrored y.* Negate the rotation's y row and `t[1]` after
+  `sh2z_view_place` (placing a negated row rounds the other way), pass
+  `center_y' = -center_y`, reflect the clip rectangle's top and bottom, swap
+  the TOP and BOTTOM bits, and take `sy = -sy'` (clamped to 32,767). The
+  quotient truncation is odd, so `-sy' = floor(Wy / 65536)` exactly, which
+  is the source's value for every `y` at or below row 0, whole pixel or not.
+  The edge stepper's and near clip's arithmetic is odd too, so their points
+  mirror exactly. But the rule is now floor on both axes, so every vertex
+  left of column 0 or above row 0 that is not on a whole pixel is still one
+  pixel off. A road quad drawn into a guard band has such vertices. No
+  single view can do better, since truncation switches between floor and
+  ceiling at the source's zero, not the library's centre.
+- *Exact, with a second projection.* After the mirrored-y projection,
+  project every vertex with a negative result again with x mirrored
+  (`(-x, y, z)`, `center_x' = -center_x`) and take the ceiling from it on
+  the negative axes. That is exact, but it costs a second projection (about
+  100 modelled cycles with the divider, plus a call) for each vertex left of
+  or above the screen. The guard clip is worse. A mirrored view runs the
+  top and bottom planes in the opposite order, which changes the clipped
+  polygon when both planes cut it. So the caller must clip with the
+  unmirrored view, reproject every output vertex itself and redo the clamp
+  and outcodes.
+
+The host test measures all three on the same 448,122 points. Centre minus
+one misses 229,270 of them. Mirrored y misses 329,663, none at a
+non-negative position, each by one pixel. Mirrored y plus the second
+projection misses none, at the cost of 334,824 extra projections. Because no
+cheap caller-side route is exact, the rule became a library contract.
+
+### Contract
+
+```
+qx = clamp(trunc(focal_x * x / z), -(2^31 - 1), 2^31 - 1)      (same for qy)
+sx = sat16(trunc((65536 * center_x + qx) / 65536))
+sy = sat16(trunc((65536 * center_y - qy) / 65536))
+```
+
+- **Relation to `view-contract-1`.** Before saturation, `sx` is one larger
+  exactly when `65536 * center_x + qx` is negative and `qx` is not a
+  multiple of 65536. `sy` is one smaller exactly when
+  `65536 * center_y - qy` is positive and `qy` is not a multiple. Otherwise
+  both are equal. The kernels compute it that way: the old floor, then a
+  fix-up from the sign and the quotient's low 16 bits.
+- **Symmetric clamp.** `view-contract-1` saturates quotients to
+  `INT32_MIN..INT32_MAX`. Its floor cannot tell `-2^31` from `-2^31 + 1`, but
+  truncation can, so `view-round-1` clamps to `+/-(2^31 - 1)`. The
+  projection is then odd: negating `x` and `center_x` negates `sx` before
+  saturation, and likewise for `y`. The SH-2 kernel's stand-in division for
+  quotients that do not fit already yields `+/-(2^31 - 1)`. The clamp only
+  matters 32,768 pixels from the centre.
+- **Guard clip.** The six planes of `sh2z_view_clip_guard` are unchanged. A
+  point inside them has its exact position inside the rectangle. Truncating
+  the quotient and then the position are both monotone and keep a value
+  between two whole-pixel bounds, as floor and ceiling do, so the point
+  still projects inside. Crossings are then clamped to the rectangle as
+  before.
+- **Near clip.** Inside corners are copied unchanged, so pass corners
+  written by a `_trunc` batch or projection.
+- **Geometry.** Stepped points, near crossings, guard crossings and
+  attributes are byte-identical to the `view-contract-1` functions (the host
+  test checks this).
+
+### Implementation
+
+The `_trunc` functions live in `src/sh2zam_view_round.c`. The argument
+rules, stepper axes, near clip and guard passes that both files need moved
+verbatim into the private headers `src/sh2zam_view_internal.h` and
+`src/sh2zam_view_paths.h`. `sh2zam_view_paths.h` holds the edge stepper and
+the guard clip, instantiated once per projection rule. Keeping the new code
+in its own file leaves the old functions' compiled code alone. In the
+benchmark build, every function section of `sh2zam_view.o` disassembles,
+relocations included, exactly as on `main`, and the capture below reproduces
+every earlier `results.json` number.
+
+On SH-2 the batch and projection kernels are the same assembly macros,
+instantiated with `trunc=1` as two more entry points. At each of the three
+places a quotient becomes a pixel, the fix-up keeps the quotient's low 16
+bits in `r10` and adds four to seven instructions. With `trunc=0` the macros
+expand to the original instructions.
+
+### Evidence
+
+**HOST** (`tests/test_round.c`, GCC and Clang strict, ASan/UBSan):
+- **Oracle.** An independent 128-bit oracle, written from the header text,
+  covers 614,400 batch vertices (random rotations and eyes, strides 6 and
+  10). It also covers 307,200 projected points, aimed exactly at pixels, one
+  unit off them and between them, on both sides of zero. Then 156,633
+  stepped points, 35,731 near-clip vertices and 35,491 guard-clip vertices.
+  All equal the oracle on both entry points, with the `_divu` bytes equal to
+  the portable bytes.
+- **Geometry and in-place calls.** View-space points, crossings and
+  attributes equal the `view-contract-1` functions', in place included.
+- **Guard rectangle.** 28,075 guard outputs inside all six planes project
+  inside the rectangle without the clamp.
+- **Relation to `view-contract-1`.** On 448,122 points, `sx` and `sy` differ
+  exactly as stated above: `sx` +1 on 217,793 points and `sy` -1 on 218,852.
+- **Hand cases.** The requester's two examples (208 and 192) and whole
+  pixels on both sides of zero. Fractions just either side of zero. The
+  symmetric clamp: a quotient of `-2^31` gives -32,607 at centre 160, not
+  -32,608. Odd symmetry on random points. Argument rules: each failure
+  returns what `view-contract-1` returns and writes nothing.
+- **Controls detected.** Oracle with x floored: 319,954 mismatches. y
+  ceiled: 394,191. Asymmetric quotient clamp: 10,663. Fraction test dropped:
+  13,813. Guard clamp dropped: 897.
+
+**MODELLED** (SH-2 model capture, `round.h`): every `_trunc` entry point,
+portable and divider forms, runs on the SH-2 against the harness's own
+oracle:
+- 262,144 batch vertices (145,841 `NEAR`), 131,072 projected points, 201,769
+  stepped points, 16,384 near-clip quads and 16,384 guard polygons (64,752
+  output vertices). All are exact.
+- On these points the rule differs from `view-contract-1` 93,389 times in
+  `sx` and 126,405 times in `sy`.
+
+Each timing fixture ran through the `view-contract-1` function and its
+`_trunc` form back to back. Medians of 64 trials on the earlier sections'
+timing camera (centre 160, 112; focal length 140 to 320 px). Those sections
+use their own fixtures, so their medians differ slightly:
+
+| Path | Unit | Portable, old / `_trunc` | `_divu`, old / `_trunc` |
+| --- | --- | ---: | ---: |
+| batch (512 vertices) | per vertex | 682.10 / 691.33 | 134.68 / **143.11** |
+| project (512 points) | per point | 612.40 / 617.52 | 101.44 / 103.96 |
+| edge steps (64 points) | per point | 713.23 / 719.69 | 177.22 / 179.50 |
+| near clip (2 crossings) | per quad | 3,101 / 3,133 | 1,648 / 1,699 |
+| guard, quad inside | per quad | 4,486 / 4,520 | 2,752 / 2,834 |
+| guard, one corner far left | per quad | 6,818 / 6,891 | 4,389 / 4,499 |
+| guard, near plus side | per quad | 11,556 / 11,620 | 7,494 / 7,595 |
+
+Each path does the same divisions in both forms. No console or emulator
+run.
+
+### Caller guidance
+
+- **Use the source's real centre.** The rule rounds the Q16 position itself,
+  so drop any centre offset adapter and pass the source centre unchanged.
+  The centre must be a whole pixel: a source centre with a fraction cannot
+  be represented and is not matched exactly.
+- **Use one rule per frame.** Use the `_trunc` form for the batch, edge
+  steps and both clips together. The near clip copies corners as given, and
+  the merge planner reads whatever `sx`, `sy` it is given.
+- **What exactness covers.** The pixel rule only. Points match a source's
+  pixels exactly when the view-space points match. A different rotation
+  precision, edge-split rule or clip-crossing rule upstream can still move
+  a point by a unit.
