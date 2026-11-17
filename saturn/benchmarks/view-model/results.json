@@ -2,12 +2,12 @@
  "schema": 1,
  "kernel": "view_batch",
  "tier": "MODELLED",
- "sourceCommit": "b6306fe92db00ad2f232e94b37dfde7642ce6dd4",
+ "sourceCommit": "b39a989c5aaaa83e55b4764fa0b20c5e2c81d974",
  "run": {
   "environment": "isolated-sh2-interpreter",
-  "elfSHA256": "f50fdc7c53a2959abf1e486750b1ba676ba3be7b51f7b1abb4734e0fa825f19d",
-  "symbolSHA256": "035263e80a4aa1d29bc035319e169e9aa113a789d723587358f0ce2ab3c7df10",
-  "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44011781668",
+  "elfSHA256": "58be6dcfe2af05bedba38d052d5e3c62a66e5ff047a7a8f1d5c2c362fb3e48c3",
+  "symbolSHA256": "1a44aa32d726b2e657cd1882c22d33116d4d72745c7cd35a194bf4d15198954f",
+  "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44074884792",
   "interpreterRepository": "https://github.com/Yabause/yabause",
   "interpreterCommit": "7e38821dbac265490f115e163c523a939acda759",
   "interpreterSourceSHA256": "28f938f95842d0127c31c01a23ccffc3a53243786b405a4afbbc2f34764ce36c",
@@ -31,9 +31,10 @@
   "dividerModelSourceSHA256": "afa130ede190f211d047e1637a3fccbbfe87c5f43aa56f4e43b0af7e9290e18d",
   "captureSourceSHA256": "28a0e5498c9fea913758fae8dd1f73271896e58aef88fc0a8fbd82ab2aebf6c2",
   "edgesCaptureSourceSHA256": "62b617ae4691c5437a4dd173a1f381be5058eed34b4dc729fa74b974e3e727e8",
-  "guardCaptureSourceSHA256": "8719b349e3de3d0328eafe6ee0509b24900e95055e3bb3648a5249d8513570bc",
-  "bridgeSourceSHA256": "a8ba71ad3b885a73e586448fd13a7830188ac0fc2df0c04e21f6d01918e280f8",
-  "collectorSourceSHA256": "f319422b1cbc0510fcbfa2c67a91dea5479b3f42e586b010ae13651e909032c5"
+  "guardCaptureSourceSHA256": "2c60d074786458734635fcb8a3341b61518847b7344c204a7d638c16febd8248",
+  "mergeCaptureSourceSHA256": "feff987b05eda927ba2b3bebe406e0a173ace9960c55f7dfb0b20847a7a27d47",
+  "bridgeSourceSHA256": "8c132abf870d7c9515618edf4f07844cb57dc5d918500454aaece9461c21cad2",
+  "collectorSourceSHA256": "d0e15e1d1e8c44b3a911f9d064d1f7a908441c16de7c6adbd84b33e5dd35c20c"
  },
  "dividerProbes": {
   "count": 2023,
@@ -825,6 +826,101 @@
    "portable": 11556,
    "divu_stall_model": 7498,
    "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_merge_runs",
+   "config": "pixel1",
+   "mode": "pixels",
+   "tol_q8": 256,
+   "end_masks": false,
+   "boundaries": 64,
+   "run_mask": [
+    1,
+    2,
+    4
+   ],
+   "unit": "cycles per boundary",
+   "tier": "MODELLED",
+   "cycles_per_boundary": 223.11,
+   "max_cycles_per_boundary": 389.02,
+   "mean_quads": 25.16,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_merge_runs",
+   "config": "pixel0.5",
+   "mode": "pixels",
+   "tol_q8": 128,
+   "end_masks": false,
+   "boundaries": 64,
+   "run_mask": [
+    1,
+    2,
+    4
+   ],
+   "unit": "cycles per boundary",
+   "tier": "MODELLED",
+   "cycles_per_boundary": 308.12,
+   "max_cycles_per_boundary": 414.56,
+   "mean_quads": 33.98,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_merge_runs",
+   "config": "pixel2",
+   "mode": "pixels",
+   "tol_q8": 512,
+   "end_masks": false,
+   "boundaries": 64,
+   "run_mask": [
+    1,
+    2,
+    4
+   ],
+   "unit": "cycles per boundary",
+   "tier": "MODELLED",
+   "cycles_per_boundary": 201.3,
+   "max_cycles_per_boundary": 365.98,
+   "mean_quads": 22.2,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_merge_runs",
+   "config": "pixel1Aligned",
+   "mode": "pixels",
+   "tol_q8": 256,
+   "end_masks": true,
+   "boundaries": 64,
+   "run_mask": [
+    1,
+    2,
+    4
+   ],
+   "unit": "cycles per boundary",
+   "tier": "MODELLED",
+   "cycles_per_boundary": 210.22,
+   "max_cycles_per_boundary": 276.5,
+   "mean_quads": 27.52,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_merge_runs",
+   "config": "rows1",
+   "mode": "rows",
+   "tol_q8": 256,
+   "end_masks": false,
+   "boundaries": 64,
+   "run_mask": [
+    1,
+    2,
+    4
+   ],
+   "unit": "cycles per boundary",
+   "tier": "MODELLED",
+   "cycles_per_boundary": 527.14,
+   "max_cycles_per_boundary": 698.27,
+   "mean_quads": 52.12,
+   "outputs_equal_oracle": true
   }
  ],
  "edges": {
@@ -937,6 +1033,135 @@
      "divuStallModel": 7498
     },
     "divisionsPerCall": 22.94
+   }
+  }
+ },
+ "merge": {
+  "trials": 16384,
+  "boundaries": 1660262,
+  "runs": 1349576,
+  "mergedRuns": 132486,
+  "mismatches": 0,
+  "rejectedCalls": 4078,
+  "hugeRowStrips": 4687,
+  "blockedBoundaries": 289423,
+  "runLengths": [
+   1217090,
+   82832,
+   5399,
+   33746,
+   1512,
+   1259,
+   691,
+   3492,
+   401,
+   403,
+   250,
+   289,
+   137,
+   164,
+   161,
+   170,
+   107,
+   159,
+   67,
+   110,
+   97,
+   66,
+   53,
+   144,
+   56,
+   48,
+   87,
+   70,
+   65,
+   154,
+   297
+  ],
+  "timing": {
+   "trials": 64,
+   "boundaries": 64,
+   "runMask": [
+    1,
+    2,
+    4
+   ],
+   "configs": {
+    "pixel0.5": {
+     "mode": "pixels",
+     "tolQ8": 128,
+     "endMasks": false,
+     "meanQuads": 33.98,
+     "runs": [
+      924,
+      948,
+      303
+     ],
+     "medianCycles": 19720,
+     "medianCyclesPerBoundary": 308.12,
+     "maxCyclesPerBoundary": 414.56,
+     "instructionsPerBoundary": 277.56
+    },
+    "pixel1": {
+     "mode": "pixels",
+     "tolQ8": 256,
+     "endMasks": false,
+     "meanQuads": 25.16,
+     "runs": [
+      572,
+      346,
+      692
+     ],
+     "medianCycles": 14279,
+     "medianCyclesPerBoundary": 223.11,
+     "maxCyclesPerBoundary": 389.02,
+     "instructionsPerBoundary": 207.76
+    },
+    "pixel2": {
+     "mode": "pixels",
+     "tolQ8": 512,
+     "endMasks": false,
+     "meanQuads": 22.2,
+     "runs": [
+      400,
+      226,
+      795
+     ],
+     "medianCycles": 12883,
+     "medianCyclesPerBoundary": 201.3,
+     "maxCyclesPerBoundary": 365.98,
+     "instructionsPerBoundary": 188.78
+    },
+    "pixel1Aligned": {
+     "mode": "pixels",
+     "tolQ8": 256,
+     "endMasks": true,
+     "meanQuads": 27.52,
+     "runs": [
+      704,
+      450,
+      607
+     ],
+     "medianCycles": 13454,
+     "medianCyclesPerBoundary": 210.22,
+     "maxCyclesPerBoundary": 276.5,
+     "instructionsPerBoundary": 187.44
+    },
+    "rows1": {
+     "mode": "rows",
+     "tolQ8": 256,
+     "endMasks": false,
+     "meanQuads": 52.12,
+     "runs": [
+      2786,
+      477,
+      73
+     ],
+     "medianCycles": 33737,
+     "medianCyclesPerBoundary": 527.14,
+     "maxCyclesPerBoundary": 698.27,
+     "instructionsPerBoundary": 450.53
+    }
    }
   }
  }

@@ -16,6 +16,7 @@ ctest --test-dir build --output-on-failure
 ./build/saturn/sh2zam_smoke_main
 ./build/saturn/sh2zam_view
 ./build/saturn/sh2zam_edges
+./build/saturn/sh2zam_merge
 ```
 
 **Orbit:** `orbit.c` calls `sh2z_example_orbit()`. Expected quarter-cycle positions are (240,112), (160,168), (80,112), (160,56). Use the resulting integer position in your sprite command construction; the sample does not write VRAM.
@@ -27,6 +28,8 @@ ctest --test-dir build --output-on-failure
 **View batch:** `view.c` places a camera with `sh2z_view_place`, projects two road quads with `sh2z_view_batch`, draws the one in front and rejects the one behind the camera by ANDing outcodes. It then checks that `sh2z_view_batch_divu`, the SH-2 hardware-divider entry point, writes the same bytes. See [VIEW_BATCH.md](../VIEW_BATCH.md) and [DIVU.md](../DIVU.md); the API is experimental.
 
 **Edges and near clip:** `edges.c` cuts both side edges of a road quad where a 6-unit texture restarts with `sh2z_view_edge_steps`, and clips a quad that passes the camera with `sh2z_view_clip_near`. See [VIEW_BATCH.md](../VIEW_BATCH.md).
+
+**Texture merges:** `merge.c` projects the boundaries of a curving road strip whose texture repeats every 2 units and plans with `sh2z_view_merge_runs` which repetitions to draw as one quad (runs of 1, 2 or 4) so that every texel stays within 1 pixel of the one-quad-per-repetition drawing. It prints the plan: 32 repetitions as 20 quads at 1 px, 24 at 0.5 px. See [VIEW_BATCH.md](../VIEW_BATCH.md).
 
 **Hardware smoke kernel:** `saturn_smoke.c` exports `sh2z_saturn_smoke()`. The host runner prints a mask; zero is expected. The same C function can be called inside an existing Saturn game. Mask meanings are in [HARDWARE.md](../HARDWARE.md).
 

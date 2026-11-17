@@ -6,11 +6,12 @@
  * random cameras and guard rectangles; both entry points run on the SH-2 and
  * are compared with an oracle written here from the contract text.
  * Timing: the port's camera and its -900..900 band, quads with two
- * attributes in three shapes. */
+ * attributes in three shapes. Then merge.h (view-merge-1). */
 #define GUARD_TRIALS 65536u
 #define GUARD_TIME_TRIALS 64u
 #define GUARD_MAX_OUT 16
 
+#include "merge.h"
 struct guard_vtx {struct view_vtx v;int32_t attr[4];};
 struct guard_pt {__int128 c[7];};
 
@@ -180,6 +181,6 @@ static int capture_guard(void) {
   printf(",\"%s\":{\"meanOutputVertices\":%.2f,\"medianCycles\":{\"portable\":%u,\"divuStallModel\":%u},\"divisionsPerCall\":%.2f}",
    shape[s],(double)outs[s]/GUARD_TIME_TRIALS,cyc[s][0][GUARD_TIME_TRIALS/2],cyc[s][1][GUARD_TIME_TRIALS/2],(double)divs[s]/GUARD_TIME_TRIALS);
  }
- printf("}}}\n");
- return 0;
+ printf("}},");
+ return capture_merge();
 }

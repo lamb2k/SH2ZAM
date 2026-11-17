@@ -20,8 +20,12 @@ MODELLED. Not console timing, not emulator timing.
      on 262,144 points, each against its own oracle, then timing.
   5. `guard.h`, view-guard-1: the guard-band clip on 65,536 random polygons
      against its own oracle, then timing on the port's camera and band.
+  6. `merge.h`, view-merge-1: the texture-merge planner on 16,384 random
+     strips (road and adversarial) against its own oracle, rejected calls
+     writing nothing, then cycles per boundary on 64-boundary road strips.
 - `collect.py` checks the invariants (zero mismatches, two divisions per
-  timing vertex, the ELF's embedded source commit, the interpreter pin) and
+  timing vertex, merge runs covering every repetition, the ELF's embedded
+  source commit, the interpreter pin) and
   writes the results file.
 
 Reproduce from the repository root with the benchmark ELF built as in

@@ -865,3 +865,112 @@ int sh2z_view_clip_guard_divu(sh2z_view_guard_vertex_t out[SH2Z_VIEW_GUARD_MAX_O
     const sh2z_view_guard_vertex_t *in,unsigned count,unsigned attrs) {
     return clip_guard(out,v,guard,in,count,attrs,true);
 }
+
+/* ---- view-merge-1: bounded texture-merge planner ------------------------ */
+#define MERGE_BLOCKING ((uint8_t)~(SH2Z_OUT_LEFT|SH2Z_OUT_RIGHT|SH2Z_OUT_TOP|SH2Z_OUT_BOTTOM))
+
+static uint64_t magnitude64(int64_t a) {
+    return a<0?(uint64_t)0-(uint64_t)a:(uint64_t)a;
+}
+/* a * b exactly for a < 2^32 and |b| < 2^31, from 32 x 32 -> 64-bit signed
+ * products (dmuls.l on SH-2) instead of a general 64-bit multiply. */
+static SH2ZI_ALWAYS_INLINE int64_t merge_mul(uint32_t a,int32_t b) {
+    if(a<=(uint32_t)INT32_MAX)return (int64_t)(int32_t)a*b;
+    return (int64_t)(int32_t)(a-UINT32_C(0x80000000))*b+(int64_t)b*INT64_C(0x80000000);
+}
+/* The k-th interior boundary to test, k = 0 .. r-2: the middle one first
+ * (where a perspective rail usually strays most), then the others in order.
+ * The order changes only how soon a failing run is rejected. */
+static SH2ZI_ALWAYS_INLINE unsigned merge_order(unsigned j,unsigned mid) {
+    return j==0u?mid:j<mid?j:j+1u;
+}
+/* Interior boundaries 1 .. r-1 of one rail of the run p[0] .. p[r] with rows
+ * q[0] .. q[r]; scale is tol_q8 (pixel mode) or 256 (the rows mode guard).
+ * For integer m, m * 256 <= scale * S exactly when m <= floor(scale * S / 256),
+ * and likewise for the row test, so both limits are computed once per rail.
+ * Ranges: P differences and D lie in +-65535 and S, t < 2^32, so |E| < 2^49.
+ * In rows mode the guard runs first and gives |E.x|, |E.y| <= S < 2^32, so
+ * |E . D| < 2^49; tol_q8 * |D|^2 <= 2^24 * 2^33. Nothing wraps. When
+ * S < 2^14, |E| <= (S + t) * 65535 < 2^31 and int32 products suffice. */
+static bool merge_rail_ok(const sh2z_view_vertex_t *p,const uint32_t *q,unsigned r,
+    uint32_t scale,uint32_t tol_q8,bool row_mode) {
+    const int32_t x0=p[0].sx,y0=p[0].sy,dx=p[r].sx-x0,dy=p[r].sy-y0;
+    const uint32_t q0=q[0],s=q[r]-q0;
+    const uint64_t pixel_limit=((uint64_t)scale*s)>>8;
+    const unsigned mid=r>>1;
+    uint64_t row_limit=0;
+    if(row_mode) {
+        const uint64_t d2=(uint64_t)((int64_t)dx*dx+(int64_t)dy*dy);
+        row_limit=(d2<=UINT32_MAX?(uint64_t)tol_q8*(uint32_t)d2:tol_q8*d2)>>8;
+    }
+    if(s<16384u) {
+        const int32_t s32=(int32_t)s;
+        const uint32_t limit32=(uint32_t)pixel_limit;   /* < 2^24 * 2^14 / 2^8 */
+        for(unsigned j=0;j+1u<r;++j) {
+            const unsigned k=merge_order(j,mid);
+            const int32_t t=(int32_t)(q[k]-q0);
+            const int32_t ex=s32*(p[k].sx-x0)-t*dx,ey=s32*(p[k].sy-y0)-t*dy;
+            const uint32_t ax=magnitude32(ex),ay=magnitude32(ey);
+            if((ax>ay?ax:ay)>limit32)return false;
+            if(row_mode && magnitude64((int64_t)ex*dx+(int64_t)ey*dy)>row_limit)return false;
+        }
+        return true;
+    }
+    for(unsigned j=0;j+1u<r;++j) {
+        const unsigned k=merge_order(j,mid);
+        const int32_t px=p[k].sx-x0,py=p[k].sy-y0;
+        const uint32_t t=q[k]-q0;
+        const int64_t ex=merge_mul(s,px)-merge_mul(t,dx),ey=merge_mul(s,py)-merge_mul(t,dy);
+        const uint64_t ax=magnitude64(ex),ay=magnitude64(ey);
+        if((ax>ay?ax:ay)>pixel_limit)return false;
+        if(row_mode) {
+            const int64_t dot=merge_mul((uint32_t)ax,ex<0?-dx:dx)+merge_mul((uint32_t)ay,ey<0?-dy:dy);
+            if(magnitude64(dot)>row_limit)return false;
+        }
+    }
+    return true;
+}
+static bool merge_blocked(const sh2z_view_vertex_t *left,const sh2z_view_vertex_t *right,unsigned j) {
+    return ((left[j].outcode|right[j].outcode)&MERGE_BLOCKING)!=0;
+}
+static bool merge_span_ok(const void *p,size_t bytes) {
+    return (uintptr_t)p<=UINTPTR_MAX-bytes;
+}
+int sh2z_view_merge_runs(uint8_t *runs_out,const sh2z_view_vertex_t *left,
+    const sh2z_view_vertex_t *right,const uint32_t *rows,const uint32_t *end_masks,
+    unsigned count,uint32_t run_mask,uint32_t tol_q8,unsigned mode) {
+    if(!runs_out || !left || !right || !rows || count<2u || count>SH2Z_VIEW_MERGE_MAX_COUNT ||
+       mode>SH2Z_VIEW_MERGE_ROWS || tol_q8>SH2Z_VIEW_MERGE_MAX_TOL)return SH2Z_VIEW_MERGE_INVALID;
+    const unsigned last=count-1u;
+    const size_t vb=(size_t)count*sizeof(*left),wb=(size_t)count*sizeof(*rows);
+    if(!merge_span_ok(runs_out,last) || !merge_span_ok(left,vb) || !merge_span_ok(right,vb) ||
+       !merge_span_ok(rows,wb) || (end_masks && !merge_span_ok(end_masks,wb)) ||
+       overlaps(runs_out,last,left,vb) || overlaps(runs_out,last,right,vb) ||
+       overlaps(runs_out,last,rows,wb) || (end_masks && overlaps(runs_out,last,end_masks,wb)))
+        return SH2Z_VIEW_MERGE_INVALID;
+    for(unsigned j=0;j<last;++j)if(rows[j+1u]<=rows[j])return SH2Z_VIEW_MERGE_INVALID;
+    const bool row_mode=mode==SH2Z_VIEW_MERGE_ROWS;
+    const uint32_t scale=row_mode?256u:tol_q8,mask=run_mask&~UINT32_C(3);
+    unsigned top=0;   /* the longest run the mask allows */
+    for(uint32_t m=mask>>1;m;m>>=1)++top;
+    unsigned i=0,n=0,blocked=0;
+    while(i<last) {
+        /* blocked: the first boundary >= i that stops merging, or count. */
+        if(blocked<i)blocked=i;
+        while(blocked<=last && !merge_blocked(left,right,blocked))++blocked;
+        unsigned limit=last-i;
+        if(limit>top)limit=top;
+        if(blocked-i<=limit)limit=blocked==i?0u:blocked-i-1u;
+        unsigned r=1;
+        /* bit tracks 1 << c with constant shifts (SH-2 has no barrel shifter). */
+        uint32_t bit=limit>=2u?UINT32_C(1)<<limit:0u;
+        for(unsigned c=limit;c>=2u;--c,bit>>=1) {
+            if(!(mask&bit) || (end_masks && !(end_masks[i+c]&bit)))continue;
+            if(merge_rail_ok(left+i,rows+i,c,scale,tol_q8,row_mode) &&
+               merge_rail_ok(right+i,rows+i,c,scale,tol_q8,row_mode)){r=c;break;}
+        }
+        runs_out[n++]=(uint8_t)r;
+        i+=r;
+    }
+    return (int)n;
+}

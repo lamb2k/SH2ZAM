@@ -263,6 +263,70 @@ int sh2z_view_clip_guard_divu(sh2z_view_guard_vertex_t out[SH2Z_VIEW_GUARD_MAX_O
     const sh2z_view_t *v,const int16_t guard[4],
     const sh2z_view_guard_vertex_t *in,unsigned count,unsigned attrs);
 
+/* ---- Contract tag view-merge-1 ------------------------------------------- */
+
+#define SH2Z_VIEW_MERGE_PIXELS    0u
+#define SH2Z_VIEW_MERGE_ROWS      1u
+#define SH2Z_VIEW_MERGE_MAX_COUNT 65536u
+#define SH2Z_VIEW_MERGE_MAX_TOL   0x01000000u
+#define SH2Z_VIEW_MERGE_INVALID   (-1)
+
+/** Plan which consecutive texture repetitions of a strip to draw as one
+ *  distorted sprite, with every merged quad provably within a tolerance of
+ *  the one-quad-per-repetition reference.
+ *
+ *  Boundaries j = 0 .. count-1 cut the strip into count-1 repetitions; the
+ *  reference draws repetition j as the quad left[j], right[j], right[j+1],
+ *  left[j+1] with texture rows rows[j] .. rows[j+1]. Only sx, sy and
+ *  outcode of left and right are read. rows[] holds cumulative source
+ *  texture rows and must be strictly increasing (uint32 compare).
+ *
+ *  A merged run of r repetitions from boundary i is the single quad
+ *  left[i], right[i], right[i+r], left[i+r] with rows rows[i] .. rows[i+r].
+ *  On each rail P (left and right), with S = rows[i+r] - rows[i], and for
+ *  each interior boundary k = i+1 .. i+r-1 with t = rows[k] - rows[i]:
+ *      D = P[i+r] - P[i],  E = S * (P[k] - P[i]) - t * D   (per axis, exact)
+ *  E / S is how far, in pixels, the reference puts row t from where the
+ *  merged quad puts it. The run passes when every interior boundary passes
+ *  on both rails:
+ *      SH2Z_VIEW_MERGE_PIXELS: max(|E.x|, |E.y|) * 256 <= tol_q8 * S
+ *          (each boundary row within tol_q8 / 256 pixels, Chebyshev)
+ *      SH2Z_VIEW_MERGE_ROWS:   max(|E.x|, |E.y|) <= S   (within 1 pixel) and
+ *          |E.x * D.x + E.y * D.y| * 256 <= tol_q8 * (D.x^2 + D.y^2)
+ *          (the boundary point, projected onto the merged rail, lies within
+ *          tol_q8 / 256 merged texture rows of row t; a rail whose two ends
+ *          coincide on screen passes this half)
+ *  Between boundaries both rails' errors are linear in the row, and the quad
+ *  interpolates between its rails, so in pixel mode every texel of a merged
+ *  quad lies within the tolerance of its reference position. VIEW_BATCH.md
+ *  has the proof and what rows mode bounds.
+ *
+ *  Greedy plan, from boundary i = 0 until count-1: take the largest r with
+ *  i + r <= count-1 and r <= 31 such that r == 1 (a single repetition is the
+ *  reference, always allowed), or all of:
+ *      bit r of run_mask is set;
+ *      end_masks is NULL, or bit r of end_masks[i+r] is set;
+ *      no boundary i .. i+r (ends included) has an outcode bit other than
+ *          LEFT, RIGHT, TOP, BOTTOM on either rail (NEAR, FAR and undefined
+ *          bits stop merging: such corners have no usable screen position);
+ *      the run passes;
+ *  then runs_out[n++] = r and i += r. Bits 0 and 1 of run_mask and of
+ *  end_masks[] are ignored. Bit r of end_masks[j] permits the run j-r .. j,
+ *  so one word per boundary expresses any start and end alignment per run
+ *  length (for tier textures that line up only at some boundaries).
+ *
+ *  Returns n >= 1, the number of runs written (they sum to count-1), or
+ *  SH2Z_VIEW_MERGE_INVALID, writing nothing, if a pointer other than
+ *  end_masks is null, count < 2 or count > SH2Z_VIEW_MERGE_MAX_COUNT, mode
+ *  is neither of the two above, tol_q8 > SH2Z_VIEW_MERGE_MAX_TOL, rows is
+ *  not strictly increasing, or runs_out[0 .. count-2] overlaps an input
+ *  array. Every product is exact in 64 bits; no division, floating point,
+ *  global state or allocation. At most 30 candidate runs per output run,
+ *  typically one to three. */
+int sh2z_view_merge_runs(uint8_t *runs_out,const sh2z_view_vertex_t *left,
+    const sh2z_view_vertex_t *right,const uint32_t *rows,const uint32_t *end_masks,
+    unsigned count,uint32_t run_mask,uint32_t tol_q8,unsigned mode);
+
 #ifdef __cplusplus
 }
 #endif

@@ -42,6 +42,16 @@ assert gd['trials']>=65536 and gd['mismatches']==0 and gd['vertices']>=200000,'g
 assert gd['overflows']>=1 and gd['sizes'][1]==0 and gd['sizes'][2]==0,'overflow path must run; 1 or 2 outputs are impossible'
 gt=gd['timing']
 assert gt['inside']['meanOutputVertices']==4 and gt['side']['meanOutputVertices']==5
+mg=raw['merge']
+assert mg['trials']>=16384 and mg['mismatches']==0 and mg['mergedRuns']>=10000,'merge planner must be exact'
+assert mg['rejectedCalls']>=4000 and mg['hugeRowStrips']>=1000 and mg['blockedBoundaries']>0
+rl=mg['runLengths']
+assert len(rl)==31 and rl[1]>0 and rl[3]>0 and sum(rl[4:])>0,'runs of 2, 4 and longer must occur'
+mt=mg['timing']; mc=mt['configs']
+assert mt['boundaries']==64 and mt['runMask']==[1,2,4]
+assert set(mc)=={'pixel0.5','pixel1','pixel2','pixel1Aligned','rows1'}
+assert mc['pixel0.5']['meanQuads']>=mc['pixel1']['meanQuads']>=mc['pixel2']['meanQuads'],'a looser tolerance never needs more quads'
+for c in mc.values(): assert sum(c['runs'][i]*(1,2,4)[i] for i in range(3))==63*mt['trials'],'runs cover every repetition'
 
 here=Path(__file__).resolve().parent
 model=here.parent/'sh2-model'
@@ -61,6 +71,7 @@ result=dict(schema=1,kernel='view_batch',tier='MODELLED',sourceCommit=raw['sourc
       captureSourceSHA256=sha((here/'capture.h').read_bytes()),
       edgesCaptureSourceSHA256=sha((here/'edges.h').read_bytes()),
       guardCaptureSourceSHA256=sha((here/'guard.h').read_bytes()),
+      mergeCaptureSourceSHA256=sha((here/'merge.h').read_bytes()),
       bridgeSourceSHA256=sha((here/'view_bridge.c').read_bytes()),
       collectorSourceSHA256=sha(Path(__file__).read_bytes())),
     dividerProbes=dict(count=raw['dividerProbeCount'],hardwarePath=raw['dividerProbeHardwarePath'],table=raw['dividerProbes']),
@@ -84,8 +95,13 @@ result=dict(schema=1,kernel='view_batch',tier='MODELLED',sourceCommit=raw['sourc
          [{'kernel':'view_clip_guard','shape':s,'band':gt['band'],'attrs':gt['attrs'],'unit':'cycles per quad','tier':'MODELLED',
            'output_vertices':gt[s]['meanOutputVertices'],'portable':gt[s]['medianCycles']['portable'],
            'divu_stall_model':gt[s]['medianCycles']['divuStallModel'],'outputs_equal_oracle':True}
-          for s in ('inside','side','nearSide')],
-    edges=e,guard=gd)
+          for s in ('inside','side','nearSide')]+
+         [{'kernel':'view_merge_runs','config':k,'mode':mc[k]['mode'],'tol_q8':mc[k]['tolQ8'],'end_masks':mc[k]['endMasks'],
+           'boundaries':mt['boundaries'],'run_mask':mt['runMask'],'unit':'cycles per boundary','tier':'MODELLED',
+           'cycles_per_boundary':mc[k]['medianCyclesPerBoundary'],'max_cycles_per_boundary':mc[k]['maxCyclesPerBoundary'],
+           'mean_quads':mc[k]['meanQuads'],'outputs_equal_oracle':True}
+          for k in ('pixel1','pixel0.5','pixel2','pixel1Aligned','rows1')],
+    edges=e,guard=gd,merge=mg)
 a.output.parent.mkdir(parents=True,exist_ok=True)
 a.output.write_text(json.dumps(result,indent=1)+'\n')
 print('PASS: %d sweep vertices exact on both paths (%d strided); %d divider probes (%d hardware path)'%(
@@ -99,3 +115,6 @@ print('view-guard-1: %d polygons, %d output vertices exact (%d overflows, nothin
     gd['trials'],gd['vertices'],gd['overflows'],gt['inside']['medianCycles']['portable'],gt['inside']['medianCycles']['divuStallModel'],
     gt['side']['medianCycles']['portable'],gt['side']['medianCycles']['divuStallModel'],
     gt['nearSide']['medianCycles']['portable'],gt['nearSide']['medianCycles']['divuStallModel']))
+print('view-merge-1: %d strips, %d runs exact (%d merged), %d rejected calls wrote nothing; 64-boundary strips, runs {1,2,4}, cycles/boundary (quads): '%(
+    mg['trials'],mg['runs'],mg['mergedRuns'],mg['rejectedCalls'])+
+    ', '.join('%s %.1f (%.2f)'%(k,mc[k]['medianCyclesPerBoundary'],mc[k]['meanQuads']) for k in ('pixel0.5','pixel1','pixel2','pixel1Aligned','rows1')))
