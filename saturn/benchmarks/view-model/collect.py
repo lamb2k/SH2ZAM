@@ -37,6 +37,11 @@ assert e['points']>=200000 and e['mismatches']==0 and e['quads']>=65536 and e['c
 assert e['projectedPoints']>=262144 and e['projectMismatches']==0
 assert len(e['patterns'])==16 and min(e['patterns'])>0,'every near-clip in/out pattern must run'
 et=e['timing']
+gd=raw['guard']
+assert gd['trials']>=65536 and gd['mismatches']==0 and gd['vertices']>=200000,'guard clip must be exact'
+assert gd['overflows']>=1 and gd['sizes'][1]==0 and gd['sizes'][2]==0,'overflow path must run; 1 or 2 outputs are impossible'
+gt=gd['timing']
+assert gt['inside']['meanOutputVertices']==4 and gt['side']['meanOutputVertices']==5
 
 here=Path(__file__).resolve().parent
 model=here.parent/'sh2-model'
@@ -55,6 +60,7 @@ result=dict(schema=1,kernel='view_batch',tier='MODELLED',sourceCommit=raw['sourc
       dividerModelSourceSHA256=sha((model/'divider_model.h').read_bytes()),
       captureSourceSHA256=sha((here/'capture.h').read_bytes()),
       edgesCaptureSourceSHA256=sha((here/'edges.h').read_bytes()),
+      guardCaptureSourceSHA256=sha((here/'guard.h').read_bytes()),
       bridgeSourceSHA256=sha((here/'view_bridge.c').read_bytes()),
       collectorSourceSHA256=sha(Path(__file__).read_bytes())),
     dividerProbes=dict(count=raw['dividerProbeCount'],hardwarePath=raw['dividerProbeHardwarePath'],table=raw['dividerProbes']),
@@ -74,8 +80,12 @@ result=dict(schema=1,kernel='view_batch',tier='MODELLED',sourceCommit=raw['sourc
            'one_point_call_cycles':et['medianCyclesOnePointCall'],'outputs_equal_oracle':True},
           {'kernel':'view_clip_near','crossings':2,'unit':'cycles per quad','tier':'MODELLED',
            'portable':et['medianCyclesPerQuad']['portable'],'divu_stall_model':et['medianCyclesPerQuad']['divuStallModel'],
-           'outputs_equal_oracle':True}],
-    edges=e)
+           'outputs_equal_oracle':True}]+
+         [{'kernel':'view_clip_guard','shape':s,'band':gt['band'],'attrs':gt['attrs'],'unit':'cycles per quad','tier':'MODELLED',
+           'output_vertices':gt[s]['meanOutputVertices'],'portable':gt[s]['medianCycles']['portable'],
+           'divu_stall_model':gt[s]['medianCycles']['divuStallModel'],'outputs_equal_oracle':True}
+          for s in ('inside','side','nearSide')],
+    edges=e,guard=gd)
 a.output.parent.mkdir(parents=True,exist_ok=True)
 a.output.write_text(json.dumps(result,indent=1)+'\n')
 print('PASS: %d sweep vertices exact on both paths (%d strided); %d divider probes (%d hardware path)'%(
@@ -85,3 +95,7 @@ print('cycles/vertex at 512 (median): portable %.2f, divu raw %.2f, stall model 
 print('view-edges-1: %d stepped points, %d clipped quads, %d projected points exact; project %.2f/%.2f, steps %.2f/%.2f per point, clip %d/%d per quad (portable/divu)'%(
     e['points'],e['quads'],e['projectedPoints'],et['medianCyclesPerProjectedPoint']['portable'],et['medianCyclesPerProjectedPoint']['divuStallModel'],
     et['medianCyclesPerPoint']['portable'],et['medianCyclesPerPoint']['divuStallModel'],et['medianCyclesPerQuad']['portable'],et['medianCyclesPerQuad']['divuStallModel']))
+print('view-guard-1: %d polygons, %d output vertices exact (%d overflows, nothing written); quad cycles portable/divu: inside %d/%d, side %d/%d, near+side %d/%d'%(
+    gd['trials'],gd['vertices'],gd['overflows'],gt['inside']['medianCycles']['portable'],gt['inside']['medianCycles']['divuStallModel'],
+    gt['side']['medianCycles']['portable'],gt['side']['medianCycles']['divuStallModel'],
+    gt['nearSide']['medianCycles']['portable'],gt['nearSide']['medianCycles']['divuStallModel']))

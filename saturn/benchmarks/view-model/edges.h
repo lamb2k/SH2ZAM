@@ -55,6 +55,7 @@ static void edge_set_args(unsigned first,unsigned step,unsigned den,unsigned cou
  u32 a=sym("_view_edge_args");
  wl(&cpu,a,first);wl(&cpu,a+4,step);wl(&cpu,a+8,den);wl(&cpu,a+12,count);
 }
+#include "guard.h"
 static int capture_edges(void) {
  const u32 ends=sym("_view_edge_ends"),cin=sym("_view_clip_in");
  const u32 op=sym("_view_out_portable"),od=sym("_view_out_divu");
@@ -167,8 +168,8 @@ static int capture_edges(void) {
   EDGE_TIME_TRIALS,proj_cyc[0][mid]/512.0,proj_cyc[1][mid]/512.0,proj_stall);
  printf("\"pointsPerEdge\":64,\"edgeDivisions\":%"PRIu64",\"edgeStallCycles\":%"PRIu64","
   "\"medianCyclesPerPoint\":{\"portable\":%.2f,\"divuStallModel\":%.2f},\"medianCyclesOnePointCall\":{\"portable\":%u,\"divuStallModel\":%u},"
-  "\"clipCrossingsPerQuad\":2,\"clipDivisions\":%"PRIu64",\"medianCyclesPerQuad\":{\"portable\":%u,\"divuStallModel\":%u}}}}\n",
+  "\"clipCrossingsPerQuad\":2,\"clipDivisions\":%"PRIu64",\"medianCyclesPerQuad\":{\"portable\":%u,\"divuStallModel\":%u}}},",
   step_div,step_stall,step_cyc[0][mid]/64.0,step_cyc[1][mid]/64.0,one_cyc[0][mid],one_cyc[1][mid],
   clip_div,clip_cyc[0][mid],clip_cyc[1][mid]);
- return 0;
+ return capture_guard();
 }

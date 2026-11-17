@@ -10,6 +10,7 @@
  *    nearly every vertex costs two divisions. */
 #define VIEW_SWEEP_POSES 512u
 #define VIEW_SWEEP_COUNT 2048u
+#define VIEW_SWEEP_CHUNK 1024u
 #define VIEW_TIME_POSES 64u
 #define VIEW_TIME_COUNT 512u
 
@@ -118,7 +119,7 @@ static int view_cmp_u32(const void *a,const void *b) {u32 x=*(const u32*)a,y=*(c
 #include "edges.h"
 struct view_probe {int64_t n;int32_t d;};
 static int capture_view(void) {
- if(rl(&cpu,sym("_view_capacity"))<VIEW_SWEEP_COUNT)fail("View capacity",0);
+ if(rl(&cpu,sym("_view_capacity"))<VIEW_SWEEP_CHUNK)fail("View capacity",0);
  printf("{\"schema\":1,\"kind\":\"SH2ZAM view batch, Yabause isolated SH2 flat-RAM model with harness divider model, not Saturn timing\",");
  printf("\"sourceCommit\":\"%s\",\"dividerLatencyAssumed\":%u,",(char*)ram+offset(sym("_view_source_commit"),1),DIVU_LATENCY);
  /* 1. Divider helpers. */
@@ -163,25 +164,30 @@ static int capture_view(void) {
  for(unsigned pose=0;pose<VIEW_SWEEP_POSES;pose++) {
   double m[3][3],eye[3];struct view_cam c=view_random_cam(m,eye,0);
   view_positions(pos,VIEW_SWEEP_COUNT,m,eye,0,&c);
-  view_store_cam(&c);view_store_positions(pos,VIEW_SWEEP_COUNT);
+  view_store_cam(&c);
   for(unsigned k=0;k<VIEW_SWEEP_COUNT;k++){want[k]=view_oracle(&c,pos[k],&saturated);near+=want[k].code&1;}
-  view_poison(sym("_view_out_portable"),VIEW_SWEEP_COUNT);view_poison(sym("_view_out_divu"),VIEW_SWEEP_COUNT);
-  divu_reset();
-  if(invoke("_view_run_portable",VIEW_SWEEP_COUNT,0,0,0).result!=1)fail("Portable view batch",pose);
-  if(divu_divisions)fail("Portable path used the divider",pose);
-  if(invoke("_view_run_divu",VIEW_SWEEP_COUNT,0,0,0).result!=1)fail("Divider view batch",pose);
-  divisions+=divu_divisions;
-  bad_portable+=view_compare(sym("_view_out_portable"),want,VIEW_SWEEP_COUNT);
-  bad_divu+=view_compare(sym("_view_out_divu"),want,VIEW_SWEEP_COUNT);
-  vertices+=VIEW_SWEEP_COUNT;
-  if(pose%8==0) {
-   /* Stride 12: every other record of the same input. */
-   static struct view_vtx want_even[VIEW_SWEEP_COUNT/2];
-   for(unsigned k=0;k<VIEW_SWEEP_COUNT/2;k++)want_even[k]=want[2*k];
-   view_poison(sym("_view_out_divu"),VIEW_SWEEP_COUNT);
-   if(invoke("_view_run_divu_stride12",VIEW_SWEEP_COUNT/2,0,0,0).result!=1)fail("Strided divider view batch",pose);
-   bad_divu+=view_compare(sym("_view_out_divu"),want_even,VIEW_SWEEP_COUNT/2);
-   strided+=VIEW_SWEEP_COUNT/2;
+  /* The pose's positions run as VIEW_SWEEP_COUNT/VIEW_SWEEP_CHUNK batches, so
+   * the image's buffers stay small; the vertices are the same either way. */
+  for(unsigned off=0;off<VIEW_SWEEP_COUNT;off+=VIEW_SWEEP_CHUNK) {
+   view_store_positions(pos+off,VIEW_SWEEP_CHUNK);
+   view_poison(sym("_view_out_portable"),VIEW_SWEEP_CHUNK);view_poison(sym("_view_out_divu"),VIEW_SWEEP_CHUNK);
+   divu_reset();
+   if(invoke("_view_run_portable",VIEW_SWEEP_CHUNK,0,0,0).result!=1)fail("Portable view batch",pose);
+   if(divu_divisions)fail("Portable path used the divider",pose);
+   if(invoke("_view_run_divu",VIEW_SWEEP_CHUNK,0,0,0).result!=1)fail("Divider view batch",pose);
+   divisions+=divu_divisions;
+   bad_portable+=view_compare(sym("_view_out_portable"),want+off,VIEW_SWEEP_CHUNK);
+   bad_divu+=view_compare(sym("_view_out_divu"),want+off,VIEW_SWEEP_CHUNK);
+   vertices+=VIEW_SWEEP_CHUNK;
+   if(pose%8==0) {
+    /* Stride 12: every other record of the same input. */
+    static struct view_vtx want_even[VIEW_SWEEP_CHUNK/2];
+    for(unsigned k=0;k<VIEW_SWEEP_CHUNK/2;k++)want_even[k]=want[off+2*k];
+    view_poison(sym("_view_out_divu"),VIEW_SWEEP_CHUNK);
+    if(invoke("_view_run_divu_stride12",VIEW_SWEEP_CHUNK/2,0,0,0).result!=1)fail("Strided divider view batch",pose);
+    bad_divu+=view_compare(sym("_view_out_divu"),want_even,VIEW_SWEEP_CHUNK/2);
+    strided+=VIEW_SWEEP_CHUNK/2;
+   }
   }
  }
  printf("\"sweep\":{\"poses\":%u,\"vertices\":%"PRIu64",\"near\":%"PRIu64",\"saturatedQuotients\":%"PRIu64",\"divisions\":%"PRIu64",\"stride12Vertices\":%"PRIu64",\"portableMismatches\":%"PRIu64",\"divuMismatches\":%"PRIu64"},",
