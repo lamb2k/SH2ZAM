@@ -27,14 +27,20 @@ MODELLED. Not console timing, not emulator timing.
      edge steps, near clip, guard clip; portable and divider forms) against
      its own oracle, then each timing fixture through the old function and
      its `_trunc` form back to back.
-  8. `center.h`, view-center-1: every `_center` entry point against its own
+  8. `guardsrc.h`, view-guard-src-1: the source-order guard clip, both
+     forms, on 32,768 random polygons and 16,384 road quads against its own
+     oracle, failures writing nothing, then the view-round-1 guard fixtures
+     and a road quad through `sh2z_view_clip_guard_trunc` and the new clip
+     back to back.
+  9. `center.h`, view-center-1: every `_center` entry point against its own
      oracle with fractional centres (points aimed at exact row boundaries),
      the `_center` and `_trunc` forms byte for byte at whole-pixel centres,
      then each timing fixture through the `_trunc` form and its `_center`
-     form back to back.
+     form back to back. It runs between `round.h` and `guardsrc.h`.
 - `collect.py` checks the invariants (zero mismatches, two divisions per
   timing vertex, merge runs covering every repetition, both view-round-1
-  differences occurring, view-center-1 exact and equal to view-round-1 at
+  differences occurring, both source-order clip failures occurring,
+  view-center-1 exact and equal to view-round-1 and view-guard-src-1 at
   whole-pixel centres, the ELF's embedded
   source commit, the interpreter pin) and
   writes the results file.

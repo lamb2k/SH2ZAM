@@ -13,7 +13,8 @@
  * _trunc form run on the same inputs and must write the same bytes.
  * Timing: each view-round-1 timing fixture through the _trunc function
  * (centre 160, 112) and the _center function (centre 160, 112 + 1/65536)
- * back to back. */
+ * back to back. Then guardsrc.h (view-guard-src-1), included by round.h
+ * before its capture function, runs last. */
 #define CENTER_BATCH_POSES 256u
 #define CENTER_BATCH_COUNT 1024u
 #define CENTER_PROJECT_TRIALS 256u
@@ -368,6 +369,6 @@ static int capture_center(void) {
   printf(",\"%s\":{\"per\":%.0f,\"divisions\":%"PRIu64",\"median\":{\"truncPortable\":%.2f,\"truncDivu\":%.2f,\"centerPortable\":%.2f,\"centerDivu\":%.2f}}",
    names[row],per[row],divisions[row][1],cyc[row][0][mid]/per[row],cyc[row][1][mid]/per[row],cyc[row][2][mid]/per[row],cyc[row][3][mid]/per[row]);
  }
- printf("}}}\n");
- return 0;
+ printf("}},");
+ return capture_guard_src();
 }

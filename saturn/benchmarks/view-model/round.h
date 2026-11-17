@@ -10,7 +10,8 @@
  * edge steps, near clip and guard clip.
  * Timing: the same fixtures run through the view-contract-1 function and its
  * _trunc form back to back, so each row is a paired comparison. Then
- * center.h (view-center-1), included at the end. */
+ * center.h (view-center-1), which then runs guardsrc.h (view-guard-src-1);
+ * both reuse this file's projection oracle. */
 #define ROUND_BATCH_POSES 256u
 #define ROUND_BATCH_COUNT 1024u
 #define ROUND_PROJECT_TRIALS 256u
@@ -96,6 +97,7 @@ static int round_guard_oracle(struct guard_vtx *out,const struct view_cam *c,con
 }
 static void round_median(u32 *a,unsigned n) {qsort(a,n,4,view_cmp_u32);}
 
+#include "guardsrc.h"
 static int capture_round(void) {
  const u32 op=sym("_view_out_portable"),od=sym("_view_out_divu"),pts=sym("_view_input");
  const u32 ends=sym("_view_edge_ends"),cin=sym("_view_clip_in");

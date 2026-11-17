@@ -16,6 +16,7 @@ planes per vertex in 64-bit arithmetic. Contract tag: `view-contract-1`.
 | Guard-band polygon clip (near, far, sides; attributes) | Landed, `view-guard-1` (see below) |
 | Bounded texture-merge planner (pixel or row tolerance) | Landed, `view-merge-1` (see below): HOST and MODELLED; 223 modelled cycles per boundary at 1 px |
 | Final-coordinate truncation (`_trunc` forms of every projecting path) | `view-round-1` (see below): HOST and MODELLED; +8.4 modelled cycles per batch vertex |
+| Guard clip in a source clipper's vertex order (fan-mapped textures) | `view-guard-src-1` (see below): HOST and MODELLED; −10% to +6% modelled cycles against the `view-round-1` guard clip |
 | Fractional (Q16) centre (`_center` forms of every `_trunc` path) | `view-center-1` (see below): HOST and MODELLED; +4.3 modelled cycles per batch vertex over `_trunc` |
 | Console or emulator timing | Unrun; the [calibration image](benchmarks/yaul/calibration/README.md) times the batch on a console |
 
@@ -677,6 +678,182 @@ run.
   pixels exactly when the view-space points match. A different rotation
   precision, edge-split rule or clip-crossing rule upstream can still move
   a point by a unit.
+
+## Source-order guard clip (`view-guard-src-1`)
+
+A renderer with fan-mapped textures draws each clipped polygon as a fan of
+quads from vertex 0 and maps the whole texture onto every fan piece. Then the
+polygon's starting vertex and order show on screen, not just its outline.
+`sh2z_view_clip_guard_trunc` makes the same cyclic polygon as a source
+renderer's clipper, up to rounding, but usually starts it somewhere else.
+Rotating its output afterwards does not fix that, because the crossing points
+also differ. The opt-in `sh2z_view_clip_guard_src_trunc` (and `_divu`)
+reproduces that clipper vertex for vertex.
+
+```c
+int sh2z_view_clip_guard_src_trunc(sh2z_view_guard_vertex_t out[16], const sh2z_view_t *v,
+    const int16_t guard[4], const sh2z_view_guard_vertex_t *in, unsigned count,
+    unsigned attrs, unsigned max_out);
+int sh2z_view_clip_guard_src_trunc_divu(/* same */);
+#define SH2Z_VIEW_GUARD_SNAP (-3)
+```
+
+### The source clipper
+
+The planes, their order (near, far, left, right, top, bottom) and the inside
+test `d >= 0` are those of `view-guard-1`. Three things differ:
+
+- **Order.** Each pass walks previous -> current, starting with the closing
+  edge (last, first). It emits the crossing, then the current corner.
+  `view-guard-1` walks current -> next from (first, second) and emits the
+  current corner, then the crossing. When the closing edge crosses a plane,
+  the source's output starts with that crossing; `view-guard-1` puts it last.
+- **Crossing.** The point is measured from the previous corner P towards
+  the current one Q, whichever is inside, at the Q0.32 fraction
+  `t = floor(|dP| * 2^32 / (|dP| + |dQ|))`. Each coordinate moves
+  `floor(|Q.a - P.a| * t / 2^32)` from P. `view-guard-1` measures from the
+  inside end, exactly for near and far and with a Q2.30 fraction for sides.
+- **Snap.** The rounded crossing is moved back inside every plane clipped so
+  far. z is clamped to `[near_z, far_z]`, then x is moved to
+  `ceil(KL*z / focal_x)` or `floor(KR*z / focal_x)` and y likewise, with the
+  plane offsets `KL = 65536*left - Cx`, and so on. The source fails the whole
+  call if one of those bounds does not fit int32 (used or not), or if no
+  lattice point lies between two opposite planes at that depth.
+
+The source also fails once a pass would produce more corners than its buffer
+holds (10), so the new function takes `max_out`. Its failures return
+`SH2Z_VIEW_GUARD_OVERFLOW` or `SH2Z_VIEW_GUARD_SNAP` and write nothing. Output
+vertices are projected by the `view-round-1` rule. They lie inside all six
+planes, so they land inside the guard rectangle without the clamp. The full
+contract is in the header.
+
+### How far `view-round-1` is from the source (HOST)
+
+`tests/test_guard_src.c` runs an oracle of the source clipper, written from
+the clipper itself in 128-bit arithmetic, next to `sh2z_view_clip_guard_trunc`.
+It uses 200,000 synthetic road quads and 400,000 random polygons. The road
+quads lie on a ground plane under a camera like the port's: centre 160, 112,
+focal 140 to 320 px, the ±900 band, pass limit 10. Each quad was drawn until
+one corner was behind the camera or outside the band.
+
+| Compared with the source | Road quads | Random polygons |
+| --- | ---: | ---: |
+| Clipped, non-empty polygons | 176,752 | 169,041 |
+| (a) `view-round-1`, same start, identical | 0 | 1,721 |
+| (a) same start, same pixels, view space differs | 19,349 | 25,013 |
+| (a) same start, pixels differ | 8,707 | 21,307 |
+| (a) **rotated**, identical otherwise | 0 | 2,037 |
+| (a) **rotated**, same pixels | 123,625 | 51,933 |
+| (a) **rotated**, pixels differ | 25,071 | 60,930 |
+| (a) different vertex count | 0 | 6,100 |
+| (b) source order and planes, `view-guard-1` crossings: vertices differing in view space | 228,807 of 751,420 (≤ 172 units) | 592,312 of 842,273 |
+| (b) the same: vertices on a different pixel | 35,432, all one pixel off (in 33,778 polygons) | 142,621 |
+| source crossings without the snap: vertices on a different pixel | 179,909, all one pixel off | 344,446 |
+| (c) `sh2z_view_clip_guard_src_trunc[_divu]` mismatches | **0** | **0** |
+
+On the road, 84% of clipped quads come out rotated. A rotation changes the
+fan's hub and pieces, and so where the whole texture lands. With the order
+matched, the crossing coordinates still differ by up to 172 units in every
+clipped polygon, and by one pixel in 19% of them. The source's crossing
+without its snap leaves a pixel error on about a quarter of the vertices.
+Only all three together are exact. The random polygons have corners up to
+2^31 units away, so their differences in the last three rows reach the int32
+range and thousands of pixels; no bound is given for them.
+
+### Implementation
+
+`src/sh2zam_view_guard_src.c`, a new file: every object of the earlier
+library builds byte for byte as on `main` (SH-2 `objdump -dr`, all 16 files).
+The core takes the centre as Q16 (`Cx`, `Cy`); the two entry points pass
+`65536 * center`.
+
+- **Fraction.** For `den = |dP| + |dQ| < 2^31`, one division:
+  `a*2^32/den = 2^31 + (2a - den)*2^31/den` when `2a >= den`, which keeps the
+  quotient below 2^31. For `den < 2^59`, the same on `den` and `a` shifted
+  until `den < 2^31`, then at most nine exact corrections from the 64-bit
+  remainder (proof in the source). Larger distances, which need a focal
+  length times a coordinate near 2^58, use a 32-step restoring division.
+  Each coordinate's step is then the high word of a 32 x 32 product.
+- **Snap.** A bound is divided only when the point is outside it; whether a
+  bound fits int32 is two comparisons with `focal * 2^31`.
+- **Projection.** Inside all six planes, `65536*left <= Cx + qx <=
+  65536*right` (and likewise for y), so the quotients fit the divider and the
+  pixels need no clamp. The two divisions overlap.
+
+### Evidence
+
+**HOST** (`tests/test_guard_src.c`, GCC and Clang strict, GCC ASan/UBSan):
+- **Oracle.** 751,464 road and 884,634 random output vertices equal the
+  source oracle on both entry points, with the `_divu` bytes equal to the
+  portable bytes. In-place calls are included. The random set adds 48,432
+  failures (38,678 overflow, 9,754 snap), each matched and writing nothing.
+  GCC and Clang draw the same fixtures, so every count here is the same
+  under both.
+- **Coverage.** Every oracle branch runs: 1,574,203 fractions with
+  `den < 2^31`, 4,081,294 below 2^59, 50,707 above, 121,774 with a corner on
+  the plane (`t = 2^32`), 1,189,953 snap moves, 1,074 empty-lattice failures
+  and 8,680 int32 range failures.
+- **Properties.** Every source output lies inside all six planes and the
+  guard rectangle unclamped. Every output projects exactly as
+  `sh2z_view_project_trunc`, and unused attributes are zero. The oracle run
+  in `view-guard-1` mode equals `sh2z_view_clip_guard_trunc` on every polygon.
+- **Hand cases.** A closing-edge crossing comes first; `view-round-1` gives
+  the same corners rotated, with that crossing one unit and one pixel off
+  (-899 against -900). A corner exactly on a plane repeats. An edge
+  symmetric about a plane crosses at its lattice midpoint. An octagon clips
+  to 12 corners and overflows at `max_out` 10. A lattice bound outside int32
+  fails with `SH2Z_VIEW_GUARD_SNAP`. Every invalid argument writes nothing.
+- **Controls**, each detected (mismatches over 20,000 road quads and 40,000
+  random polygons):
+
+| Oracle mutation | Mismatches |
+| --- | ---: |
+| `view-guard-1` emission order (current, then crossing) | 126,787 |
+| Walk starts at (first, second) | 139,264 |
+| Planes left, top, right, bottom | 27,273 |
+| `view-guard-1` crossing rule | 89,479 |
+| No snap | 80,815 |
+| No near/far clamp in the snap | 33,353 |
+| Fraction rounded to nearest | 33,805 |
+| Crossing measured from the current corner | 109,913 |
+| Pass limit ignored | 3,840 |
+| Snap failures ignored | 1,026 |
+
+**MODELLED** (SH-2 model capture, `guardsrc.h`): both entry points run on
+the SH-2 against the harness's own oracle, written from the header text, on
+32,768 random polygons (thin rectangles and shallow near planes included) and
+16,384 road quads. All 134,608 output vertices are exact; 3,645 overflows and
+3,055 snap failures write nothing. Medians of 64 trials on the timing camera
+and the ±900 band, each fixture through `sh2z_view_clip_guard_trunc` and the
+new clip back to back:
+
+| Quad | Output vertices | `_trunc` portable / `_divu` | `_src_trunc` portable / `_divu` | Divisions, `_trunc` / `_src_trunc` |
+| --- | ---: | ---: | ---: | ---: |
+| All corners inside (attrs 2) | 4 | 4,518 / 2,834 | 4,277 / **2,873** | 8 / 8 |
+| One corner far left (attrs 2) | 5 | 6,896 / 4,496 | 6,774 / **4,577** | 12 / 13 |
+| Two corners behind, one far left (attrs 2) | 5 | 11,617 / 7,598 | 9,790 / **6,865** | 23.1 / 18 |
+| Road quad from behind the camera (attrs 0, `max_out` 10) | 6 | 12,636 / 8,347 | 12,544 / **8,856** | 24 / 22.6 |
+
+So the `_divu` form costs within about −10% to +6% of
+`sh2z_view_clip_guard_trunc_divu`. Near crossings are cheaper: one division
+for the fraction, against one per coordinate. Side crossings cost a second
+division when the snap moves them. No console or emulator run.
+
+### Caller guidance
+
+- **Swap the call where the source clips.** Pass the source's buffer size as
+  `max_out` (10 for a buffer of 10 corners) and attrs 0 if the texture comes
+  from the fan, not from per-corner coordinates. Treat both negative results
+  as the source's failure.
+- **Same inputs.** Give the corners in the source's order, as view-space
+  points equal to the source's. Exactness covers order, count and every
+  coordinate given equal view-space corners and an integer centre.
+- **Q16 centre.** The clip computes with a Q16 centre internally. A source
+  whose centre has a fraction needs an entry point that takes it, which can
+  pass it through unchanged; these two functions take `sh2z_view_t`'s whole
+  pixels.
+- **Attributes**, which the source does not have, are interpolated with the
+  same fraction from the previous corner and never snapped.
 
 ## Fractional centre (`view-center-1`)
 

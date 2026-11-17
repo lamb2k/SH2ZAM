@@ -141,6 +141,18 @@ int32_t view_round_guard_divu(void) {
         view_input.guard,view_guard_args[0],view_guard_args[1]);
 }
 
+/* view-guard-src-1: the source-order guard clip on the view-guard-1 buffers,
+ * with the pass limit in view_src_guard_args[0]. */
+uint32_t view_src_guard_args[1];
+int32_t view_src_guard_portable(void) {
+    return sh2z_view_clip_guard_src_trunc((sh2z_view_guard_vertex_t *)(void *)view_out_portable,&view_camera,view_guard_rect,
+        view_input.guard,view_guard_args[0],view_guard_args[1],view_src_guard_args[0]);
+}
+int32_t view_src_guard_divu(void) {
+    return sh2z_view_clip_guard_src_trunc_divu((sh2z_view_guard_vertex_t *)(void *)view_out_divu,&view_camera,view_guard_rect,
+        view_input.guard,view_guard_args[0],view_guard_args[1],view_src_guard_args[0]);
+}
+
 /* view-center-1: the _center forms on the same buffers and arguments, with
  * the harness writing the centre view (the camera, then center_x16 and
  * center_y16) to view_center. */
