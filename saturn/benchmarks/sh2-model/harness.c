@@ -29,10 +29,11 @@ static size_t offset(u32 addr,size_t len) {
 }
 static u8 rb(SH2_struct *sh,u32 addr) {(void)sh;reads++;return ram[offset(addr,1)];}
 static u16 rw(SH2_struct *sh,u32 addr) {(void)sh;reads++;size_t i=offset(addr,2);return (u16)((u16)ram[i]<<8|ram[i+1]);}
-static u32 rl(SH2_struct *sh,u32 addr) {(void)sh;reads++;size_t i=offset(addr,4);return (u32)ram[i]<<24|(u32)ram[i+1]<<16|(u32)ram[i+2]<<8|ram[i+3];}
+#include "divider_model.h"
+static u32 rl(SH2_struct *sh,u32 addr) {if(divu_address(addr))return divu_read(sh,addr);reads++;size_t i=offset(addr,4);return (u32)ram[i]<<24|(u32)ram[i+1]<<16|(u32)ram[i+2]<<8|ram[i+3];}
 static void wb(SH2_struct *sh,u32 addr,u8 v) {(void)sh;writes++;ram[offset(addr,1)]=v;}
 static void ww(SH2_struct *sh,u32 addr,u16 v) {(void)sh;writes++;size_t i=offset(addr,2);ram[i]=(u8)(v>>8);ram[i+1]=(u8)v;}
-static void wl(SH2_struct *sh,u32 addr,u32 v) {(void)sh;writes++;size_t i=offset(addr,4);ram[i]=(u8)(v>>24);ram[i+1]=(u8)(v>>16);ram[i+2]=(u8)(v>>8);ram[i+3]=(u8)v;}
+static void wl(SH2_struct *sh,u32 addr,u32 v) {if(divu_address(addr)){divu_write(sh,addr,v);return;}writes++;size_t i=offset(addr,4);ram[i]=(u8)(v>>24);ram[i+1]=(u8)(v>>16);ram[i+2]=(u8)(v>>8);ram[i+3]=(u8)v;}
 static u32 fetch(SH2_struct *sh,u32 addr) {(void)sh;size_t i=offset(addr,2);u16 op=(u16)((u16)ram[i]<<8|ram[i+1]);instructions++;histogram[op]++;if((op&0xf00f)==0x000f)mac_ops++;if((op&0xf00f)==0x300d)dmuls_ops++;return op;}
 /* These entry points are unreachable for the configured pure SH-2 CPU/RAM
  * run. Trap if a supposedly isolated kernel reaches unsupported hardware. */
@@ -82,16 +83,19 @@ static const char *outputs[]={"_float_output","_general_output","_fixed_output",
 static void print_cost(struct cost c) {printf("{\"cycles\":%u,\"instructions\":%"PRIu64",\"dataReads\":%"PRIu64",\"dataWrites\":%"PRIu64",\"macInstructions\":%"PRIu64",\"dmulsInstructions\":%"PRIu64"}",c.cycles,c.instructions,c.reads,c.writes,c.mac_ops,c.dmuls_ops);}
 #include "../math-model/capture.h"
 #include "../workload-model/capture.h"
+#include "../view-model/capture.h"
 int main(int argc,char**argv) {
- if(argc<3){fprintf(stderr,"usage: harness benchmark.elf benchmark.sym [maxcases] [maxposes] | --math | --workloads\n");return 2;}
+ if(argc<3){fprintf(stderr,"usage: harness benchmark.elf benchmark.sym [maxcases] [maxposes] | --math | --workloads | --view\n");return 2;}
  int math_mode=argc>3&&!strcmp(argv[3],"--math");
  int workload_mode=argc>3&&!strcmp(argv[3],"--workloads");
- unsigned case_count=argc>3&&!math_mode&&!workload_mode?(unsigned)atoi(argv[3]):15,pose_count=argc>4?(unsigned)atoi(argv[4]):21;if(case_count==0||pose_count==0||case_count>15||pose_count>21)return 2;
+ int view_mode=argc>3&&!strcmp(argv[3],"--view");
+ unsigned case_count=argc>3&&!math_mode&&!workload_mode&&!view_mode?(unsigned)atoi(argv[3]):15,pose_count=argc>4?(unsigned)atoi(argv[4]):21;if(case_count==0||pose_count==0||case_count>15||pose_count>21)return 2;
  load_symbols(argv[2]);load_elf(argv[1]);
  cpu.model=SHMT_SH2;cpu.MappedMemoryReadByte=rb;cpu.MappedMemoryReadWord=rw;cpu.MappedMemoryReadLong=rl;cpu.MappedMemoryWriteByte=wb;cpu.MappedMemoryWriteWord=ww;cpu.MappedMemoryWriteLong=wl;
  for(unsigned i=0;i<65536;i++)cpu.opcodes[i]=decode(SHMT_SH2,(u16)i);for(unsigned i=0;i<256;i++)cpu.fetchlist[i]=fetch;
  if(math_mode) return capture_math();
  if(workload_mode) return capture_workloads();
+ if(view_mode) return capture_view();
  u32 in=sym("_input"),matrix=sym("_fixed_matrix"),cases=sym("_cases"),poses=sym("_poses");
  uint64_t components=0;unsigned mismatches=0;double max_error=0;
  printf("{\"schema\":2,\"kind\":\"Yabause isolated SH2 interpreter flat-RAM model, not Saturn timing\",\"cases\":[");

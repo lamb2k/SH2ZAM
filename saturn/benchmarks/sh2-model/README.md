@@ -157,6 +157,13 @@ This model deliberately has:
 - No DMA, timer, interrupt, second CPU, renderer or other peripheral activity.
 - No BIOS, boot sequence, SDK timer integration or full-console execution.
 
+The one on-chip device the harness models is the SH-2 division unit, used
+only by explicit `_divu` kernels: `divider_model.h` is labelled harness code
+implementing the assumptions in [../../DIVU.md](../../DIVU.md) (39-cycle latency,
+reads hold the CPU) and traps on any division the library promised never to
+issue. It is not evidence about the console. The view capture
+([../view-model](../view-model/README.md)) is its only user.
+
 Unsupported hardware access, an invalid opcode, an out-of-RAM access, a runaway
 function, an ABI violation or any output mismatch causes failure. The benchmark
 bypasses only the outer scheduler, debugger and idle-loop detector; opcode

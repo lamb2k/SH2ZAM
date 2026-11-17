@@ -131,7 +131,7 @@ static void random_positions(sh2z_pos16_t *p,size_t n,const double eye[3]) {
 }
 
 static sh2z_pos16_t positions[PER_POSE];
-static sh2z_view_vertex_t got[PER_POSE],want[PER_POSE];
+static sh2z_view_vertex_t got[PER_POSE],want[PER_POSE],got_divu[PER_POSE];
 
 /* Returns the number of mismatching vertices across the sweep. */
 static uint64_t sweep(unsigned mutation,uint64_t *vertices,uint64_t *near,uint64_t *saturated) {
@@ -142,6 +142,8 @@ static uint64_t sweep(unsigned mutation,uint64_t *vertices,uint64_t *near,uint64
         const sh2z_view_t v=random_view(r,eye);
         random_positions(positions,PER_POSE,eye);
         check(sh2z_view_batch(got,&v,positions,sizeof(positions[0]),PER_POSE),"batch succeeds");
+        check(sh2z_view_batch_divu(got_divu,&v,positions,sizeof(positions[0]),PER_POSE),"divu batch succeeds");
+        check(!memcmp(got,got_divu,sizeof(got)),"divu batch equals batch byte for byte");
         for(unsigned k=0;k<PER_POSE;++k) {
             const int16_t p[3]={positions[k].x,positions[k].y,positions[k].z};
             want[k]=oracle_vertex(&v,p,mutation);
@@ -167,6 +169,8 @@ static sh2z_view_vertex_t one(const sh2z_view_t *v,int16_t x,int16_t y,int16_t z
     const sh2z_pos16_t p={x,y,z};
     sh2z_view_vertex_t o;
     check(sh2z_view_batch(&o,v,&p,sizeof(p),1),"single vertex succeeds");
+    sh2z_view_vertex_t d;
+    check(sh2z_view_batch_divu(&d,v,&p,sizeof(p),1) && !memcmp(&o,&d,sizeof(o)),"single divu vertex equals batch");
     const int16_t q[3]={x,y,z};
     const sh2z_view_vertex_t w=oracle_vertex(v,q,MUT_NONE);
     check(!memcmp(&o,&w,sizeof(o)),"single vertex matches oracle");
@@ -247,10 +251,16 @@ static void edge_cases(void) {
     check(!sh2z_view_batch(out,&v,(const char *)p+1,6,2),"misaligned positions");
     check(!sh2z_view_batch(NULL,&v,p,6,2) && !sh2z_view_batch(out,&v,NULL,6,2),"null with count");
     check(!sh2z_view_batch(out,NULL,p,6,2) && !sh2z_view_batch(out,&bad,p,6,2),"invalid view");
+    check(sh2z_view_batch_divu(NULL,&v,NULL,0,0) && sh2z_view_batch_divu(out,&v,p,7,0),"divu count 0 succeeds");
+    check(!sh2z_view_batch_divu(out,&v,p,5,2) && !sh2z_view_batch_divu(out,&v,p,7,2),"divu stride rules");
+    check(!sh2z_view_batch_divu(out,&v,(const char *)p+1,6,2),"divu misaligned positions");
+    check(!sh2z_view_batch_divu(NULL,&v,p,6,2) && !sh2z_view_batch_divu(out,&v,NULL,6,2),"divu null with count");
+    check(!sh2z_view_batch_divu(out,NULL,p,6,2) && !sh2z_view_batch_divu(out,&bad,p,6,2),"divu invalid view");
     check(!memcmp(out,sentinel,sizeof(out)),"failed calls write nothing");
     union {sh2z_view_vertex_t v[4];sh2z_pos16_t p[13];} shared;
     memset(&shared,0,sizeof(shared));
     check(!sh2z_view_batch(shared.v,&v,shared.p+4,6,2),"overlapping output rejected");
+    check(!sh2z_view_batch_divu(shared.v,&v,shared.p+4,6,2),"divu overlapping output rejected");
     /* Stride larger than a position: records with trailing data. */
     struct {int16_t x,y,z,u,w;} records[3]={{1,2,10,99,99},{-4,5,20,99,99},{6,-7,6,99,99}};
     check(sh2z_view_batch(out,&v,records,sizeof(records[0]),3),"stride 10");
