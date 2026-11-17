@@ -746,8 +746,8 @@ one corner was behind the camera or outside the band.
 | (a) **rotated**, pixels differ | 25,071 | 60,930 |
 | (a) different vertex count | 0 | 6,100 |
 | (b) source order and planes, `view-guard-1` crossings: vertices differing in view space | 228,807 of 751,420 (≤ 172 units) | 592,312 of 842,273 |
-| (b) the same: vertices one pixel off | 35,432 (in 33,778 polygons) | 142,621 |
-| source crossings without the snap: vertices one pixel off | 179,909 | 344,446 |
+| (b) the same: vertices on a different pixel | 35,432, all one pixel off (in 33,778 polygons) | 142,621 |
+| source crossings without the snap: vertices on a different pixel | 179,909, all one pixel off | 344,446 |
 | (c) `sh2z_view_clip_guard_src_trunc[_divu]` mismatches | **0** | **0** |
 
 On the road, 84% of clipped quads come out rotated. A rotation changes the
@@ -755,9 +755,9 @@ fan's hub and pieces, and so where the whole texture lands. With the order
 matched, the crossing coordinates still differ by up to 172 units in every
 clipped polygon, and by one pixel in 19% of them. The source's crossing
 without its snap leaves a pixel error on about a quarter of the vertices.
-Only all three together are exact. The random
-polygons' differences in the (b) rows reach full int32 range (corners up to
-2^31 units away), so no unit bound is given for them.
+Only all three together are exact. The random polygons have corners up to
+2^31 units away, so their differences in the last three rows reach the int32
+range and thousands of pixels; no bound is given for them.
 
 ### Implementation
 
@@ -771,8 +771,8 @@ The core takes the centre as Q16 (`Cx`, `Cy`); the two entry points pass
   quotient below 2^31. For `den < 2^59`, the same on `den` and `a` shifted
   until `den < 2^31`, then at most nine exact corrections from the 64-bit
   remainder (proof in the source). Larger distances, which need a focal
-  length times a coordinate near 2^58, use a 32-step restoring division. Each coordinate's step is then the high word of a 32 x 32
-  product.
+  length times a coordinate near 2^58, use a 32-step restoring division.
+  Each coordinate's step is then the high word of a 32 x 32 product.
 - **Snap.** A bound is divided only when the point is outside it; whether a
   bound fits int32 is two comparisons with `focal * 2^31`.
 - **Projection.** Inside all six planes, `65536*left <= Cx + qx <=
@@ -851,5 +851,5 @@ division when the snap moves them. No console or emulator run.
   whose centre has a fraction needs an entry point that takes it, which can
   pass it through unchanged; these two functions take `sh2z_view_t`'s whole
   pixels.
-- **Attributes** are interpolated with the same fraction from the previous
-  corner and are never snapped, so they are not the source's (it has none).
+- **Attributes**, which the source does not have, are interpolated with the
+  same fraction from the previous corner and never snapped.
