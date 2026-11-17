@@ -61,6 +61,15 @@ rt=rd['timing']
 for k in ('batch','project','edgeSteps','clipNear','guardInside','guardSide','guardNearSide'):
     assert set(rt[k]['median'])=={'floorPortable','floorDivu','truncPortable','truncDivu'}
 assert rt['batch']['divisions']==2*512*rt['trials'],'round timing batch must cost two divisions per vertex'
+gs=raw['guardSrc']
+assert gs['mismatches']==0,'view-guard-src-1 must be exact'
+assert gs['trials']>=32768 and gs['roadTrials']>=16384 and gs['vertices']>=100000 and gs['roadPolygons']>=10000
+assert gs['overflows']>=1 and gs['snapFailures']>=1,'overflow and snap failures must run and write nothing'
+assert gs['sizes'][1]==0 and gs['sizes'][2]==0,'1 or 2 outputs are impossible'
+gst=gs['timing']
+for k in ('inside','side','nearSide','roadNear'):
+    assert set(gst[k]['median'])=={'truncPortable','truncDivu','srcPortable','srcDivu'}
+assert gst['inside']['meanOutputVertices']==4 and gst['side']['meanOutputVertices']==5
 
 here=Path(__file__).resolve().parent
 model=here.parent/'sh2-model'
@@ -82,6 +91,7 @@ result=dict(schema=1,kernel='view_batch',tier='MODELLED',sourceCommit=raw['sourc
       guardCaptureSourceSHA256=sha((here/'guard.h').read_bytes()),
       mergeCaptureSourceSHA256=sha((here/'merge.h').read_bytes()),
       roundCaptureSourceSHA256=sha((here/'round.h').read_bytes()),
+      guardSrcCaptureSourceSHA256=sha((here/'guardsrc.h').read_bytes()),
       bridgeSourceSHA256=sha((here/'view_bridge.c').read_bytes()),
       collectorSourceSHA256=sha(Path(__file__).read_bytes())),
     dividerProbes=dict(count=raw['dividerProbeCount'],hardwarePath=raw['dividerProbeHardwarePath'],table=raw['dividerProbes']),
@@ -115,8 +125,14 @@ result=dict(schema=1,kernel='view_batch',tier='MODELLED',sourceCommit=raw['sourc
            'per':rt[k]['per'],'tier':'MODELLED','floor_portable':rt[k]['median']['floorPortable'],
            'floor_divu_stall_model':rt[k]['median']['floorDivu'],'trunc_portable':rt[k]['median']['truncPortable'],
            'trunc_divu_stall_model':rt[k]['median']['truncDivu'],'outputs_equal_oracle':True}
-          for k in ('batch','project','edgeSteps','clipNear','guardInside','guardSide','guardNearSide')],
-    edges=e,guard=gd,merge=mg,round=rd)
+          for k in ('batch','project','edgeSteps','clipNear','guardInside','guardSide','guardNearSide')]+
+         [{'kernel':'view_guard_src_'+k,'unit':'cycles per call','band':gst['band'],'attrs':gst[k]['attrs'],'max_out':gst[k]['maxOut'],
+           'tier':'MODELLED','output_vertices':gst[k]['meanOutputVertices'],
+           'trunc_portable':gst[k]['median']['truncPortable'],'trunc_divu_stall_model':gst[k]['median']['truncDivu'],
+           'src_portable':gst[k]['median']['srcPortable'],'src_divu_stall_model':gst[k]['median']['srcDivu'],
+           'outputs_equal_oracle':True}
+          for k in ('inside','side','nearSide','roadNear')],
+    edges=e,guard=gd,merge=mg,round=rd,guardSrc=gs)
 a.output.parent.mkdir(parents=True,exist_ok=True)
 a.output.write_text(json.dumps(result,indent=1)+'\n')
 print('PASS: %d sweep vertices exact on both paths (%d strided); %d divider probes (%d hardware path)'%(
@@ -136,3 +152,6 @@ print('view-merge-1: %d strips, %d runs exact (%d merged), %d rejected calls wro
 print('view-round-1: %d batch, %d projected, %d stepped, %d near-clip, %d guard vertices exact (sx+1 %d, sy-1 %d); floor/trunc divu: '%(
     rd['batchVertices'],rd['projectedPoints'],rd['steppedPoints'],rd['clipVertices'],rd['guardVertices'],rd['xUp'],rd['yDown'])+
     ', '.join('%s %.2f/%.2f'%(k,rt[k]['median']['floorDivu'],rt[k]['median']['truncDivu']) for k in ('batch','project','edgeSteps','clipNear','guardInside','guardSide','guardNearSide')))
+print('view-guard-src-1: %d polygons (%d road quads), %d output vertices exact (%d overflows, %d snap failures, nothing written); '%(
+    gs['trials']+gs['roadTrials'],gs['roadTrials'],gs['vertices'],gs['overflows'],gs['snapFailures'])+
+    'trunc/src divu cycles: '+', '.join('%s %d/%d'%(k,gst[k]['median']['truncDivu'],gst[k]['median']['srcDivu']) for k in ('inside','side','nearSide','roadNear')))
