@@ -327,6 +327,62 @@ int sh2z_view_merge_runs(uint8_t *runs_out,const sh2z_view_vertex_t *left,
     const sh2z_view_vertex_t *right,const uint32_t *rows,const uint32_t *end_masks,
     unsigned count,uint32_t run_mask,uint32_t tol_q8,unsigned mode);
 
+/* ---- Contract tag view-round-1 ------------------------------------------- */
+
+/** Final-coordinate truncation (opt-in). For a renderer that matches a source
+ *  which computes a Q16.16 screen position and then truncates it toward zero
+ *  (C division by 65536), instead of rounding the quotient first.
+ *
+ *  Each _trunc function takes the same arguments, has the same failures and
+ *  writes the same bytes as the function of the same name without _trunc,
+ *  except that every projection uses these sx, sy (and the outcode bits that
+ *  follow from them):
+ *      qx = clamp(trunc(focal_x * x / z), -(2^31 - 1), 2^31 - 1)
+ *      qy = clamp(trunc(focal_y * y / z), -(2^31 - 1), 2^31 - 1)
+ *      sx = sat16(trunc((65536 * center_x + qx) / 65536))
+ *      sy = sat16(trunc((65536 * center_y - qy) / 65536))
+ *  computed exactly; trunc rounds toward zero. The quotient clamp is
+ *  symmetric, unlike view-contract-1's sat32, so the projection is odd:
+ *  negating x and center_x negates sx before saturation (same for y).
+ *
+ *  Compared with view-contract-1, sx is one larger when the Q16 position
+ *  65536 * center_x + qx is negative and not a whole pixel, and sy is one
+ *  smaller when 65536 * center_y - qy is positive and not a whole pixel;
+ *  otherwise both are equal.
+ *
+ *  Paths: the edge stepper and both clips compute the same view-space points
+ *  as before. sh2z_view_clip_near_trunc copies inside corners unchanged, so
+ *  give it corners from a _trunc batch or projection. sh2z_view_clip_guard_trunc
+ *  keeps the six planes of sh2z_view_clip_guard: truncation, like the old
+ *  rounding, never moves a value out of an interval with whole-pixel ends, so a
+ *  point inside all six still lands inside the guard rectangle; sx and sy are
+ *  then clamped to the rectangle as before. The _divu forms give the same
+ *  bytes and use this CPU's hardware divider on SH-2 (see divu_experimental.h). */
+bool sh2z_view_batch_trunc(sh2z_view_vertex_t *out,const sh2z_view_t *v,
+    const void *positions,size_t in_stride,size_t count);
+bool sh2z_view_batch_trunc_divu(sh2z_view_vertex_t *out,const sh2z_view_t *v,
+    const void *positions,size_t in_stride,size_t count);
+bool sh2z_view_project_trunc(sh2z_view_vertex_t *out,const sh2z_view_t *v,
+    const sh2z_view_vertex_t *in,size_t count);
+bool sh2z_view_project_trunc_divu(sh2z_view_vertex_t *out,const sh2z_view_t *v,
+    const sh2z_view_vertex_t *in,size_t count);
+bool sh2z_view_edge_steps_trunc(sh2z_view_vertex_t *out,const sh2z_view_t *v,
+    const sh2z_view_vertex_t *from,const sh2z_view_vertex_t *to,
+    uint16_t first_num,uint16_t step_num,uint16_t den,size_t count);
+bool sh2z_view_edge_steps_trunc_divu(sh2z_view_vertex_t *out,const sh2z_view_t *v,
+    const sh2z_view_vertex_t *from,const sh2z_view_vertex_t *to,
+    uint16_t first_num,uint16_t step_num,uint16_t den,size_t count);
+unsigned sh2z_view_clip_near_trunc(sh2z_view_vertex_t out[6],const sh2z_view_t *v,
+    const sh2z_view_vertex_t in[4]);
+unsigned sh2z_view_clip_near_trunc_divu(sh2z_view_vertex_t out[6],const sh2z_view_t *v,
+    const sh2z_view_vertex_t in[4]);
+int sh2z_view_clip_guard_trunc(sh2z_view_guard_vertex_t out[SH2Z_VIEW_GUARD_MAX_OUT],
+    const sh2z_view_t *v,const int16_t guard[4],
+    const sh2z_view_guard_vertex_t *in,unsigned count,unsigned attrs);
+int sh2z_view_clip_guard_trunc_divu(sh2z_view_guard_vertex_t out[SH2Z_VIEW_GUARD_MAX_OUT],
+    const sh2z_view_t *v,const int16_t guard[4],
+    const sh2z_view_guard_vertex_t *in,unsigned count,unsigned attrs);
+
 #ifdef __cplusplus
 }
 #endif

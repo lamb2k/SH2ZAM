@@ -2,12 +2,12 @@
  "schema": 1,
  "kernel": "view_batch",
  "tier": "MODELLED",
- "sourceCommit": "b39a989c5aaaa83e55b4764fa0b20c5e2c81d974",
+ "sourceCommit": "145723544191a8cc9a0e7fbbe3196ca869bd1c78",
  "run": {
   "environment": "isolated-sh2-interpreter",
-  "elfSHA256": "58be6dcfe2af05bedba38d052d5e3c62a66e5ff047a7a8f1d5c2c362fb3e48c3",
-  "symbolSHA256": "1a44aa32d726b2e657cd1882c22d33116d4d72745c7cd35a194bf4d15198954f",
-  "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44074884792",
+  "elfSHA256": "404dc3b53fc144b364a9a63ddac8d258b837e2facb07db0dfc18624c95348815",
+  "symbolSHA256": "629db99e99d1a23c6fffaa46547f67be57f75795585b37d2f3e05db729630203",
+  "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44086440203",
   "interpreterRepository": "https://github.com/Yabause/yabause",
   "interpreterCommit": "7e38821dbac265490f115e163c523a939acda759",
   "interpreterSourceSHA256": "28f938f95842d0127c31c01a23ccffc3a53243786b405a4afbbc2f34764ce36c",
@@ -31,10 +31,11 @@
   "dividerModelSourceSHA256": "afa130ede190f211d047e1637a3fccbbfe87c5f43aa56f4e43b0af7e9290e18d",
   "captureSourceSHA256": "28a0e5498c9fea913758fae8dd1f73271896e58aef88fc0a8fbd82ab2aebf6c2",
   "edgesCaptureSourceSHA256": "62b617ae4691c5437a4dd173a1f381be5058eed34b4dc729fa74b974e3e727e8",
-  "guardCaptureSourceSHA256": "2c60d074786458734635fcb8a3341b61518847b7344c204a7d638c16febd8248",
-  "mergeCaptureSourceSHA256": "feff987b05eda927ba2b3bebe406e0a173ace9960c55f7dfb0b20847a7a27d47",
-  "bridgeSourceSHA256": "8c132abf870d7c9515618edf4f07844cb57dc5d918500454aaece9461c21cad2",
-  "collectorSourceSHA256": "d0e15e1d1e8c44b3a911f9d064d1f7a908441c16de7c6adbd84b33e5dd35c20c"
+  "guardCaptureSourceSHA256": "50a305fe2b1adab1b767ec3d585f4f61eab633b1aa0977729623b68f5a8c7713",
+  "mergeCaptureSourceSHA256": "075d434c324cc41653baf46d1f8e2877788b93ec72969c7aac07ac458555760f",
+  "roundCaptureSourceSHA256": "92c876c1b8bf7ba47d34b1300891ce48c756c0f4d29deae12e1ddd8c9461b4c1",
+  "bridgeSourceSHA256": "ad2637b455581f86b65d2219a174917f6a9c6cde1fa73c0fcbf06f45d0482535",
+  "collectorSourceSHA256": "2532e4ad869f437d17b35ac49a5e9f7bc14bc16488aa81d10c9412944a9ffe20"
  },
  "dividerProbes": {
   "count": 2023,
@@ -921,6 +922,83 @@
    "max_cycles_per_boundary": 698.27,
    "mean_quads": 52.12,
    "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_round_batch",
+   "unit": "cycles per vertex",
+   "per": 512,
+   "tier": "MODELLED",
+   "floor_portable": 682.1,
+   "floor_divu_stall_model": 134.68,
+   "trunc_portable": 691.33,
+   "trunc_divu_stall_model": 143.11,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_round_project",
+   "unit": "cycles per vertex",
+   "per": 512,
+   "tier": "MODELLED",
+   "floor_portable": 612.4,
+   "floor_divu_stall_model": 101.44,
+   "trunc_portable": 617.52,
+   "trunc_divu_stall_model": 103.96,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_round_edgeSteps",
+   "unit": "cycles per vertex",
+   "per": 64,
+   "tier": "MODELLED",
+   "floor_portable": 713.23,
+   "floor_divu_stall_model": 177.22,
+   "trunc_portable": 719.69,
+   "trunc_divu_stall_model": 179.5,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_round_clipNear",
+   "unit": "cycles per call",
+   "per": 1,
+   "tier": "MODELLED",
+   "floor_portable": 3101.0,
+   "floor_divu_stall_model": 1648.0,
+   "trunc_portable": 3133.0,
+   "trunc_divu_stall_model": 1699.0,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_round_guardInside",
+   "unit": "cycles per call",
+   "per": 1,
+   "tier": "MODELLED",
+   "floor_portable": 4486.0,
+   "floor_divu_stall_model": 2752.0,
+   "trunc_portable": 4520.0,
+   "trunc_divu_stall_model": 2834.0,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_round_guardSide",
+   "unit": "cycles per call",
+   "per": 1,
+   "tier": "MODELLED",
+   "floor_portable": 6818.0,
+   "floor_divu_stall_model": 4389.0,
+   "trunc_portable": 6891.0,
+   "trunc_divu_stall_model": 4499.0,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_round_guardNearSide",
+   "unit": "cycles per call",
+   "per": 1,
+   "tier": "MODELLED",
+   "floor_portable": 11556.0,
+   "floor_divu_stall_model": 7494.0,
+   "trunc_portable": 11620.0,
+   "trunc_divu_stall_model": 7595.0,
+   "outputs_equal_oracle": true
   }
  ],
  "edges": {
@@ -1161,6 +1239,93 @@
      "medianCyclesPerBoundary": 527.14,
      "maxCyclesPerBoundary": 698.27,
      "instructionsPerBoundary": 450.53
+    }
+   }
+  }
+ },
+ "round": {
+  "batchVertices": 262144,
+  "batchNear": 145841,
+  "projectedPoints": 131072,
+  "steppedPoints": 201769,
+  "clipQuads": 16384,
+  "clipVertices": 65536,
+  "guardPolygons": 16384,
+  "guardVertices": 64752,
+  "guardOverflows": 1,
+  "xUp": 93389,
+  "yDown": 126405,
+  "mismatches": 0,
+  "timing": {
+   "trials": 64,
+   "batch": {
+    "per": 512,
+    "divisions": 65536,
+    "median": {
+     "floorPortable": 682.1,
+     "floorDivu": 134.68,
+     "truncPortable": 691.33,
+     "truncDivu": 143.11
+    }
+   },
+   "project": {
+    "per": 512,
+    "divisions": 65536,
+    "median": {
+     "floorPortable": 612.4,
+     "floorDivu": 101.44,
+     "truncPortable": 617.52,
+     "truncDivu": 103.96
+    }
+   },
+   "edgeSteps": {
+    "per": 64,
+    "divisions": 8960,
+    "median": {
+     "floorPortable": 713.23,
+     "floorDivu": 177.22,
+     "truncPortable": 719.69,
+     "truncDivu": 179.5
+    }
+   },
+   "clipNear": {
+    "per": 1,
+    "divisions": 512,
+    "median": {
+     "floorPortable": 3101.0,
+     "floorDivu": 1648.0,
+     "truncPortable": 3133.0,
+     "truncDivu": 1699.0
+    }
+   },
+   "guardInside": {
+    "per": 1,
+    "divisions": 512,
+    "median": {
+     "floorPortable": 4486.0,
+     "floorDivu": 2752.0,
+     "truncPortable": 4520.0,
+     "truncDivu": 2834.0
+    }
+   },
+   "guardSide": {
+    "per": 1,
+    "divisions": 768,
+    "median": {
+     "floorPortable": 6818.0,
+     "floorDivu": 4389.0,
+     "truncPortable": 6891.0,
+     "truncDivu": 4499.0
+    }
+   },
+   "guardNearSide": {
+    "per": 1,
+    "divisions": 1480,
+    "median": {
+     "floorPortable": 11556.0,
+     "floorDivu": 7494.0,
+     "truncPortable": 11620.0,
+     "truncDivu": 7595.0
     }
    }
   }

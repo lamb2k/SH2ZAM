@@ -15,6 +15,8 @@
 #define MERGE_CAP 200u
 #define MERGE_TIME_COUNT 64u
 
+static int capture_round(void);   /* round.h, view-round-1 */
+
 struct merge_pt {int16_t sx,sy;uint8_t code;};
 struct merge_strip {unsigned n;struct merge_pt l[MERGE_CAP],r[MERGE_CAP];uint32_t rows[MERGE_CAP],ends[MERGE_CAP];};
 
@@ -230,6 +232,6 @@ static int capture_merge(void) {
    cyc[c][MERGE_TIME_TRIALS/2],cyc[c][MERGE_TIME_TRIALS/2]/(double)MERGE_TIME_COUNT,cyc[c][MERGE_TIME_TRIALS-1]/(double)MERGE_TIME_COUNT,
    (double)instr[c]/(MERGE_TIME_TRIALS*(double)MERGE_TIME_COUNT));
  }
- printf("}}}}\n");
- return 0;
+ printf("}}},");
+ return capture_round();
 }

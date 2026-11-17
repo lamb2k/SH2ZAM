@@ -104,6 +104,43 @@ int32_t view_merge(void) {
         view_merge_args[2],view_merge_args[3]);
 }
 
+/* view-round-1: the _trunc forms of the entry points above, on the same
+ * buffers and arguments. */
+uint32_t view_round_batch_portable(uint32_t count) {
+    return sh2z_view_batch_trunc(view_out_portable,&view_camera,view_input.pos,sizeof(view_input.pos[0]),count);
+}
+uint32_t view_round_batch_divu(uint32_t count) {
+    return sh2z_view_batch_trunc_divu(view_out_divu,&view_camera,view_input.pos,sizeof(view_input.pos[0]),count);
+}
+uint32_t view_round_project_portable(uint32_t count) {
+    return sh2z_view_project_trunc(view_out_portable,&view_camera,view_input.pts,count);
+}
+uint32_t view_round_project_divu(uint32_t count) {
+    return sh2z_view_project_trunc_divu(view_out_divu,&view_camera,view_input.pts,count);
+}
+uint32_t view_round_edges_portable(void) {
+    return sh2z_view_edge_steps_trunc(view_out_portable,&view_camera,&view_edge_ends[0],&view_edge_ends[1],
+        (uint16_t)view_edge_args[0],(uint16_t)view_edge_args[1],(uint16_t)view_edge_args[2],view_edge_args[3]);
+}
+uint32_t view_round_edges_divu(void) {
+    return sh2z_view_edge_steps_trunc_divu(view_out_divu,&view_camera,&view_edge_ends[0],&view_edge_ends[1],
+        (uint16_t)view_edge_args[0],(uint16_t)view_edge_args[1],(uint16_t)view_edge_args[2],view_edge_args[3]);
+}
+uint32_t view_round_clip_portable(void) {
+    return sh2z_view_clip_near_trunc(view_out_portable,&view_camera,view_clip_in);
+}
+uint32_t view_round_clip_divu(void) {
+    return sh2z_view_clip_near_trunc_divu(view_out_divu,&view_camera,view_clip_in);
+}
+int32_t view_round_guard_portable(void) {
+    return sh2z_view_clip_guard_trunc((sh2z_view_guard_vertex_t *)(void *)view_out_portable,&view_camera,view_guard_rect,
+        view_input.guard,view_guard_args[0],view_guard_args[1]);
+}
+int32_t view_round_guard_divu(void) {
+    return sh2z_view_clip_guard_trunc_divu((sh2z_view_guard_vertex_t *)(void *)view_out_divu,&view_camera,view_guard_rect,
+        view_input.guard,view_guard_args[0],view_guard_args[1]);
+}
+
 /* Divider helper checks: start64/finish and an interrupted division saved and
  * restored around a second one. Arguments are the dividend halves and
  * divisor; results land in view_divu_result. */
