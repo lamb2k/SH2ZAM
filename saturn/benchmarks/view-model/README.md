@@ -36,7 +36,9 @@ MODELLED. Not console timing, not emulator timing.
      oracle with fractional centres (points aimed at exact row boundaries),
      the `_center` and `_trunc` forms byte for byte at whole-pixel centres,
      then each timing fixture through the `_trunc` form and its `_center`
-     form back to back. It runs between `round.h` and `guardsrc.h`.
+     form back to back; then the same for the source-order clip
+     (`sh2z_view_clip_guard_src_center`) against its own Q16 oracle. It runs
+     between `round.h` and `guardsrc.h`.
 - `collect.py` checks the invariants (zero mismatches, two divisions per
   timing vertex, merge runs covering every repetition, both view-round-1
   differences occurring, both source-order clip failures occurring,
