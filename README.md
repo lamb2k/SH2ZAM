@@ -176,6 +176,15 @@ build scratch can be reused afterward. Pruning and bulk acceptance depend on
 the query pattern, and index construction must be included when evaluating cost.
 See the [API examples, memory budget and workload comparisons](saturn/benchmarks/workload-model/README.md).
 
+## Integer kernels for lifted 16-bit game code
+
+[`sh2zam/m68k.h`](saturn/include/sh2zam/m68k.h) provides 68000-exact `MULS.W`/`MULU.W`/`DIVS.W`/`DIVU.W`
+(condition codes, overflow rule, divide-by-zero report; the divides use `DIV1`, not the on-chip divider).
+[`sh2zam/box2.h`](saturn/include/sh2zam/box2.h) does exact 2D integer box overlap with packed bitset results,
+and [`sh2zam/cell16.h`](saturn/include/sh2zam/cell16.h) mirrors, offsets and clips batches of 16x16 cells.
+All are host-exact tested and costed in the SH-2 instruction model (modelled, no console run). See the
+[integer kernels guide](saturn/INTEGER_KERNELS.md).
+
 ## Git submodule
 
 ```sh
