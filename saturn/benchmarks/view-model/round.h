@@ -10,7 +10,8 @@
  * edge steps, near clip and guard clip.
  * Timing: the same fixtures run through the view-contract-1 function and its
  * _trunc form back to back, so each row is a paired comparison. Then
- * guardsrc.h (view-guard-src-1), which reuses this file's projection oracle. */
+ * center.h (view-center-1), which then runs guardsrc.h (view-guard-src-1);
+ * both reuse this file's projection oracle. */
 #define ROUND_BATCH_POSES 256u
 #define ROUND_BATCH_COUNT 1024u
 #define ROUND_PROJECT_TRIALS 256u
@@ -18,6 +19,8 @@
 #define ROUND_CLIP_TRIALS 16384u
 #define ROUND_GUARD_TRIALS 16384u
 #define ROUND_TIME_TRIALS 64u
+
+static int capture_center(void);   /* center.h, view-center-1 */
 
 /* view_project with the view-round-1 pixel rule. */
 static struct view_vtx round_project(const struct view_cam *c,const __int128 v[3]) {
@@ -257,5 +260,6 @@ static int capture_round(void) {
    names[row],per[row],divisions[row][1],cyc[row][0][mid]/per[row],cyc[row][1][mid]/per[row],cyc[row][2][mid]/per[row],cyc[row][3][mid]/per[row]);
  }
  printf("}},");
- return capture_guard_src();
+ return capture_center();
 }
+#include "center.h"

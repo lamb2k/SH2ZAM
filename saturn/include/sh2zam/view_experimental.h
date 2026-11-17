@@ -457,6 +457,118 @@ int sh2z_view_clip_guard_src_trunc_divu(sh2z_view_guard_vertex_t out[SH2Z_VIEW_G
     const sh2z_view_t *v,const int16_t guard[4],
     const sh2z_view_guard_vertex_t *in,unsigned count,unsigned attrs,unsigned max_out);
 
+/* ---- Contract tag view-center-1 ------------------------------------------ */
+
+/** A view whose centre has 16 fraction bits (68 bytes), for a source renderer
+ *  whose centre is fractional. center_x16 and center_y16 are the centre in
+ *  Q16.16 pixels; any int32 values are allowed. view holds every other field.
+ *
+ *  Valid when view is valid (see sh2z_view_t) and
+ *      view.center_x == floor(center_x16 / 65536)
+ *      view.center_y == floor(center_y16 / 65536)
+ *  so a stale or forgotten centre is rejected instead of used. The _center
+ *  functions read the centre only from center_x16 and center_y16.
+ *  sh2z_view_center_init sets all four fields consistently. */
+typedef struct {
+    sh2z_view_t view;
+    int32_t center_x16,center_y16;
+} sh2z_view_center_t;
+
+/** Copy *view to out->view, set out->view.center_x and center_y to the floor
+ *  of the Q16 centre and store center_x16 and center_y16. Fails, leaving out
+ *  unchanged, if out is null or *view is invalid. view may be &out->view.
+ *  Call sh2z_view_place on the plain view first (it ignores the centre). */
+bool sh2z_view_center_init(sh2z_view_center_t *out,const sh2z_view_t *view,
+    int32_t center_x16,int32_t center_y16);
+
+/** Final-coordinate truncation with a fractional centre (opt-in). Each
+ *  _center function takes a sh2z_view_center_t where the _trunc function of
+ *  the same name takes a view. It has the same other arguments and failures,
+ *  plus failure on an invalid centre (see above). It writes the same bytes,
+ *  except that every projection uses these sx, sy and the outcode bits that
+ *  follow from them:
+ *      qx = clamp(trunc(focal_x * x / z), -(2^31 - 1), 2^31 - 1)
+ *      qy = clamp(trunc(focal_y * y / z), -(2^31 - 1), 2^31 - 1)
+ *      sx = sat16(trunc((center_x16 + qx) / 65536))
+ *      sy = sat16(trunc((center_y16 - qy) / 65536))
+ *  The sums are computed exactly (33 bits; they never wrap), so every int32
+ *  centre is valid. With center_x16 = 65536 * center_x and
+ *  center_y16 = 65536 * center_y, each function writes exactly what its
+ *  _trunc form writes.
+ *
+ *  Edge steps compute the same points as sh2z_view_edge_steps. The near clip
+ *  computes the same crossings as sh2z_view_clip_near and copies inside
+ *  corners unchanged, so give it corners from a _center batch or projection
+ *  with the same view.
+ *
+ *  The guard clip uses sh2z_view_clip_guard's six planes with the centre
+ *  taken in Q16 (65536 * center_x becomes center_x16):
+ *      3 left    d = focal_x*x - (65536*left - center_x16)*z
+ *      4 right   d = (65536*right - center_x16)*z - focal_x*x
+ *      5 top     d = (center_y16 - 65536*top)*z - focal_y*y
+ *      6 bottom  d = focal_y*y - (center_y16 - 65536*bottom)*z
+ *  and its rule "a guard edge more than 16384 pixels from the centre" becomes
+ *  |65536*edge - centre16| > 2^30 (then SH2Z_VIEW_GUARD_INVALID). Passes,
+ *  crossings and the order of the output are as before. A point inside all
+ *  six planes lands, by the projection above, inside the guard rectangle;
+ *  sx and sy are then clamped to the rectangle as before, and outcode is
+ *  computed from the clamped sx, sy against view.clip (never NEAR or FAR).
+ *  The _divu forms give the same bytes and use this CPU's hardware divider
+ *  on SH-2 (see divu_experimental.h). */
+bool sh2z_view_batch_center(sh2z_view_vertex_t *out,const sh2z_view_center_t *v,
+    const void *positions,size_t in_stride,size_t count);
+bool sh2z_view_batch_center_divu(sh2z_view_vertex_t *out,const sh2z_view_center_t *v,
+    const void *positions,size_t in_stride,size_t count);
+bool sh2z_view_project_center(sh2z_view_vertex_t *out,const sh2z_view_center_t *v,
+    const sh2z_view_vertex_t *in,size_t count);
+bool sh2z_view_project_center_divu(sh2z_view_vertex_t *out,const sh2z_view_center_t *v,
+    const sh2z_view_vertex_t *in,size_t count);
+bool sh2z_view_edge_steps_center(sh2z_view_vertex_t *out,const sh2z_view_center_t *v,
+    const sh2z_view_vertex_t *from,const sh2z_view_vertex_t *to,
+    uint16_t first_num,uint16_t step_num,uint16_t den,size_t count);
+bool sh2z_view_edge_steps_center_divu(sh2z_view_vertex_t *out,const sh2z_view_center_t *v,
+    const sh2z_view_vertex_t *from,const sh2z_view_vertex_t *to,
+    uint16_t first_num,uint16_t step_num,uint16_t den,size_t count);
+unsigned sh2z_view_clip_near_center(sh2z_view_vertex_t out[6],const sh2z_view_center_t *v,
+    const sh2z_view_vertex_t in[4]);
+unsigned sh2z_view_clip_near_center_divu(sh2z_view_vertex_t out[6],const sh2z_view_center_t *v,
+    const sh2z_view_vertex_t in[4]);
+int sh2z_view_clip_guard_center(sh2z_view_guard_vertex_t out[SH2Z_VIEW_GUARD_MAX_OUT],
+    const sh2z_view_center_t *v,const int16_t guard[4],
+    const sh2z_view_guard_vertex_t *in,unsigned count,unsigned attrs);
+int sh2z_view_clip_guard_center_divu(sh2z_view_guard_vertex_t out[SH2Z_VIEW_GUARD_MAX_OUT],
+    const sh2z_view_center_t *v,const int16_t guard[4],
+    const sh2z_view_guard_vertex_t *in,unsigned count,unsigned attrs);
+
+/** The view-guard-src-1 clip (sh2z_view_clip_guard_src_trunc) with a
+ *  fractional centre: the same arguments, with a sh2z_view_center_t in place
+ *  of the view. Its contract text already writes the planes, the snap
+ *  bounds and the projection with a Q16 centre (Cx, Cy); here
+ *      Cx = center_x16,  Cy = center_y16
+ *  exactly, with nothing rounded. So the planes are those of
+ *  sh2z_view_clip_guard_center above, the snap bounds are
+ *  ceil(KL*z/focal_x), floor(KR*z/focal_x), floor(KT*z/focal_y) and
+ *  ceil(KB*z/focal_y) with KL = 65536*left - center_x16,
+ *  KR = 65536*right - center_x16, KT = center_y16 - 65536*top,
+ *  KB = center_y16 - 65536*bottom, and every output vertex gets
+ *      sx = trunc((center_x16 + trunc(focal_x*x/z)) / 65536)
+ *      sy = trunc((center_y16 - trunc(focal_y*y/z)) / 65536)
+ *  which lies inside the guard rectangle without a clamp (it is what
+ *  sh2z_view_project_center writes). outcode is from sx, sy against
+ *  view.clip. Order, crossings, max_out, the snap failure and every return
+ *  value are as for sh2z_view_clip_guard_src_trunc. The call fails with
+ *  SH2Z_VIEW_GUARD_INVALID on an invalid centre view (see above) or when
+ *  |65536*edge - centre16| > 2^30 for an edge. With
+ *  center_x16 = 65536 * center_x and center_y16 = 65536 * center_y each
+ *  writes exactly what its _src_trunc form writes. The _divu form gives the
+ *  same bytes and uses this CPU's hardware divider on SH-2. */
+int sh2z_view_clip_guard_src_center(sh2z_view_guard_vertex_t out[SH2Z_VIEW_GUARD_MAX_OUT],
+    const sh2z_view_center_t *v,const int16_t guard[4],
+    const sh2z_view_guard_vertex_t *in,unsigned count,unsigned attrs,unsigned max_out);
+int sh2z_view_clip_guard_src_center_divu(sh2z_view_guard_vertex_t out[SH2Z_VIEW_GUARD_MAX_OUT],
+    const sh2z_view_center_t *v,const int16_t guard[4],
+    const sh2z_view_guard_vertex_t *in,unsigned count,unsigned attrs,unsigned max_out);
+
 #ifdef __cplusplus
 }
 #endif

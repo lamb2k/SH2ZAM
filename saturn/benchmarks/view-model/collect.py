@@ -70,6 +70,26 @@ gst=gs['timing']
 for k in ('inside','side','nearSide','roadNear'):
     assert set(gst[k]['median'])=={'truncPortable','truncDivu','srcPortable','srcDivu'}
 assert gst['inside']['meanOutputVertices']==4 and gst['side']['meanOutputVertices']==5
+cd=raw['center']
+assert cd['mismatches']==0,'view-center-1 must be exact'
+assert cd['batchVertices']>=262144 and cd['projectedPoints']>=131072 and cd['steppedPoints']>=100000
+assert cd['clipQuads']>=16384 and cd['guardPolygons']>=16384 and cd['guardVertices']>=50000 and cd['guardInsidePlanes']>0
+assert cd['fractionalX']>0 and cd['fractionalY']>0 and cd['rowBoundaryPoints']>0,'fractional centres and exact row boundaries must occur'
+ce=cd['equivalence']
+assert ce['mismatches']==0 and ce['calls']>=2000,'_center must equal _trunc at whole-pixel centres'
+ct=cd['timing']
+for k in ('batch','project','edgeSteps','clipNear','guardInside','guardSide','guardNearSide'):
+    assert set(ct[k]['median'])=={'truncPortable','truncDivu','centerPortable','centerDivu'}
+assert ct['batch']['divisions']==2*512*ct['trials'],'center timing batch must cost two divisions per vertex'
+cs=cd['srcGuard']
+assert cs['mismatches']==0,'view-center-1 source-order clip must be exact'
+assert cs['trials']>=16384 and cs['roadTrials']>=8192 and cs['vertices']>=50000 and cs['roadVertices']>=10000
+assert cs['fractionalX']>0 and cs['fractionalY']>0 and cs['boundaryVertices']>0 and cs['differFromWholePixel']>0
+assert cs['overflows']>=1 and cs['snapFailures']>=1,'overflow and snap failures must run and write nothing'
+assert cs['equivalence']['mismatches']==0 and cs['equivalence']['calls']>=1000,'_src_center must equal _src_trunc at whole-pixel centres'
+cst=cs['timing']
+for k in ('inside','side','nearSide','roadNear'):
+    assert set(cst[k]['median'])=={'truncPortable','truncDivu','centerPortable','centerDivu'}
 
 here=Path(__file__).resolve().parent
 model=here.parent/'sh2-model'
@@ -92,6 +112,7 @@ result=dict(schema=1,kernel='view_batch',tier='MODELLED',sourceCommit=raw['sourc
       mergeCaptureSourceSHA256=sha((here/'merge.h').read_bytes()),
       roundCaptureSourceSHA256=sha((here/'round.h').read_bytes()),
       guardSrcCaptureSourceSHA256=sha((here/'guardsrc.h').read_bytes()),
+      centerCaptureSourceSHA256=sha((here/'center.h').read_bytes()),
       bridgeSourceSHA256=sha((here/'view_bridge.c').read_bytes()),
       collectorSourceSHA256=sha(Path(__file__).read_bytes())),
     dividerProbes=dict(count=raw['dividerProbeCount'],hardwarePath=raw['dividerProbeHardwarePath'],table=raw['dividerProbes']),
@@ -131,8 +152,19 @@ result=dict(schema=1,kernel='view_batch',tier='MODELLED',sourceCommit=raw['sourc
            'trunc_portable':gst[k]['median']['truncPortable'],'trunc_divu_stall_model':gst[k]['median']['truncDivu'],
            'src_portable':gst[k]['median']['srcPortable'],'src_divu_stall_model':gst[k]['median']['srcDivu'],
            'outputs_equal_oracle':True}
+          for k in ('inside','side','nearSide','roadNear')]+
+         [{'kernel':'view_center_'+k,'unit':'cycles per vertex' if ct[k]['per']>1 else 'cycles per call',
+           'per':ct[k]['per'],'tier':'MODELLED','trunc_portable':ct[k]['median']['truncPortable'],
+           'trunc_divu_stall_model':ct[k]['median']['truncDivu'],'center_portable':ct[k]['median']['centerPortable'],
+           'center_divu_stall_model':ct[k]['median']['centerDivu'],'outputs_equal_oracle':True}
+          for k in ('batch','project','edgeSteps','clipNear','guardInside','guardSide','guardNearSide')]+
+         [{'kernel':'view_center_src_guard_'+k,'unit':'cycles per call','band':cst['band'],'attrs':cst[k]['attrs'],'max_out':cst[k]['maxOut'],
+           'tier':'MODELLED','output_vertices':cst[k]['meanOutputVertices'],
+           'trunc_portable':cst[k]['median']['truncPortable'],'trunc_divu_stall_model':cst[k]['median']['truncDivu'],
+           'center_portable':cst[k]['median']['centerPortable'],'center_divu_stall_model':cst[k]['median']['centerDivu'],
+           'outputs_equal_oracle':True}
           for k in ('inside','side','nearSide','roadNear')],
-    edges=e,guard=gd,merge=mg,round=rd,guardSrc=gs)
+    edges=e,guard=gd,merge=mg,round=rd,guardSrc=gs,center=cd)
 a.output.parent.mkdir(parents=True,exist_ok=True)
 a.output.write_text(json.dumps(result,indent=1)+'\n')
 print('PASS: %d sweep vertices exact on both paths (%d strided); %d divider probes (%d hardware path)'%(
@@ -155,3 +187,9 @@ print('view-round-1: %d batch, %d projected, %d stepped, %d near-clip, %d guard 
 print('view-guard-src-1: %d polygons (%d road quads), %d output vertices exact (%d overflows, %d snap failures, nothing written); '%(
     gs['trials']+gs['roadTrials'],gs['roadTrials'],gs['vertices'],gs['overflows'],gs['snapFailures'])+
     'trunc/src divu cycles: '+', '.join('%s %d/%d'%(k,gst[k]['median']['truncDivu'],gst[k]['median']['srcDivu']) for k in ('inside','side','nearSide','roadNear')))
+print('view-center-1: %d batch, %d projected (%d on row boundaries), %d stepped, %d near-clip, %d guard vertices exact; %d paired _trunc/_center calls identical; trunc/center divu: '%(
+    cd['batchVertices'],cd['projectedPoints'],cd['rowBoundaryPoints'],cd['steppedPoints'],cd['clipVertices'],cd['guardVertices'],ce['calls'])+
+    ', '.join('%s %.2f/%.2f'%(k,ct[k]['median']['truncDivu'],ct[k]['median']['centerDivu']) for k in ('batch','project','edgeSteps','clipNear','guardInside','guardSide','guardNearSide')))
+print('view-center-1 source-order: %d polygons (%d road quads), %d output vertices exact (%d on a pixel boundary; %d overflows, %d snap failures, nothing written); %d paired _src_trunc/_src_center calls identical; trunc/center divu cycles: '%(
+    cs['trials']+cs['roadTrials'],cs['roadTrials'],cs['vertices'],cs['boundaryVertices'],cs['overflows'],cs['snapFailures'],cs['equivalence']['calls'])+
+    ', '.join('%s %d/%d'%(k,cst[k]['median']['truncDivu'],cst[k]['median']['centerDivu']) for k in ('inside','side','nearSide','roadNear')))

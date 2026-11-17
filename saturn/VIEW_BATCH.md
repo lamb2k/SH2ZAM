@@ -17,6 +17,7 @@ planes per vertex in 64-bit arithmetic. Contract tag: `view-contract-1`.
 | Bounded texture-merge planner (pixel or row tolerance) | Landed, `view-merge-1` (see below): HOST and MODELLED; 223 modelled cycles per boundary at 1 px |
 | Final-coordinate truncation (`_trunc` forms of every projecting path) | `view-round-1` (see below): HOST and MODELLED; +8.4 modelled cycles per batch vertex |
 | Guard clip in a source clipper's vertex order (fan-mapped textures) | `view-guard-src-1` (see below): HOST and MODELLED; −10% to +6% modelled cycles against the `view-round-1` guard clip |
+| Fractional (Q16) centre (`_center` forms of every `_trunc` path and of the source-order guard clip) | `view-center-1` (see below): HOST and MODELLED; +4.3 modelled cycles per batch vertex over `_trunc`, +6 to +9 per source-order clip (divider) |
 | Console or emulator timing | Unrun; the [calibration image](benchmarks/yaul/calibration/README.md) times the batch on a console |
 
 `sh2z_view_batch` is the definition of correct and never touches the hardware
@@ -668,8 +669,8 @@ run.
 
 - **Use the source's real centre.** The rule rounds the Q16 position itself,
   so drop any centre offset adapter and pass the source centre unchanged.
-  The centre must be a whole pixel: a source centre with a fraction cannot
-  be represented and is not matched exactly.
+  The centre must be a whole pixel; for a source centre with a fraction,
+  use the `view-center-1` forms below.
 - **Use one rule per frame.** Use the `_trunc` form for the batch, edge
   steps and both clips together. The near clip copies corners as given, and
   the merge planner reads whatever `sx`, `sy` it is given.
@@ -850,6 +851,338 @@ division when the snap moves them. No console or emulator run.
 - **Q16 centre.** The clip computes with a Q16 centre internally. A source
   whose centre has a fraction needs an entry point that takes it, which can
   pass it through unchanged; these two functions take `sh2z_view_t`'s whole
-  pixels.
+  pixels. `sh2z_view_clip_guard_src_center` (`view-center-1`, below) is that
+  entry point.
 - **Attributes**, which the source does not have, are interpolated with the
   same fraction from the previous corner and never snapped.
+
+## Fractional centre (`view-center-1`)
+
+`view-round-1` takes the centre from `sh2z_view_t`, whose `center_x` and
+`center_y` are whole pixels. A source renderer whose centre is fractional
+keeps it as a Q16.16 value and adds the quotient to it before truncating:
+
+```
+X16 = Cx16 + trunc(F_x * x / z)      sx = trunc(X16 / 65536)
+Y16 = Cy16 - trunc(F_y * y / z)      sy = trunc(Y16 / 65536)
+```
+
+Such centres arise when the source computes the centre in floating point.
+A residual of one unit either side of a whole pixel (for example
+`193 * 65536 - 1` and `193 * 65536 + 1`) is enough to move `sy` by a row
+whenever `Y16` lands on, or a unit beside, a row boundary. The `_center`
+forms take the Q16 centre itself:
+
+```c
+typedef struct {
+    sh2z_view_t view;
+    int32_t center_x16,center_y16;
+} sh2z_view_center_t;                       /* 68 bytes */
+
+bool sh2z_view_center_init(sh2z_view_center_t *out,const sh2z_view_t *view,
+    int32_t center_x16,int32_t center_y16);
+
+bool sh2z_view_batch_center(...);          bool sh2z_view_batch_center_divu(...);
+bool sh2z_view_project_center(...);        bool sh2z_view_project_center_divu(...);
+bool sh2z_view_edge_steps_center(...);     bool sh2z_view_edge_steps_center_divu(...);
+unsigned sh2z_view_clip_near_center(...);  unsigned sh2z_view_clip_near_center_divu(...);
+int sh2z_view_clip_guard_center(...);      int sh2z_view_clip_guard_center_divu(...);
+int sh2z_view_clip_guard_src_center(...);  int sh2z_view_clip_guard_src_center_divu(...);
+```
+
+Each takes a `const sh2z_view_center_t *` where the `_trunc` function takes
+a `const sh2z_view_t *`; every other argument is the same.
+
+### Can a caller do it with `view-round-1` alone?
+
+No. The library rounds at multiples of 65536 in its own position
+`65536 * c - qy`, and the source rounds at multiples of 65536 in
+`Cy16 - qy`. With `Cy16 = 65536 * c +/- 1` the two differ exactly when the
+position is at, or one unit beside, a row boundary. Which side it is on
+depends on `qy mod 65536`, which the library never returns. Two points can
+therefore get the same `sy` from the library and need different rows. No
+choice of integer centre and no function of the library's pixels can tell
+them apart. A caller could only redo the y division for every vertex, which
+is the projection again.
+
+The host test counts single-call tactics against the oracle for both
+residuals, on 400 synthetic road-like cameras per residual (a flat road a
+few units above or below the eye, focal 160 to 320 px, centre x 160) and on
+points aimed at row boundaries in the same views (GCC build):
+
+| Centre y | Tactic | Road-like misses | Row-boundary misses |
+| --- | --- | ---: | ---: |
+| `193 * 65536 - 1` | `_trunc`, centre 193 (rounded) | 38 of 1,634,277 | 136,951 of 409,600 |
+| | `_trunc`, centre 192 (floor) | 1,634,179 | 272,187 |
+| | `view-contract-1`, centre 192 | 9,047 | 87,698 |
+| | `view-contract-1`, centre 191 | 1,634,276 | 409,600 |
+| `193 * 65536 + 1` | `_trunc`, centre 193 | 22 of 1,634,270 | 136,635 of 409,600 |
+| | `view-contract-1`, centre 193 | 1,624,611 | 136,049 |
+| | `view-contract-1`, centre 192 | 9,658 | 317,688 |
+
+Every tactic misses, so the claim holds. On road-like views, rounding the
+centre to 193 misses one vertex in 40,000 to 75,000 (35 and 17 of the misses
+are on screen), which an exactness gate still catches. Its misses are not
+recoverable either: 37 and 21 of its output rows each map to two different
+source rows on the road-like views, and about 70,000 do on the
+boundary-aimed points.
+
+One near-miss is worth knowing. With `Cy16 = 65536 * c - 1`,
+`view-contract-1` at centre `c - 1` computes `ceil((Y16 + 1 - 65536) / 65536)`,
+which is exactly `floor(Y16 / 65536)`. That is the source's row for every
+position at or below row 0, and wrong only above it (the 9,047 road-like
+misses are vertices above the top of the screen). It does not help with
+`+1`, it floors `x`, and a guard band reaches above row 0, so it is not a
+substitute.
+
+### Contract
+
+```
+qx = clamp(trunc(focal_x * x / z), -(2^31 - 1), 2^31 - 1)      (same for qy)
+sx = sat16(trunc((center_x16 + qx) / 65536))
+sy = sat16(trunc((center_y16 - qy) / 65536))
+```
+
+- **Centre fields.** A centre view is valid when `view` is valid and
+  `view.center_x == floor(center_x16 / 65536)` and
+  `view.center_y == floor(center_y16 / 65536)` (an arithmetic shift by 16).
+  The `_center` functions read the centre only from `center_x16` and
+  `center_y16`; the rule makes a stale or forgotten centre fail instead of
+  projecting around the wrong point. `sh2z_view_center_init` sets all four
+  fields. Every other failure is the `_trunc` function's.
+- **Range.** Every int32 centre is valid. `center16 +/- q` needs 33 bits; the
+  kernels never form it. They add (x) or subtract (y) the low 16 bits of
+  the centre and the quotient apart, fold the carry or borrow into the sum
+  of the high halves, and use the low 16 bits of the result as the fraction
+  that truncation tests. The floor before saturation lies within
+  -65,536 .. 65,536, so it fits any register.
+- **Equivalence.** With `center_x16 = 65536 * center_x` and
+  `center_y16 = 65536 * center_y`, every `_center` function writes exactly
+  what its `_trunc` form writes, return value included.
+- **Guard clip.** The six planes of `sh2z_view_clip_guard` with the centre
+  taken in Q16 (`65536 * center` becomes `center16`):
+
+  ```
+  3 left    d = focal_x*x - (65536*left - center_x16)*z
+  4 right   d = (65536*right - center_x16)*z - focal_x*x
+  5 top     d = (center_y16 - 65536*top)*z - focal_y*y
+  6 bottom  d = focal_y*y - (center_y16 - 65536*bottom)*z
+  ```
+
+  The edge rule "more than 16,384 pixels from the centre" becomes
+  `|65536 * edge - center16| > 2^30`, so the plane constants fit int32 and
+  every distance fits int64 as before. Passes, crossings, clamp and output
+  order are those of `view-guard-1`.
+  **Why every output still lands inside the rectangle.** Inside the left
+  plane, `focal_x * x / z >= 65536 * left - center_x16`, which is a whole
+  number. Truncating a quotient keeps it at or above a whole number below it,
+  and the symmetric clamp keeps it there too (the bound is within `2^30`).
+  So `center_x16 + qx >= 65536 * left`. Truncating that position by 65536
+  again keeps it at or above `left`. The other three planes are the same
+  argument. Outcodes are computed from the final (clamped) `sx`, `sy`
+  against `view.clip`, so they always agree with the pixels.
+- **Near clip and edge steps.** The near clip computes the same crossings
+  as `sh2z_view_clip_near` and copies inside corners unchanged, so pass
+  corners written by a `_center` batch or projection with the same view.
+  The edge stepper computes the same points as `sh2z_view_edge_steps` and
+  projects each with the rule above.
+
+### Implementation
+
+The functions live in `src/sh2zam_view_center.c`, a new file, so every
+earlier object is unchanged. Compiled for SH-2 with the CI flags, with and
+without function sections, every other library object is byte-identical to
+`main`'s, `sh2zam_view.o` and `sh2zam_view_round.o` included. The SH-2
+kernel's assembler macros moved verbatim from `sh2zam_view.c` into the
+private header `src/sh2zam_view_asm.h`, so the new file can instantiate them.
+
+The batch and projection kernels are those macros with `center=1`. The
+camera block gains two words, the centre fractions shifted into the top
+half. The prologue pushes them, so `@r15` and `@(4,r15)` reach them without
+a free register. At each place a quotient becomes a pixel, the quotient's
+low half, shifted up, is added to (`ADDC`) or subtracted from (`SUBC`) the
+centre fraction. The carry or borrow lands in `T`, and the next
+`ADDC`/`SUBC` folds it into the floor. `T` is already clear there on the main path
+(right after a `CMP/HS` that did not branch); the stand-in-quotient stubs and
+the finish subroutine clear it. With `center=0` the macros expand to the
+original instructions. The guard clip, near clip and stepper reuse the
+private passes; their per-point projections are C.
+
+### Evidence
+
+**HOST** (`tests/test_center.c`, `tests/test_center_equiv.c`; GCC and Clang
+strict, ASan/UBSan; counts from the GCC build):
+- **Oracle.** An independent 128-bit oracle, written from the header text,
+  covers 614,400 batch vertices, 307,200 projected points (39,595 exactly on
+  a row boundary), 155,313 stepped points, 38,400 near-clip vertices and
+  27,344 guard-clip vertices from 7,476 polygons, the guard clip included
+  (its own Sutherland-Hodgman passes with the Q16 planes). Centres are drawn
+  from whole pixels plus or minus one unit, plus or minus half a pixel,
+  random int32 values, the int32 extremes, and 193 -/+ 1/65536. Points are
+  aimed at exact row and column boundaries (with z equal to the focal length
+  the quotient is the coordinate itself) and between them. All equal the
+  oracle on both entry points, with the `_divu` bytes equal to the portable
+  bytes and in-place calls equal to separate ones.
+- **Guard rectangle.** 21,888 guard outputs inside all six Q16 planes
+  project inside the rectangle without the clamp.
+- **Hand cases.** Both of the requester's centres with vertices placed on
+  rows 193, 192, 191 and -7, a unit either side of each, and at the top clip
+  row (where the residual flips the `TOP` bit). Half-pixel centres on both
+  axes and either side of zero. Extreme centres whose sums would wrap 32
+  bits.
+- **Equivalence with `view-round-1`.** `test_center_equiv.c` runs the whole
+  `view-round-1` test suite, unchanged, with every `_trunc` call routed
+  through a wrapper. Each wrapper also calls the `_center` form with
+  `center16 = 65536 * center` on the same memory and requires the same
+  return value and identical bytes. That covers every input of that suite:
+  hand cases, relation sweep, path sweeps, argument-rule failures, in-place
+  calls and the sweeps of its five negative controls. 471,417 paired calls,
+  372,685,880 output bytes, no difference. Control: the centre one unit
+  lower makes 18,936 of 72,953 paired calls differ.
+- **Argument rules.** Stale centre fields, invalid views and null views
+  fail on all ten entry points and write nothing. Guard edges exactly
+  `2^30` from the Q16 centre are accepted, `2^30 + 1` rejected, on each
+  side. Initialization from the view's own embedded copy is allowed.
+- **Controls detected** (oracle mutations, 150 cameras each): centre
+  fraction ignored, 117,155 mismatches; centre rounded to a pixel, 66,064;
+  y residual sign flipped, 64,774; guard planes from the integer centre,
+  4,283; carry and borrow dropped, 134,384.
+
+**MODELLED** (SH-2 model capture, `center.h`): every `_center` entry point,
+portable and divider forms, runs on the SH-2 against the harness's own
+oracle (fractional centres in 219 of the 256 batch poses on x and 217 on y):
+- 262,144 batch vertices (147,352 `NEAR`), 131,072 projected points (7,044
+  on an exact row boundary), 202,714 stepped points, 16,384 near-clip quads
+  and 16,384 guard polygons (55,282 output vertices, 46,663 of them checked
+  inside all six planes, 1 overflow and 2,210 rejected rectangles writing
+  nothing). All are exact.
+- Equivalence at whole-pixel centres: 2,048 paired `_trunc`/`_center`
+  calls over all five paths and both forms, 13,404,208 output bytes,
+  identical.
+
+Each timing fixture of `view-round-1` ran through the `_trunc` function
+(centre 160, 112) and the `_center` function (centre 160, 112 + 1/65536)
+back to back. Medians of 64 trials:
+
+| Path | Unit | Portable, `_trunc` / `_center` | `_divu`, `_trunc` / `_center` |
+| --- | --- | ---: | ---: |
+| batch (512 vertices) | per vertex | 691.27 / 699.03 | 143.12 / **147.45** |
+| project (512 points) | per point | 617.53 / 625.05 | 103.96 / 106.04 |
+| edge steps (64 points) | per point | 720.44 / 729.50 | 180.02 / 182.64 |
+| near clip (2 crossings) | per quad | 3,128 / 3,206 | 1,696 / 1,776 |
+| guard, quad inside | per quad | 4,522 / 4,633 | 2,834 / 2,955 |
+| guard, one corner far left | per quad | 6,905 / 7,053 | 4,501 / 4,669 |
+| guard, near plus side | per quad | 11,620 / 11,770 | 7,592 / 7,758 |
+
+Each path does the same divisions in both forms. The batch and projection
+kernels add three instructions at each of the two places a quotient becomes
+a pixel. The clips' per-point
+C projections and the centre check cost 20 to 40 cycles per projected point.
+No console or emulator run.
+
+### Source-order guard clip with a fractional centre
+
+`sh2z_view_clip_guard_src_center[_divu]` is the `view-guard-src-1` clip
+taking a `const sh2z_view_center_t *` where `sh2z_view_clip_guard_src_trunc`
+takes a view; every other argument (`max_out` included) is the same. The
+`view-guard-src-1` contract is already written with a Q16 centre `(Cx, Cy)`;
+here `Cx = center_x16` and `Cy = center_y16`, unrounded:
+
+```
+planes       KL = 65536*left - center_x16     KR = 65536*right - center_x16
+             KT = center_y16 - 65536*top      KB = center_y16 - 65536*bottom
+snap bounds  x >= ceil(KL*z/focal_x)   x <= floor(KR*z/focal_x)
+             y <= floor(KT*z/focal_y)  y >= ceil(KB*z/focal_y)
+pixels       sx = trunc((center_x16 + trunc(focal_x*x/z)) / 65536)
+             sy = trunc((center_y16 - trunc(focal_y*y/z)) / 65536)
+```
+
+These are the planes of `sh2z_view_clip_guard_center`, and the pixels are
+what `sh2z_view_project_center` writes. They land inside the rectangle
+without a clamp, by the argument above. Outcodes come from `sx`, `sy`
+against `view.clip`. The validity rules are those of the other `_center`
+functions (stale centre fields fail), plus `|65536 * edge - center16| <= 2^30`
+for each edge. Order, crossings, snap, `max_out`, the snap failure and every
+return value are `view-guard-src-1`'s.
+
+**Implementation.** The clip's static functions moved verbatim from
+`sh2zam_view_guard_src.c` into the private header
+`src/sh2zam_view_guard_src_core.h`. `sh2zam_view_guard_src.c` includes it,
+and its object is byte-identical to `main`'s. The new file
+`src/sh2zam_view_guard_src_center.c` includes it too, checks the centre fields
+and passes `center_x16`, `center_y16` to the clip unchanged. Every other
+object is unchanged, `sh2zam_view_center.o` included.
+
+**HOST** (`tests/test_guard_src_center.c`; GCC and Clang strict,
+ASan/UBSan; counts from the GCC build):
+- **Equivalence.** The whole `view-guard-src-1` suite (`test_guard_src.c`,
+  unchanged) runs with every `_src_trunc[_divu]` call routed through a
+  wrapper. Each wrapper also calls the `_src_center` form with
+  `center16 = 65536 * center` on the same memory, and requires the same
+  return value and identical bytes over the whole 16-vertex buffer. That
+  covers its hand cases, argument rules, 600,000 polygons, in-place calls and
+  the sweeps of its ten negative controls: 2,746,894 paired calls and
+  1,582,210,368 bytes, no difference. Control: the centre 1/65536 lower makes
+  38,318 of 154,736 paired calls differ.
+- **Oracle.** That suite's own source-clipper oracle, which takes a Q16
+  centre for its planes, snap and projection, is compared with both entry
+  points at fractional centres. 200,000 road quads (port-like camera, ±900,
+  `max_out` 10, centre y `12648447` or `12648449` in half of them) give
+  752,026 exact output vertices. 400,000 random polygons (3 to 8 corners,
+  half aimed through the Q16 centre at exact pixel boundaries) give
+  1,308,231 exact vertices, 250,254 of them on a pixel boundary, with
+  43,398 overflows and 7,899 snap failures writing nothing. Divider bytes
+  equal portable bytes, and in-place calls equal separate ones. 158,720 road
+  quads and 214,130 random polygons differ from the whole-pixel clip of the
+  floor view.
+- **Hand cases.** At `12648447` and `12648449` a corner on the y axis lands
+  on rows 192 and 193; `_src_trunc` at 193 puts it on 193 both times. Left
+  crossings snap to `x >= 65536 * left - center_x16` for x fractions 0,
+  1/65536 and 1/2.
+- **Argument rules.** A stale floor, a null view, `max_out` 2 or 17 and an
+  edge `2^30 + 1` from the Q16 centre are rejected with nothing written
+  (`2^30` exactly, and `2^30 - 1` with a fraction, are accepted). Centres at
+  the int32 extremes clip exactly.
+- **Controls detected** (oracle mutations, 60,000 polygons each): fraction
+  dropped, 131,610 mismatches; centre rounded to a pixel, 104,693; y fraction
+  subtracted, 108,731.
+
+**MODELLED** (`center.h`): both entry points ran on the SH-2 against the
+harness's own oracle (the `guardsrc.h` oracle rewritten with the Q16
+planes, snap and projection). 16,384 random polygons and 8,192 road quads
+(centre y `12648447` or `12648449` on three in four) gave 69,946 exact output
+vertices (26,795 on road quads; 14,447 on a pixel boundary). 1,716 overflows,
+986 snap failures and 2,852 rejected rectangles wrote nothing. 12,712
+polygons differ from the whole-pixel clip of the floor view. At whole-pixel
+centres, 1,024 paired `_src_trunc`/`_src_center` calls wrote identical bytes.
+
+`guardsrc.h`'s timing fixtures ran through `_src_trunc` (centre 160, 112) and
+`_src_center` (centre 160, 112 + 1/65536) back to back. Medians of 64 trials,
+cycles per call:
+
+| Fixture | Portable, `_src_trunc` / `_src_center` | `_divu`, `_src_trunc` / `_src_center` |
+| --- | ---: | ---: |
+| quad inside (attrs 2, `max_out` 16) | 4,281 / 4,287 | 2,873 / 2,879 |
+| one corner far left | 6,763 / 6,770 | 4,576 / 4,583 |
+| near plus side | 9,780 / 9,789 | 6,866 / 6,875 |
+| road quad from behind the camera (attrs 0, `max_out` 10) | 12,542 / 12,537 | 8,864 / 8,870 |
+
+Both forms do the same divisions. The divider forms cost 6 to 9 cycles more
+per call (the centre check); the portable medians differ by -5 to +9. No
+console or emulator run.
+
+### Caller guidance
+
+- **Pass the source centre as it is.** Build the plain view as for
+  `_trunc` (rotation, `sh2z_view_place`, focal, clip), then call
+  `sh2z_view_center_init` with the source's Q16 centre. Do not round it.
+- **Use one rule per frame.** Use the `_center` forms for the batch, edge
+  steps and both clips together, with the same centre view. Where the source
+  clips in its own order, use `sh2z_view_clip_guard_src_center[_divu]` with
+  the source's pass limit instead of `sh2z_view_clip_guard_center`. The near clip
+  copies corners as given, and the merge planner reads whatever `sx`, `sy`
+  it is given.
+- **Guard rectangle.** Pass the same rectangle as before. Its edges are
+  whole pixels, and the planes come from the Q16 centre. Use
+  `view.clip` of the centre view when the rectangle is the clip rectangle.
+- **What exactness covers.** The pixel rule only, as for `view-round-1`.

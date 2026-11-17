@@ -32,10 +32,18 @@ MODELLED. Not console timing, not emulator timing.
      oracle, failures writing nothing, then the view-round-1 guard fixtures
      and a road quad through `sh2z_view_clip_guard_trunc` and the new clip
      back to back.
+  9. `center.h`, view-center-1: every `_center` entry point against its own
+     oracle with fractional centres (points aimed at exact row boundaries),
+     the `_center` and `_trunc` forms byte for byte at whole-pixel centres,
+     then each timing fixture through the `_trunc` form and its `_center`
+     form back to back; then the same for the source-order clip
+     (`sh2z_view_clip_guard_src_center`) against its own Q16 oracle. It runs
+     between `round.h` and `guardsrc.h`.
 - `collect.py` checks the invariants (zero mismatches, two divisions per
   timing vertex, merge runs covering every repetition, both view-round-1
-  differences occurring, both source-order clip failures occurring, the
-  ELF's embedded
+  differences occurring, both source-order clip failures occurring,
+  view-center-1 exact and equal to view-round-1 and view-guard-src-1 at
+  whole-pixel centres, the ELF's embedded
   source commit, the interpreter pin) and
   writes the results file.
 
