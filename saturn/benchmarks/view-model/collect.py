@@ -52,6 +52,15 @@ assert mt['boundaries']==64 and mt['runMask']==[1,2,4]
 assert set(mc)=={'pixel0.5','pixel1','pixel2','pixel1Aligned','rows1'}
 assert mc['pixel0.5']['meanQuads']>=mc['pixel1']['meanQuads']>=mc['pixel2']['meanQuads'],'a looser tolerance never needs more quads'
 for c in mc.values(): assert sum(c['runs'][i]*(1,2,4)[i] for i in range(3))==63*mt['trials'],'runs cover every repetition'
+rd=raw['round']
+assert rd['mismatches']==0,'view-round-1 must be exact'
+assert rd['batchVertices']>=262144 and rd['projectedPoints']>=131072 and rd['steppedPoints']>=100000
+assert rd['clipQuads']>=16384 and rd['guardPolygons']>=16384 and rd['guardVertices']>=50000
+assert rd['xUp']>0 and rd['yDown']>0,'both differences from view-contract-1 must occur'
+rt=rd['timing']
+for k in ('batch','project','edgeSteps','clipNear','guardInside','guardSide','guardNearSide'):
+    assert set(rt[k]['median'])=={'floorPortable','floorDivu','truncPortable','truncDivu'}
+assert rt['batch']['divisions']==2*512*rt['trials'],'round timing batch must cost two divisions per vertex'
 
 here=Path(__file__).resolve().parent
 model=here.parent/'sh2-model'
@@ -72,6 +81,7 @@ result=dict(schema=1,kernel='view_batch',tier='MODELLED',sourceCommit=raw['sourc
       edgesCaptureSourceSHA256=sha((here/'edges.h').read_bytes()),
       guardCaptureSourceSHA256=sha((here/'guard.h').read_bytes()),
       mergeCaptureSourceSHA256=sha((here/'merge.h').read_bytes()),
+      roundCaptureSourceSHA256=sha((here/'round.h').read_bytes()),
       bridgeSourceSHA256=sha((here/'view_bridge.c').read_bytes()),
       collectorSourceSHA256=sha(Path(__file__).read_bytes())),
     dividerProbes=dict(count=raw['dividerProbeCount'],hardwarePath=raw['dividerProbeHardwarePath'],table=raw['dividerProbes']),
@@ -100,8 +110,13 @@ result=dict(schema=1,kernel='view_batch',tier='MODELLED',sourceCommit=raw['sourc
            'boundaries':mt['boundaries'],'run_mask':mt['runMask'],'unit':'cycles per boundary','tier':'MODELLED',
            'cycles_per_boundary':mc[k]['medianCyclesPerBoundary'],'max_cycles_per_boundary':mc[k]['maxCyclesPerBoundary'],
            'mean_quads':mc[k]['meanQuads'],'outputs_equal_oracle':True}
-          for k in ('pixel1','pixel0.5','pixel2','pixel1Aligned','rows1')],
-    edges=e,guard=gd,merge=mg)
+          for k in ('pixel1','pixel0.5','pixel2','pixel1Aligned','rows1')]+
+         [{'kernel':'view_round_'+k,'unit':'cycles per vertex' if rt[k]['per']>1 else 'cycles per call',
+           'per':rt[k]['per'],'tier':'MODELLED','floor_portable':rt[k]['median']['floorPortable'],
+           'floor_divu_stall_model':rt[k]['median']['floorDivu'],'trunc_portable':rt[k]['median']['truncPortable'],
+           'trunc_divu_stall_model':rt[k]['median']['truncDivu'],'outputs_equal_oracle':True}
+          for k in ('batch','project','edgeSteps','clipNear','guardInside','guardSide','guardNearSide')],
+    edges=e,guard=gd,merge=mg,round=rd)
 a.output.parent.mkdir(parents=True,exist_ok=True)
 a.output.write_text(json.dumps(result,indent=1)+'\n')
 print('PASS: %d sweep vertices exact on both paths (%d strided); %d divider probes (%d hardware path)'%(
@@ -118,3 +133,6 @@ print('view-guard-1: %d polygons, %d output vertices exact (%d overflows, nothin
 print('view-merge-1: %d strips, %d runs exact (%d merged), %d rejected calls wrote nothing; 64-boundary strips, runs {1,2,4}, cycles/boundary (quads): '%(
     mg['trials'],mg['runs'],mg['mergedRuns'],mg['rejectedCalls'])+
     ', '.join('%s %.1f (%.2f)'%(k,mc[k]['medianCyclesPerBoundary'],mc[k]['meanQuads']) for k in ('pixel0.5','pixel1','pixel2','pixel1Aligned','rows1')))
+print('view-round-1: %d batch, %d projected, %d stepped, %d near-clip, %d guard vertices exact (sx+1 %d, sy-1 %d); floor/trunc divu: '%(
+    rd['batchVertices'],rd['projectedPoints'],rd['steppedPoints'],rd['clipVertices'],rd['guardVertices'],rd['xUp'],rd['yDown'])+
+    ', '.join('%s %.2f/%.2f'%(k,rt[k]['median']['floorDivu'],rt[k]['median']['truncDivu']) for k in ('batch','project','edgeSteps','clipNear','guardInside','guardSide','guardNearSide')))

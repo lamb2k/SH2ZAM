@@ -6,7 +6,9 @@
  * random cameras and guard rectangles; both entry points run on the SH-2 and
  * are compared with an oracle written here from the contract text.
  * Timing: the port's camera and its -900..900 band, quads with two
- * attributes in three shapes. Then merge.h (view-merge-1). */
+ * attributes in three shapes. Then merge.h (view-merge-1), then round.h
+ * (view-round-1), which is included at the end because it reuses this
+ * file's oracle helpers. */
 #define GUARD_TRIALS 65536u
 #define GUARD_TIME_TRIALS 64u
 #define GUARD_MAX_OUT 16
@@ -184,3 +186,4 @@ static int capture_guard(void) {
  printf("}},");
  return capture_merge();
 }
+#include "round.h"
