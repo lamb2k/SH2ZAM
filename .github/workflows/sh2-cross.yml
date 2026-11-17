@@ -68,6 +68,8 @@ jobs:
             grep -q __mulsf3 sh2-benchmark-float-helpers.txt
             grep -q __addsf3 sh2-benchmark-float-helpers.txt
             sha256sum saturn/benchmarks/yaul/*.iso > sh2-benchmark-image-sha256.txt
+            make -C saturn/benchmarks/yaul/calibration
+            sha256sum saturn/benchmarks/yaul/calibration/*.iso > sh2-calibration-image-sha256.txt
           '
       - name: Inspect generated batch instructions
         run: python3 saturn/benchmarks/audit-batch.py sh2-batch-disassembly.txt | tee sh2-batch-audit.txt
@@ -127,6 +129,11 @@ jobs:
             saturn/benchmarks/yaul/*.cue
             saturn/benchmarks/yaul/*.bin
             saturn/benchmarks/yaul/build/
+            saturn/benchmarks/yaul/calibration/*.iso
+            saturn/benchmarks/yaul/calibration/*.cue
+            saturn/benchmarks/yaul/calibration/*.bin
+            saturn/benchmarks/yaul/calibration/build/*.elf
+            saturn/benchmarks/yaul/calibration/build/*.map
             saturn/benchmarks/manifest.json
             build/sh2-model/results.json
             build/sh2-model/raw.json

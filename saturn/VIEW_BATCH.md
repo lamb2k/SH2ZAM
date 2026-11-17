@@ -13,7 +13,7 @@ planes per vertex in 64-bit arithmetic. Contract tag: `view-contract-1`.
 | SH-2 path with the hardware divider (`sh2z_view_batch_divu`) | Landed, `view-sh2-1` |
 | SH-2 model timing (MODELLED tier) | 134.7 cycles per vertex at 512 vertices |
 | View-space projection, edge stepper, near clip | Landed, `view-edges-1` (see below) |
-| Console or emulator timing | Unrun |
+| Console or emulator timing | Unrun; the [calibration image](benchmarks/yaul/calibration/README.md) times the batch on a console |
 
 `sh2z_view_batch` is the definition of correct and never touches the hardware
 divider (its contract says so). On SH-2 it calls the 64-bit division helper
