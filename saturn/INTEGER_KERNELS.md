@@ -60,10 +60,10 @@ specification: see the verified counts below.
 | Operation | Case | Library | Plain C | Fewer cycles |
 |---|---|---:|---:|---:|
 | `mulu_w`, `muls_w` | any | 12 | 12 | 0% (the compiler already emits `MULU.W`/`MULS.W`; the API adds exact flags and register semantics, not speed) |
-| `divu_w` | quotient fits | 48 | 170 | 71.8% |
+| `divu_w` | quotient fits | 46.5 | 169 | 72.5% |
 | `divu_w` | overflow | 16 | 88 | 81.8% |
-| `divs_w` | quotient fits | 73.1 | 200 | 63.5% |
-| `divs_w` | overflow | 58.0 | 105 | 44.8% |
+| `divs_w` | quotient fits | 67.1 | 199 | 66.3% |
+| `divs_w` | overflow | 55.0 | 105 | 47.6% |
 
 ## Box overlap
 
@@ -93,16 +93,16 @@ scattered over a 384x224 arena with about 7% hits, "dense" has every box overlap
 
 | Case (inclusive edges) | Library | Plain C | Fewer cycles |
 |---|---:|---:|---:|
-| min/max, 1 vs 16, sparse | 423 | 317 | -33% (slower: validation dominates) |
-| min/max, 1 vs 16, sparse, unchecked | 265 | 317 | 16% |
-| min/max, 1 vs 64, sparse | 993 | 1,130 | 12% |
-| min/max, 1 vs 256, sparse | 3,267 | 4,384 | 26% |
-| min/max, 1 vs 256, dense | 5,789 | 12,181 | 52% |
-| centre, 1 vs 64, sparse | 1,449 | 2,424 | 40% |
-| centre, 1 vs 256, sparse | 5,077 | 9,585 | 47% |
-| min/max, 16 x 16, sparse | 4,406 | 4,397 | 0% |
-| min/max, 32 x 64, sparse | 26,567 | 32,880 | 19% |
-| centre, 32 x 64, sparse | 41,270 | 77,170 | 46% |
+| min/max, 1 vs 16, sparse | 409 | 317 | -29% (slower: validation dominates) |
+| min/max, 1 vs 16, sparse, unchecked | 261 | 317 | 18% |
+| min/max, 1 vs 64, sparse | 983 | 1,135 | 13% |
+| min/max, 1 vs 256, sparse | 3,257 | 4,410 | 26% |
+| min/max, 1 vs 256, dense | 5,779 | 12,435 | 54% |
+| centre, 1 vs 64, sparse | 1,439 | 2,422 | 41% |
+| centre, 1 vs 256, sparse | 5,067 | 9,583 | 47% |
+| min/max, 16 x 16, sparse | 4,314 | 4,383 | 2% |
+| min/max, 32 x 64, sparse | 26,539 | 32,782 | 19% |
+| centre, 32 x 64, sparse | 41,242 | 77,170 | 47% |
 
 Honest reading: the min/max form is only a modest win when most boxes miss at the first test, and a checked
 call on a handful of boxes does not beat a bare loop. Centre form and hit-heavy batches gain the most. Edge
@@ -124,12 +124,12 @@ checks and the argument and overlap contracts.
 
 | Case | Visible cells | Library | Plain C | Fewer cycles |
 |---|---:|---:|---:|---:|
-| 16 cells, on screen | 16 | 799 | 718 | -11% |
-| 64 cells, on screen | 64 | 2,383 | 2,734 | 13% |
-| 256 cells, on screen | 185 | 7,589 | 10,162 | 25% |
-| 256 cells, edge | 71 | 5,196 | 7,560 | 31% |
-| 256 cells, scattered | 37 | 4,442 | 7,188 | 38% |
-| 256 cells, scattered, flipped X+Y | 10 | 3,697 | 6,659 | 45% |
+| 16 cells, on screen | 16 | 794 | 750 | -6% |
+| 64 cells, on screen | 64 | 2,378 | 2,862 | 17% |
+| 256 cells, on screen | 185 | 7,655 | 10,533 | 27% |
+| 256 cells, edge | 71 | 5,262 | 7,702 | 32% |
+| 256 cells, scattered | 37 | 4,499 | 7,262 | 38% |
+| 256 cells, scattered, flipped X+Y | 10 | 3,727 | 6,678 | 44% |
 
 Batches below roughly 40 cells do not beat an unchecked plain loop because the library validates its arguments.
 
@@ -142,5 +142,5 @@ The harness first verifies the SH-2 object code against independent models: **16
 ## Not done
 
 No console run. No whole-frame measurement. The 68000 overflow N/Z choice is unchecked against silicon. The
-memory-mapped divider was not evaluated. The numbers above are from a local GCC 9.3 build; CI produces its own
-capture with the Yaul GCC.
+memory-mapped divider was not evaluated. The numbers above are the capture from
+[CI run 44071367448](https://github.com/lamb2k/SH2ZAM/actions/runs/44071367448), built with the pinned Yaul image's GCC 13.2.

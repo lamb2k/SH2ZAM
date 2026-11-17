@@ -48,10 +48,11 @@ INTEGER_VERIFY=4000000 bash saturn/benchmarks/integer-model/run.sh integer-model
 ```
 
 [`results.json`](results.json) is the committed capture. It records the source commit,
-the ELF SHA-256, the toolchain and the Yabause commit. The committed capture was
-produced locally with GCC 9.3.0 (compile to assembly) and GNU binutils 2.40
-(assemble and link) rather than the CI image's GCC 13.2; CI's own capture is uploaded
-as the `sh2-compile-evidence` artifact and may differ in individual cycle counts.
+the ELF SHA-256, the toolchain and the Yabause commit. It is the `integer-results.json`
+from the `sh2-compile-evidence` artifact of [CI run 44071367448](https://github.com/lamb2k/SH2ZAM/actions/runs/44071367448),
+built with the pinned Yaul image's GCC 13.2. Every CI run uploads a fresh capture there.
+An earlier local capture built with GCC 9.3.0 verified the same counts; its cycle
+numbers differed by up to about 8% per row.
 
 ## Not covered
 
