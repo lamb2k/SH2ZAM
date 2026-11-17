@@ -2,12 +2,12 @@
  "schema": 1,
  "kernel": "view_batch",
  "tier": "MODELLED",
- "sourceCommit": "5faf9d23132d6b05e2db163174680c4b11bae5f0",
+ "sourceCommit": "3996668c7cbaf523c2fdfd39abe843995bc1b621",
  "run": {
   "environment": "isolated-sh2-interpreter",
-  "elfSHA256": "04a1ed0805c04d6d8fea3d32ea6bd35f0d8e3db7853b31a847e848e4df474fcc",
-  "symbolSHA256": "97492fe0087cd73b10b8ae8e31f5629561399ca2ed848a6cf2e816280b28f61c",
-  "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44106757612",
+  "elfSHA256": "05528e3af95856a48c9221de4ae7c2aaf2b17b342b22bff6292e13726bb44edd",
+  "symbolSHA256": "aadf6e0d4e9159cf410f0ab208b51f14e8b2078cca2b1898c94e976ccc1bd32b",
+  "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44116525230",
   "interpreterRepository": "https://github.com/Yabause/yabause",
   "interpreterCommit": "7e38821dbac265490f115e163c523a939acda759",
   "interpreterSourceSHA256": "28f938f95842d0127c31c01a23ccffc3a53243786b405a4afbbc2f34764ce36c",
@@ -33,10 +33,11 @@
   "edgesCaptureSourceSHA256": "62b617ae4691c5437a4dd173a1f381be5058eed34b4dc729fa74b974e3e727e8",
   "guardCaptureSourceSHA256": "50a305fe2b1adab1b767ec3d585f4f61eab633b1aa0977729623b68f5a8c7713",
   "mergeCaptureSourceSHA256": "075d434c324cc41653baf46d1f8e2877788b93ec72969c7aac07ac458555760f",
-  "roundCaptureSourceSHA256": "de97e6fec702aadaf731207cdfef157f3c8b1579db1c4b473102f64eef9ee354",
+  "roundCaptureSourceSHA256": "9236076366e2f310fb4c34d515831a99168e7650359fbb6b8dc375b7d25d129d",
   "guardSrcCaptureSourceSHA256": "fb332a90ddcbda72b5cfa5532c1303ca38b570773f83dda5174d14efb8a8b457",
-  "bridgeSourceSHA256": "f6a4e24271f37d1ce38055eea327c0ec3d0461a3dcf6cc9e515c521e92cce7c9",
-  "collectorSourceSHA256": "2e76bb2005fd8a37493b63322a91f6f039fcc21f20ad4a1993396323b80e74d6"
+  "centerCaptureSourceSHA256": "69f7909fd3c55921d8aa33e8c0e9445cca1a1764a386f6179a5cff361656a591",
+  "bridgeSourceSHA256": "c70bf246312fb90ea74978e79e189556014cfcb69402c7613a228d7d54f96ea1",
+  "collectorSourceSHA256": "53f2e1accd26a9e4b7b4e8c342143f5a4fa9a03d6e9a19224c46f7e018351857"
  },
  "dividerProbes": {
   "count": 2023,
@@ -1076,6 +1077,159 @@
    "src_portable": 12544,
    "src_divu_stall_model": 8856,
    "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_center_batch",
+   "unit": "cycles per vertex",
+   "per": 512,
+   "tier": "MODELLED",
+   "trunc_portable": 691.27,
+   "trunc_divu_stall_model": 143.12,
+   "center_portable": 699.03,
+   "center_divu_stall_model": 147.45,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_center_project",
+   "unit": "cycles per vertex",
+   "per": 512,
+   "tier": "MODELLED",
+   "trunc_portable": 617.53,
+   "trunc_divu_stall_model": 103.96,
+   "center_portable": 625.05,
+   "center_divu_stall_model": 106.04,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_center_edgeSteps",
+   "unit": "cycles per vertex",
+   "per": 64,
+   "tier": "MODELLED",
+   "trunc_portable": 720.44,
+   "trunc_divu_stall_model": 180.02,
+   "center_portable": 729.5,
+   "center_divu_stall_model": 182.64,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_center_clipNear",
+   "unit": "cycles per call",
+   "per": 1,
+   "tier": "MODELLED",
+   "trunc_portable": 3128.0,
+   "trunc_divu_stall_model": 1696.0,
+   "center_portable": 3206.0,
+   "center_divu_stall_model": 1776.0,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_center_guardInside",
+   "unit": "cycles per call",
+   "per": 1,
+   "tier": "MODELLED",
+   "trunc_portable": 4522.0,
+   "trunc_divu_stall_model": 2834.0,
+   "center_portable": 4633.0,
+   "center_divu_stall_model": 2955.0,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_center_guardSide",
+   "unit": "cycles per call",
+   "per": 1,
+   "tier": "MODELLED",
+   "trunc_portable": 6905.0,
+   "trunc_divu_stall_model": 4501.0,
+   "center_portable": 7053.0,
+   "center_divu_stall_model": 4669.0,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_center_guardNearSide",
+   "unit": "cycles per call",
+   "per": 1,
+   "tier": "MODELLED",
+   "trunc_portable": 11620.0,
+   "trunc_divu_stall_model": 7592.0,
+   "center_portable": 11770.0,
+   "center_divu_stall_model": 7758.0,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_center_src_guard_inside",
+   "unit": "cycles per call",
+   "band": [
+    -900,
+    -900,
+    900,
+    900
+   ],
+   "attrs": 2,
+   "max_out": 16,
+   "tier": "MODELLED",
+   "output_vertices": 4.0,
+   "trunc_portable": 4281,
+   "trunc_divu_stall_model": 2873,
+   "center_portable": 4287,
+   "center_divu_stall_model": 2879,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_center_src_guard_side",
+   "unit": "cycles per call",
+   "band": [
+    -900,
+    -900,
+    900,
+    900
+   ],
+   "attrs": 2,
+   "max_out": 16,
+   "tier": "MODELLED",
+   "output_vertices": 5.0,
+   "trunc_portable": 6763,
+   "trunc_divu_stall_model": 4576,
+   "center_portable": 6770,
+   "center_divu_stall_model": 4583,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_center_src_guard_nearSide",
+   "unit": "cycles per call",
+   "band": [
+    -900,
+    -900,
+    900,
+    900
+   ],
+   "attrs": 2,
+   "max_out": 16,
+   "tier": "MODELLED",
+   "output_vertices": 5.0,
+   "trunc_portable": 9780,
+   "trunc_divu_stall_model": 6866,
+   "center_portable": 9789,
+   "center_divu_stall_model": 6875,
+   "outputs_equal_oracle": true
+  },
+  {
+   "kernel": "view_center_src_guard_roadNear",
+   "unit": "cycles per call",
+   "band": [
+    -900,
+    -900,
+    900,
+    900
+   ],
+   "attrs": 0,
+   "max_out": 10,
+   "tier": "MODELLED",
+   "output_vertices": 6.0,
+   "trunc_portable": 12542,
+   "trunc_divu_stall_model": 8864,
+   "center_portable": 12537,
+   "center_divu_stall_model": 8870,
+   "outputs_equal_oracle": true
   }
  ],
  "edges": {
@@ -1518,6 +1672,214 @@
     "max": {
      "truncDivu": 8380,
      "srcDivu": 8920
+    }
+   }
+  }
+ },
+ "center": {
+  "batchVertices": 262144,
+  "batchNear": 147352,
+  "fractionalX": 219,
+  "fractionalY": 217,
+  "projectedPoints": 131072,
+  "rowBoundaryPoints": 7044,
+  "steppedPoints": 202714,
+  "clipQuads": 16384,
+  "clipVertices": 65536,
+  "guardPolygons": 16384,
+  "guardVertices": 55282,
+  "guardOverflows": 1,
+  "guardInvalid": 2210,
+  "guardInsidePlanes": 46663,
+  "mismatches": 0,
+  "equivalence": {
+   "calls": 2048,
+   "bytes": 13404208,
+   "mismatches": 0
+  },
+  "timing": {
+   "trials": 64,
+   "centerQ16": [
+    10485760,
+    7340033
+   ],
+   "batch": {
+    "per": 512,
+    "divisions": 65536,
+    "median": {
+     "truncPortable": 691.27,
+     "truncDivu": 143.12,
+     "centerPortable": 699.03,
+     "centerDivu": 147.45
+    }
+   },
+   "project": {
+    "per": 512,
+    "divisions": 65536,
+    "median": {
+     "truncPortable": 617.53,
+     "truncDivu": 103.96,
+     "centerPortable": 625.05,
+     "centerDivu": 106.04
+    }
+   },
+   "edgeSteps": {
+    "per": 64,
+    "divisions": 8960,
+    "median": {
+     "truncPortable": 720.44,
+     "truncDivu": 180.02,
+     "centerPortable": 729.5,
+     "centerDivu": 182.64
+    }
+   },
+   "clipNear": {
+    "per": 1,
+    "divisions": 512,
+    "median": {
+     "truncPortable": 3128.0,
+     "truncDivu": 1696.0,
+     "centerPortable": 3206.0,
+     "centerDivu": 1776.0
+    }
+   },
+   "guardInside": {
+    "per": 1,
+    "divisions": 512,
+    "median": {
+     "truncPortable": 4522.0,
+     "truncDivu": 2834.0,
+     "centerPortable": 4633.0,
+     "centerDivu": 2955.0
+    }
+   },
+   "guardSide": {
+    "per": 1,
+    "divisions": 768,
+    "median": {
+     "truncPortable": 6905.0,
+     "truncDivu": 4501.0,
+     "centerPortable": 7053.0,
+     "centerDivu": 4669.0
+    }
+   },
+   "guardNearSide": {
+    "per": 1,
+    "divisions": 1485,
+    "median": {
+     "truncPortable": 11620.0,
+     "truncDivu": 7592.0,
+     "centerPortable": 11770.0,
+     "centerDivu": 7758.0
+    }
+   }
+  },
+  "srcGuard": {
+   "trials": 16384,
+   "roadTrials": 8192,
+   "vertices": 69946,
+   "roadVertices": 26795,
+   "fractionalX": 20772,
+   "fractionalY": 21686,
+   "boundaryVertices": 14447,
+   "differFromWholePixel": 12712,
+   "overflows": 1716,
+   "snapFailures": 986,
+   "invalid": 2852,
+   "empty": 4756,
+   "mismatches": 0,
+   "equivalence": {
+    "calls": 1024,
+    "bytes": 589824,
+    "mismatches": 0
+   },
+   "timing": {
+    "trials": 64,
+    "band": [
+     -900,
+     -900,
+     900,
+     900
+    ],
+    "centerQ16": [
+     10485760,
+     7340033
+    ],
+    "inside": {
+     "attrs": 2,
+     "maxOut": 16,
+     "meanOutputVertices": 4.0,
+     "divisionsPerCall": {
+      "trunc": 8.0,
+      "center": 8.0
+     },
+     "median": {
+      "truncPortable": 4281,
+      "truncDivu": 2873,
+      "centerPortable": 4287,
+      "centerDivu": 2879
+     },
+     "max": {
+      "truncDivu": 2873,
+      "centerDivu": 2879
+     }
+    },
+    "side": {
+     "attrs": 2,
+     "maxOut": 16,
+     "meanOutputVertices": 5.0,
+     "divisionsPerCall": {
+      "trunc": 13.0,
+      "center": 13.0
+     },
+     "median": {
+      "truncPortable": 6763,
+      "truncDivu": 4576,
+      "centerPortable": 6770,
+      "centerDivu": 4583
+     },
+     "max": {
+      "truncDivu": 4626,
+      "centerDivu": 4633
+     }
+    },
+    "nearSide": {
+     "attrs": 2,
+     "maxOut": 16,
+     "meanOutputVertices": 5.0,
+     "divisionsPerCall": {
+      "trunc": 18.0,
+      "center": 18.0
+     },
+     "median": {
+      "truncPortable": 9780,
+      "truncDivu": 6866,
+      "centerPortable": 9789,
+      "centerDivu": 6875
+     },
+     "max": {
+      "truncDivu": 6913,
+      "centerDivu": 6922
+     }
+    },
+    "roadNear": {
+     "attrs": 0,
+     "maxOut": 10,
+     "meanOutputVertices": 6.0,
+     "divisionsPerCall": {
+      "trunc": 22.73,
+      "center": 22.73
+     },
+     "median": {
+      "truncPortable": 12542,
+      "truncDivu": 8864,
+      "centerPortable": 12537,
+      "centerDivu": 8870
+     },
+     "max": {
+      "truncDivu": 8913,
+      "centerDivu": 8925
+     }
     }
    }
   }
