@@ -2,7 +2,8 @@
  *  \brief Shared with the browser's actual C bridge.
  *
  *  \author 2026 SH2ZAM Contributors
- *  \copyright GPL-2.0-or-later
+ *  \copyright MIT License
+ *  Shared with the MIT browser module (exhibits/bridge.c), so it stays MIT.
  */
 #ifndef SH2Z_BENCH_BRIDGE_H
 #define SH2Z_BENCH_BRIDGE_H
