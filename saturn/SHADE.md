@@ -201,7 +201,8 @@ caller's own thresholds) when fog changes. Per piece, `sh2z_shade_fog_lookup` ov
 corners' `z` (stride `sizeof(sh2z_view_guard_vertex_t)` or `sizeof(sh2z_view_vertex_t)`
 from `&v[0].z`), then choose the variant from the fades, then `sh2z_shade_fade_offset`
 (textured) or `sh2z_shade_fade_mix` (solid). Calling over all corners of a strip or of the
-frame at once instead of per piece removes most of the per-call cost.
+frame at once instead of per piece removes most of the per-call cost. Contract tag
+`shade-2` does all three steps in one call per piece; see [SHADE_FUSED.md](SHADE_FUSED.md).
 
 ## Not established
 

@@ -195,6 +195,13 @@ reciprocal multiplies in place of its divisions. Host-exact tested against an in
 and costed in the SH-2 instruction model (modelled, no console run). See
 [the shading guide](saturn/SHADE.md).
 
+Contract tag `shade-2` adds `sh2z_shade_fog_gouraud`: a road renderer's per-piece fade lookup,
+fog variant and 5:5:5 colour in one hand-written SH-2 call with prepared fog and colour handles
+(fades, variants and solid colours exact; textured colours within +1 LSB of shade-1), and
+[`sh2zam/cdiv_experimental.h`](saturn/include/sh2zam/cdiv_experimental.h), division by constants
+through magic-number multiplies with exhaustively checked domains. See
+[the fused shade guide](saturn/SHADE_FUSED.md).
+
 ## Variable-length decoding
 
 [`sh2zam/vlc_experimental.h`](saturn/include/sh2zam/vlc_experimental.h) (contract tag `vlc-1`)
