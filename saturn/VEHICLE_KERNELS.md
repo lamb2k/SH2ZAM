@@ -129,7 +129,7 @@ The negative controls are:
 Every control is caught.
 
 **MODELLED** ([results](benchmarks/vehicle-model/results.json), captured by
-[CI run 44215071056](https://github.com/lamb2k/SH2ZAM/actions/runs/44215071056) on source commit `c8674d4`, ELF SHA-256 `3f911d42...`; the
+[CI run 44224191560](https://github.com/lamb2k/SH2ZAM/actions/runs/44224191560) on source commit `3da9af1`, ELF SHA-256 `3f911d42...`; the
 [vehicle-model](benchmarks/vehicle-model/README.md) harness). The compiled SH-2 code
 matches the oracles before timing on 30,555 view vertices, 251,325 faces,
 130,563 normals and 1,293,261 Gouraud pairs. The table gives cycles per element (the

@@ -12,7 +12,7 @@ Evidence by tier:
   exact projection; integer pixels differ from the float pipeline by at most one.
 - **MODELLED:** the compiled SH-2 object code matches the oracle on 23,075 calls of each
   function, and the float chain compiled for SH-2 matches the host bit for bit
-  ([results](benchmarks/camera-model/results.json)). 691 modelled cycles per view against
+  ([results](benchmarks/camera-model/results.json), captured by [CI run 44224191560](https://github.com/lamb2k/SH2ZAM/actions/runs/44224191560)). 691 modelled cycles per view against
   87,395 for the soft-float chain. Cycle numbers are modelled, not Saturn timings.
 - **Not done:** console or emulator execution, cache and memory timing, a port's own float
   library.
@@ -32,7 +32,7 @@ equals shade-1's or is one less (proven exhaustively; 94.5443% equal over the wh
   3,976,307 faces, 295,190 indexed vertices, and 9 negative controls (75,743,762 checks).
 - **MODELLED:** the compiled SH-2 code matches the oracles on 30,555 view vertices, 251,325
   faces, 130,563 normals and 1,293,261 Gouraud pairs in the Yabause interpreter before timing
-  ([results](benchmarks/vehicle-model/results.json), captured by [CI run 44215071056](https://github.com/lamb2k/SH2ZAM/actions/runs/44215071056)). Modelled cycles per element,
+  ([results](benchmarks/vehicle-model/results.json), captured by [CI run 44224191560](https://github.com/lamb2k/SH2ZAM/actions/runs/44224191560)). Modelled cycles per element,
   kernel / today: facing 53.0 / 228.7, indexed light 72.7 / 101 (all normals), approximate
   Gouraud 91.4 / 134.2, indexed view 146.5 / 142.4 (all positions). Cycle numbers are
   modelled, not Saturn timings.
@@ -63,6 +63,8 @@ Host and SH-2 give the same bits. **No console or emulator run was done.** Evide
   the oracle or equals the host build bit for bit:
   - the assembly normalisation equals its portable C on SH-2;
   - the `MAC.L` dot product is also checked with SR.S set on entry.
+
+  ([results](benchmarks/unit30-model/results.json), captured by [CI run 44224191560](https://github.com/lamb2k/SH2ZAM/actions/runs/44224191560).)
 
   Modelled cycles per element: multiply 23, dot 37, cross 89, normalisation 155-182. A
   basis orthonormalisation costs 494-519, against 10,948 for the same algorithm on

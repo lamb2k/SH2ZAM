@@ -1575,7 +1575,9 @@ calls (`nm -u` is empty).
   table entry, truncated centre floor, a strict row bound, and Q16-scaled
   depth.
 - **MODELLED.** [`benchmarks/camera-model`](benchmarks/camera-model/README.md)
-  runs the SH-2 object code in the Yabause interpreter and checks it before
+  ([results](benchmarks/camera-model/results.json), captured by
+  [CI run 44224191560](https://github.com/lamb2k/SH2ZAM/actions/runs/44224191560)
+  on `3da9af1`) runs the SH-2 object code in the Yabause interpreter and checks it before
   timing:
   - `sh2z_view_from_camera30` and `sh2z_view_place_q12` on 23,075 calls
     each (every field, or untouched output on failure), against the oracle;

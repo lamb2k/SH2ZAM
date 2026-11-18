@@ -206,8 +206,8 @@ ASan+UBSan all pass: 21,452,989 checks per run, about 2 s.
 [`benchmarks/unit30-model`](benchmarks/unit30-model/README.md) runs the library compiled
 for `-m2 -mb -O2` (GCC 13.2 from the pinned Yaul image) in the pinned Yabause SH-2
 interpreter. That is flat RAM with no caches or wait states, not Saturn timing. The
-committed capture [`results.json`](benchmarks/unit30-model/results.json) is the CI
-capture named in the commit that records it.
+committed capture [`results.json`](benchmarks/unit30-model/results.json) is from
+[CI run 44224191560](https://github.com/lamb2k/SH2ZAM/actions/runs/44224191560) on `3da9af1`.
 
 **Verification before any timing.**
 - **Against the oracle:** `mul`, `q12_mul`, `dot3` (`MAC.L`, again with SR.S set on
