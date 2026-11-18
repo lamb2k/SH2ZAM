@@ -534,7 +534,7 @@ __asm__(
     "bra .Lpd_bound\n\tsts macl,r0\n"
 ".Lpd_fhuge:\n\t"                                                     /* e >= 174 */
     "mov r1,r0\n\tadd #1,r0\n\tshlr8 r0\n\ttst r0,r0\n\tbf .Lpd_fail\n\t"   /* e = 255: inf or NaN */
-    "tst r2,r2\n\tbf .Lpd_fail\n\tmov #0,r0\n\trts\n\tsett\n"               /* finite: 0 or too far */
+    "mov #0,r0\n\trts\n\ttst r2,r2\n"                                  /* finite: 0, or too far (T clear) */
     /* Otherwise align, add and round as pose_delta does. */
 ".Lpd_general:\n\t"
     "mov r4,r0\n\tshll r0\n\tmov r5,r1\n\tshll r1\n\t"               /* magnitudes, doubled */
@@ -569,7 +569,7 @@ __asm__(
     "dmulu.l r7,r1\n\tsts mach,r7\n\ttst r7,r7\n\tbf .Lpd_fail\n\t"
     "bra .Lpd_bound\n\tsts macl,r0\n"
 ".Lpd_huge:\n\t"
-    "tst r1,r1\n\tbf .Lpd_fail\n\tmov #0,r0\n\trts\n\tsett\n"
+    "mov #0,r0\n\trts\n\ttst r1,r1\n"                                  /* 0, or too far (T clear) */
 ".Lpd_shift:\n\t"                                                     /* align y: d > 0 */
     "mov #31,r7\n\tcmp/hi r7,r6\n\tbt .Lpd_far\n\t"
     "mov.l .Lp_k_g145,r7\n\tshll2 r6\n\tsub r6,r7\n\tmov.l @r7,r7\n\t" /* 2^(32-d) */
