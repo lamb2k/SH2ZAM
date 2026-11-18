@@ -113,6 +113,9 @@ static uint64_t view_compare(u32 out,const struct view_vtx *want,unsigned n) {
      rw(&cpu,a+14)!=(u16)w->sy||rb(&cpu,a+16)!=w->code||rb(&cpu,a+17)||rb(&cpu,a+18)||rb(&cpu,a+19))bad++;}
  return bad;
 }
+/* Placement model (MODEL_PLACEMENT_LOG): the two output buffers are output;
+ * the rest of the bridge's data (camera, centre, inputs, arguments) is input. */
+static const struct place_decl view_place_decl[]={{"_view_out_portable",PC_OUTPUT},{"_view_out_divu",PC_OUTPUT},{NULL,0}};
 static void view_poison(u32 out,unsigned n) {for(unsigned i=0;i<5*n;i++)wl(&cpu,out+4*i,UINT32_C(0xA5A5A5A5));}
 static int view_cmp_u32(const void *a,const void *b) {u32 x=*(const u32*)a,y=*(const u32*)b;return x<y?-1:x>y;}
 

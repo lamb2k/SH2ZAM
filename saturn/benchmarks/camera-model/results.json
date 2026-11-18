@@ -1,0 +1,57 @@
+{
+ "schema": 1,
+ "kind": "Yabause isolated SH2 interpreter flat-RAM model, not Saturn timing",
+ "verified": {
+  "cameraCalls": 23075,
+  "cameraRefusals": 16849,
+  "placeCalls": 23075,
+  "placeRefusals": 17846,
+  "floatChainPoses": 1016,
+  "floatChainRefusals": 0,
+  "entries": "fast_camera and fast_place return values and every field (or untouched output on failure) against tests/camera_oracle.h; plain_chain and plain_adapter against the same binary32 chain run on the host"
+ },
+ "rows": {
+  "world_poses": {
+   "description": "64 camera poses in the int16 world (eye anywhere, 40 to 110 degree field of view, off-axis frustum centre), the source's 160 x 120 viewport and 16..8192 depth",
+   "poses": 64,
+   "fast_camera": {
+    "meanCycles": 691.0,
+    "medianCycles": 691.0,
+    "minCycles": 691,
+    "maxCycles": 691,
+    "meanInstructions": 655.0
+   },
+   "fast_place": {
+    "meanCycles": 411.0,
+    "medianCycles": 411.0,
+    "minCycles": 411,
+    "maxCycles": 411,
+    "meanInstructions": 394.0
+   },
+   "plain_chain": {
+    "meanCycles": 87394.94,
+    "medianCycles": 87026.5,
+    "minCycles": 85831,
+    "maxCycles": 89056,
+    "meanInstructions": 75645.05
+   },
+   "plain_adapter": {
+    "meanCycles": 25761.52,
+    "medianCycles": 25700.0,
+    "minCycles": 25653,
+    "maxCycles": 25903,
+    "meanInstructions": 22431.36
+   }
+  }
+ },
+ "label": "MODELLED: executed SH-2 instructions in the Yabause interpreter; flat RAM, no caches or wait states; not Saturn hardware",
+ "sourceCommit": "3da9af1a93c6798265621111ef3542f9ac8071b1",
+ "elfSha256": "4c58d4b669a765e872e1ad1609386041917d315d7eaf7a08d7291d8cac338ba8",
+ "toolchain": "Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)",
+ "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44224191560",
+ "yabauseCommit": "7e38821dbac265490f115e163c523a939acda759",
+ "speedup": {
+  "plain_chain": 126.48,
+  "plain_adapter": 37.28
+ }
+}

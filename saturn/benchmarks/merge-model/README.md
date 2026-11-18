@@ -8,7 +8,9 @@ contract tag `view-merge-2`) and, for comparison, `sh2z_view_merge_runs` in pixe
 `7e38821dbac265490f115e163c523a939acda759`, flat RAM, no caches, no wait states, no bus
 contention). **Cycle numbers are MODELLED. They are not Saturn measurements, not whole-frame
 timings, and not emulator-system timings.** No console or emulator run of these planners has
-been done.
+been done. The numbers here are CPU-only; what memory placement adds (cache fills, slow
+regions) is in the [placement model](../placement-model/README.md), which leaves them
+unchanged.
 
 ## What runs
 

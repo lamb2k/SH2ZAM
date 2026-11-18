@@ -19,6 +19,14 @@ endif()
 set(SH2Z_SOURCES src/sh2zam.c src/sh2zam_trig.c src/sh2zam_angles.c src/sh2zam_transform.c src/sh2zam_prepared.c src/sh2zam_reuse.c src/sh2zam_batch_sh2.c src/sh2zam_geometry.c src/sh2zam_rotation_batch.c src/sh2zam_spatial.c src/sh2zam_view.c src/sh2zam_view_round.c src/sh2zam_view_guard_src.c src/sh2zam_view_center.c src/sh2zam_view_guard_src_center.c src/sh2zam_view_merge_tier.c src/sh2zam_divu.c src/sh2zam_m68k.c src/sh2zam_box2.c src/sh2zam_cell16.c src/sh2zam_shade.c src/sh2zam_vlc.c)
 # shade-2: fused fade and colour (one line per lane source keeps merges small)
 list(APPEND SH2Z_SOURCES src/sh2zam_shade_fused.c)
+# trig12-1: 12-bit-angle sine table and tangent.
+list(APPEND SH2Z_SOURCES src/sh2zam_trig12.c)
+# fixed-unit-1: Q2.30 unit vectors
+list(APPEND SH2Z_SOURCES src/sh2zam_unit30.c)
+# vehicle-kernels-1: screen facing, indexed lighting, approximate Gouraud, indexed view batch
+list(APPEND SH2Z_SOURCES src/sh2zam_vehicle.c src/sh2zam_view_indexed.c)
+# view-camera-1: a view from a fixed-point camera
+list(APPEND SH2Z_SOURCES src/sh2zam_view_camera.c)
 # view-rails-1: both strip rails in one call
 list(APPEND SH2Z_SOURCES src/sh2zam_view_rails.c)
 add_library(sh2zam STATIC ${SH2Z_SOURCES})
@@ -69,7 +77,7 @@ if(SH2Z_BUILD_TESTS AND NOT CMAKE_CROSSCOMPILING)
   add_executable(sh2zam_batch_native_tests tests/test_batch_native.c)
   target_link_libraries(sh2zam_batch_native_tests PRIVATE sh2zam)
   add_test(NAME native_batch_host_models COMMAND sh2zam_batch_native_tests)
-  foreach(family rotation_batch spatial view divu edges guard m68k box2 cell16 vlc merge merge_tier round guard_src shade center center_equiv guard_src_center rails)
+  foreach(family rotation_batch spatial view divu edges guard m68k box2 cell16 vlc merge merge_tier round guard_src shade center center_equiv guard_src_center unit30 vehicle camera rails)
     add_executable(sh2zam_${family}_tests tests/test_${family}.c)
     target_link_libraries(sh2zam_${family}_tests PRIVATE sh2zam m)
     if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
@@ -90,6 +98,17 @@ if(SH2Z_BUILD_TESTS AND NOT CMAKE_CROSSCOMPILING)
     endif()
   endif()
   add_test(NAME shade_fused_exact COMMAND sh2zam_shade_fused_tests)
+  foreach(family trig12 divq)  # trig12-1
+    add_executable(sh2zam_${family}_tests tests/test_${family}.c)
+    target_link_libraries(sh2zam_${family}_tests PRIVATE sh2zam m)
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+      target_compile_options(sh2zam_${family}_tests PRIVATE -Wall -Wextra -Wconversion -Wshadow)
+      if(SH2Z_STRICT)
+        target_compile_options(sh2zam_${family}_tests PRIVATE -Werror -Wpedantic)
+      endif()
+    endif()
+    add_test(NAME ${family}_exact COMMAND sh2zam_${family}_tests)
+  endforeach()
   add_library(sh2zam_workload_prior STATIC
     benchmarks/workload-model/prior_sh2zam.c
     benchmarks/workload-model/prior_sh2zam_trig.c

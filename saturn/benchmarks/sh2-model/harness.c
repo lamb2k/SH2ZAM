@@ -2,7 +2,9 @@
  * Isolated SH-2 execution using Yabause's unmodified GPL interpreter.
  * Copyright (c) 2026 SH2ZAM Contributors. This optional model harness is
  * licensed separately from SH2ZAM's MIT math core; see this directory's LICENSE.
- * Flat RAM excludes caches, wait states, pipeline contention, DMA/peripherals. */
+ * Flat RAM excludes caches, wait states, pipeline contention, DMA/peripherals;
+ * the optional placement model (placement_model.h) adds them beside, never
+ * into, the interpreter's cycle count. */
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -27,14 +29,16 @@ static size_t offset(u32 addr,size_t len) {
  if(len>RAM_SIZE||addr<RAM_BASE||addr-RAM_BASE>RAM_SIZE-len)fail("RAM range",addr);
  return addr-RAM_BASE;
 }
-static u8 rb(SH2_struct *sh,u32 addr) {(void)sh;reads++;return ram[offset(addr,1)];}
-static u16 rw(SH2_struct *sh,u32 addr) {(void)sh;reads++;size_t i=offset(addr,2);return (u16)((u16)ram[i]<<8|ram[i+1]);}
+/* Set only inside a tagged invoke when MODEL_PLACEMENT_LOG is given. */
+static int place_active;static void place_access(u32 addr,int kind,unsigned size);
+static u8 rb(SH2_struct *sh,u32 addr) {(void)sh;reads++;size_t i=offset(addr,1);if(place_active)place_access(addr,1,1);return ram[i];}
+static u16 rw(SH2_struct *sh,u32 addr) {(void)sh;reads++;size_t i=offset(addr,2);if(place_active)place_access(addr,1,2);return (u16)((u16)ram[i]<<8|ram[i+1]);}
 #include "divider_model.h"
-static u32 rl(SH2_struct *sh,u32 addr) {if(divu_address(addr))return divu_read(sh,addr);reads++;size_t i=offset(addr,4);return (u32)ram[i]<<24|(u32)ram[i+1]<<16|(u32)ram[i+2]<<8|ram[i+3];}
-static void wb(SH2_struct *sh,u32 addr,u8 v) {(void)sh;writes++;ram[offset(addr,1)]=v;}
-static void ww(SH2_struct *sh,u32 addr,u16 v) {(void)sh;writes++;size_t i=offset(addr,2);ram[i]=(u8)(v>>8);ram[i+1]=(u8)v;}
-static void wl(SH2_struct *sh,u32 addr,u32 v) {if(divu_address(addr)){divu_write(sh,addr,v);return;}writes++;size_t i=offset(addr,4);ram[i]=(u8)(v>>24);ram[i+1]=(u8)(v>>16);ram[i+2]=(u8)(v>>8);ram[i+3]=(u8)v;}
-static u32 fetch(SH2_struct *sh,u32 addr) {(void)sh;size_t i=offset(addr,2);u16 op=(u16)((u16)ram[i]<<8|ram[i+1]);instructions++;histogram[op]++;if((op&0xf00f)==0x000f)mac_ops++;if((op&0xf00f)==0x300d)dmuls_ops++;return op;}
+static u32 rl(SH2_struct *sh,u32 addr) {if(divu_address(addr))return divu_read(sh,addr);reads++;size_t i=offset(addr,4);if(place_active)place_access(addr,1,4);return (u32)ram[i]<<24|(u32)ram[i+1]<<16|(u32)ram[i+2]<<8|ram[i+3];}
+static void wb(SH2_struct *sh,u32 addr,u8 v) {(void)sh;writes++;size_t i=offset(addr,1);if(place_active)place_access(addr,2,1);ram[i]=v;}
+static void ww(SH2_struct *sh,u32 addr,u16 v) {(void)sh;writes++;size_t i=offset(addr,2);if(place_active)place_access(addr,2,2);ram[i]=(u8)(v>>8);ram[i+1]=(u8)v;}
+static void wl(SH2_struct *sh,u32 addr,u32 v) {if(divu_address(addr)){divu_write(sh,addr,v);return;}writes++;size_t i=offset(addr,4);if(place_active)place_access(addr,2,4);ram[i]=(u8)(v>>24);ram[i+1]=(u8)(v>>16);ram[i+2]=(u8)(v>>8);ram[i+3]=(u8)v;}
+static u32 fetch(SH2_struct *sh,u32 addr) {(void)sh;size_t i=offset(addr,2);if(place_active)place_access(addr,0,2);u16 op=(u16)((u16)ram[i]<<8|ram[i+1]);instructions++;histogram[op]++;if((op&0xf00f)==0x000f)mac_ops++;if((op&0xf00f)==0x300d)dmuls_ops++;return op;}
 /* These entry points are unreachable for the configured pure SH-2 CPU/RAM
  * run. Trap if a supposedly isolated kernel reaches unsupported hardware. */
 int BiosHandleFunc(SH2_struct *sh) {(void)sh;fail("Unexpected BIOS",0);return 0;}
@@ -59,15 +63,18 @@ static void load_elf(const char *path) {
  for(unsigned i=0;i<count;i++,pos+=stride){const unsigned char*p=b+pos;if(be32(p)!=1)continue;u32 fileoff=be32(p+4),addr=be32(p+8),filesize=be32(p+16),memsize=be32(p+20);if(addr>=0x26000000)addr-=0x20000000;if(filesize>memsize||(uint64_t)fileoff+filesize>(uint64_t)length)fail("Invalid ELF segment",addr);size_t at=offset(addr,memsize);memset(ram+at,0,memsize);memcpy(ram+at,b+fileoff,filesize);}
  free(b);
 }
+#include "placement_model.h"
 struct cost {u32 cycles,result,sr;uint64_t instructions,reads,writes,mac_ops,dmuls_ops;};
 static struct cost invoke_sr(const char*name,u32 a,u32 b,u32 c,u32 d,u32 sr) {
  static const u32 saved[7]={UINT32_C(0x18293a4b),UINT32_C(0x293a4b5c),UINT32_C(0x3a4b5c6d),UINT32_C(0x4b5c6d7e),UINT32_C(0x5c6d7e8f),UINT32_C(0x6d7e8f90),UINT32_C(0x7e8f90a1)};
  memset(&cpu.regs,0,sizeof(cpu.regs));cpu.regs.R[4]=a;cpu.regs.R[5]=b;cpu.regs.R[6]=c;cpu.regs.R[7]=d;cpu.regs.R[15]=RAM_BASE+RAM_SIZE-64;cpu.regs.SR.all=sr;cpu.regs.PC=sym(name);cpu.regs.PR=RETURN_PC;cpu.cycles=0;cpu.delay=0;cpu.NumberOfInterrupts=0;instructions=reads=writes=mac_ops=dmuls_ops=0;
  for(unsigned r=8;r<15;r++)cpu.regs.R[r]=saved[r-8];
+ if(place_pending[0])place_begin();
  while(cpu.regs.PC!=RETURN_PC){if(instructions>UINT64_C(100000000))fail("Instruction limit",cpu.regs.PC);cpu.instruction=(u16)fetch(&cpu,cpu.regs.PC);((opcodefunc *)cpu.opcodes)[cpu.instruction](&cpu);}
  if(cpu.regs.R[15]!=RAM_BASE+RAM_SIZE-64)fail("Stack not restored",cpu.regs.R[15]);
  for(unsigned r=8;r<15;r++)if(cpu.regs.R[r]!=saved[r-8])fail("Callee-saved register not restored",r);
  if((cpu.regs.SR.all&2)!=(sr&2))fail("SR.S changed",cpu.regs.SR.all);
+ if(place_active)place_end(cpu.cycles,instructions);
  return (struct cost){cpu.cycles,cpu.regs.R[0],cpu.regs.SR.all,instructions,reads,writes,mac_ops,dmuls_ops};
 }
 static struct cost invoke(const char*name,u32 a,u32 b,u32 c,u32 d) {return invoke_sr(name,a,b,c,d,0);}
@@ -90,7 +97,7 @@ int main(int argc,char**argv) {
  int workload_mode=argc>3&&!strcmp(argv[3],"--workloads");
  int view_mode=argc>3&&!strcmp(argv[3],"--view");
  unsigned case_count=argc>3&&!math_mode&&!workload_mode&&!view_mode?(unsigned)atoi(argv[3]):15,pose_count=argc>4?(unsigned)atoi(argv[4]):21;if(case_count==0||pose_count==0||case_count>15||pose_count>21)return 2;
- load_symbols(argv[2]);load_elf(argv[1]);
+ load_symbols(argv[2]);load_elf(argv[1]);place_init(argv[1]);
  cpu.model=SHMT_SH2;cpu.MappedMemoryReadByte=rb;cpu.MappedMemoryReadWord=rw;cpu.MappedMemoryReadLong=rl;cpu.MappedMemoryWriteByte=wb;cpu.MappedMemoryWriteWord=ww;cpu.MappedMemoryWriteLong=wl;
  for(unsigned i=0;i<65536;i++)cpu.opcodes[i]=decode(SHMT_SH2,(u16)i);for(unsigned i=0;i<256;i++)cpu.fetchlist[i]=fetch;
  if(math_mode) return capture_math();

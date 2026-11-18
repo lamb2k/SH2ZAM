@@ -176,6 +176,9 @@ static void verify_decode(uint64_t iterations){
 }
 
 /* ---- cost ---- */
+/* Placement model (MODEL_PLACEMENT_LOG): the decode table is tables, the
+ * symbols out[] output; the stream and the reader state are input. */
+static const struct place_decl place_decode[]={{"_table",PC_TABLES},{"_out",PC_OUTPUT},{NULL,0}};
 enum {CORPORA=16,SYMBOLS=4096};
 struct stats {double mean,median;unsigned min,max;double instr;};
 static int cmp_u(const void*a,const void*b){unsigned x=*(const unsigned*)a,y=*(const unsigned*)b;return x<y?-1:x>y;}
@@ -218,6 +221,7 @@ static void cost_profile(const struct profile *p,bool *first){
   const uint64_t used=vo_decode(len,code,host_stream,units,0,ref,SYMBOLS,0);if(used!=at)bad("cost message",c);
   for(int k=0;k<3;k++)for(int z=0;z<2;z++){
    const unsigned n=z?SYMBOLS:1u;
+   {char label[80];snprintf(label,sizeof label,"vlc.%s.%s.call%u",p->name,decoders[k],n);place_tag(label,place_decode);}
    struct cost r=call(decoders[k],(u32)units,n);if(r.result!=1)bad(decoders[k],c);
    for(unsigned i=0;i<n;i++)if(rb(&cpu,symc("out")+i)!=ref[i])bad("cost decode",c);
    cyc[k][z][c]=r.cycles;ins[k][z]+=r.instructions;}
@@ -241,7 +245,7 @@ static void cost_profile(const struct profile *p,bool *first){
 int main(int argc,char**argv){
  if(argc<3){fprintf(stderr,"usage: vlc_harness model.elf verify-scale\n");return 2;}
  const uint64_t scale=strtoull(argv[2],0,10);
- load_elf_symbols(argv[1]);load_elf(argv[1]);
+ load_elf_symbols(argv[1]);load_elf(argv[1]);place_init(argv[1]);
  cpu.model=SHMT_SH2;cpu.MappedMemoryReadByte=g_rb;cpu.MappedMemoryReadWord=g_rw;cpu.MappedMemoryReadLong=g_rl;cpu.MappedMemoryWriteByte=wb;cpu.MappedMemoryWriteWord=ww;cpu.MappedMemoryWriteLong=wl;
  for(unsigned i=0;i<65536;i++)cpu.opcodes[i]=decode(SHMT_SH2,(u16)i);for(unsigned i=0;i<256;i++)cpu.fetchlist[i]=fetch;
  verify_build(scale);verify_decode(scale);

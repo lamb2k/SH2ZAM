@@ -30,6 +30,9 @@ jobs:
           cmake --build build --parallel
       - name: Execute regression and oracle suites, C++ interop and examples
         run: ctest --test-dir build --output-on-failure --verbose
+      - name: Check the committed trig12 table against its generator
+        if: matrix.sanitize == 'OFF'
+        run: python3 saturn/tools/sin12_table.py --check saturn/src/sh2zam_trig12.c
       - name: Check standalone library and installed package
         if: matrix.sanitize == 'OFF'
         run: |
