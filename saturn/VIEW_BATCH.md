@@ -1520,15 +1520,15 @@ strict and GCC ASan/UBSan all pass): 7,296 hand cases (centres, 19
 denominators, extreme ends), 300,000 road strips (2 to 65 boundaries, mean
 5.26, on a 256, 512 or 1024 repetition length) and 300,000 general strips
 (any spans, reversed spans, unsorted boundaries, unequal spacing, spans above
-65,535; 118,974 rejected as the contract says): 4,244,766 stepped points and
-250,516,901 checks. Every byte equals the oracle **and** the two-call loop
+65,535; 119,104 rejected as the contract says): 4,242,122 stepped points and
+250,753,743 checks. Every byte equals the oracle **and** the two-call loop
 with `sh2z_view_edge_steps_center`, so 100% of points are exact. Argument
 rules (each pointer, handle, count 0 and 65,537, overlap, `den` 65,535 and
 65,536, a 65,534-point run, boundary inside an output) are checked
 separately. Six mutation controls are each caught: an exact rational point
-(201 records), floor instead of trunc on the way down (53,672), `from`
-copied only below `low` (2,049), `to` only above `high` (4,144), the centre
-fraction ignored (19,436) and the step rounded away from zero (213).
+(208 records), floor instead of trunc on the way down (53,672), `from`
+copied only below `low` (2,048), `to` only above `high` (4,144), the centre
+fraction ignored (19,436) and the step rounded away from zero (220).
 
 **MODELLED** (`benchmarks/rails-model`, Yabause SH-2 interpreter, flat RAM;
 not Saturn timing). The model first checks every record of the assembly

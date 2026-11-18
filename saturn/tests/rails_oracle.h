@@ -214,7 +214,7 @@ static void ro_road_strip(ro_strip_t *s) {
 static void ro_general_strip(ro_strip_t *s) {
     const unsigned n=1u+ro_rnd()%70u;
     const int32_t step=(ro_rnd()%4u)?ro_range(1,300):ro_range(1,40000/(int32_t)(n+1));
-    int32_t at=(ro_rnd()%8u)?ro_range(-100000,100000):((ro_rnd()&1u)?INT32_MIN+ro_range(0,5):INT32_MAX-(int32_t)(n+2)*step-ro_range(0,5));
+    int32_t at=(ro_rnd()%8u)?ro_range(-100000,100000):((ro_rnd()&1u)?INT32_MIN+ro_range(0,5):INT32_MAX-(int32_t)(n+1)*step-10-ro_range(0,5));
     s->unit=step;s->count=0;
     if(ro_rnd()&1u){s->b[s->count++]=at;at+=ro_range(1,step+5);}
     for(unsigned k=0;k<n && s->count<90u;++k){s->b[s->count++]=at;if(k+1<n)at+=step;}
