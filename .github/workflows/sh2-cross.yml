@@ -61,108 +61,11 @@ jobs:
             grep -q "dmuls.l" sh2-disassembly.txt
             cat sh2-elf.txt
             cat sh2-undefined.txt
-            # Integer-kernel bridge for the executed-instruction model (68000 arithmetic,
-            # box overlap, cell placement). Freestanding link against the model RAM map.
-            "$CC" -m2 -mb -O2 -ffreestanding -std=c11 -Wall -Wextra -Werror -DSH2Z_REQUIRE_SH2=1 \
-              -Isaturn/include -c saturn/benchmarks/integer-model/bridge.c -o build/sh2/integer-bridge.o
-            # The m68k kernels are header-inline: audit the bridge object that instantiates them.
-            "$OBJDUMP" -d build/sh2/integer-bridge.o > sh2-m68k-disassembly.txt
-            grep -q "div1" sh2-m68k-disassembly.txt
-            grep -q "muls.w" sh2-m68k-disassembly.txt
-            "$CC" -m2 -mb -nostdlib -nostartfiles -Wl,-T,saturn/benchmarks/integer-model/model.ld -Wl,-e,0 \
-              -o build/sh2/integer-model.elf build/sh2/integer-bridge.o build/sh2/libsh2zam.a -lgcc
-            # Shade-kernel bridge (shade-1) for the executed-instruction model. The library
-            # object must not need memcpy/memset (freestanding and wasm builds have none).
-            "$CC" -m2 -mb -O2 -ffreestanding -std=c11 -Wall -Wextra -Werror -DSH2Z_REQUIRE_SH2=1 \
-              -Isaturn/include -c saturn/benchmarks/shade-model/bridge.c -o build/sh2/shade-bridge.o
-            "$OBJDUMP" -dr build/sh2/sh2zam_shade.o > sh2-shade-disassembly.txt
-            "$NM" -u build/sh2/sh2zam_shade.o | tee sh2-shade-undefined.txt
-            if grep -qE "memcpy|memset|memmove" sh2-shade-undefined.txt; then exit 1; fi
-            grep -q "dmulu.l" sh2-shade-disassembly.txt
-            grep -q "mulu.w" sh2-shade-disassembly.txt
-            "$CC" -m2 -mb -nostdlib -nostartfiles -Wl,-T,saturn/benchmarks/integer-model/model.ld -Wl,-e,0 \
-              -o build/sh2/shade-model.elf build/sh2/shade-bridge.o build/sh2/libsh2zam.a -lgcc
-            # vlc bridge (vlc-1) for the executed-instruction model. The library object
-            # must not need memcpy/memset and must contain the hand-written SH-2 decoder.
-            "$CC" -m2 -mb -O2 -ffreestanding -std=c11 -Wall -Wextra -Werror -DSH2Z_REQUIRE_SH2=1 \
-              -Isaturn/include -c saturn/benchmarks/vlc-model/bridge.c -o build/sh2/vlc-bridge.o
-            "$OBJDUMP" -dr build/sh2/sh2zam_vlc.o > sh2-vlc-disassembly.txt
-            "$NM" -u build/sh2/sh2zam_vlc.o | tee sh2-vlc-undefined.txt
-            if grep -qE "memcpy|memset|memmove" sh2-vlc-undefined.txt; then exit 1; fi
-            grep -q "<_sh2zi_vlc8_run>:" sh2-vlc-disassembly.txt
-            grep -q "dmulu.l" sh2-vlc-disassembly.txt
-            "$CC" -m2 -mb -nostdlib -nostartfiles -Wl,-T,saturn/benchmarks/integer-model/model.ld -Wl,-e,0 \
-              -o build/sh2/vlc-model.elf build/sh2/vlc-bridge.o build/sh2/libsh2zam.a -lgcc
-            # Tier merge planner (view-merge-2) for the executed-instruction model. The library
-            # object must not need memcpy/memset and must contain the hand-written SH-2 kernel.
-            "$CC" -m2 -mb -O2 -ffreestanding -std=c11 -Wall -Wextra -Werror -DSH2Z_REQUIRE_SH2=1 \
-              -Isaturn/include -c saturn/benchmarks/merge-model/bridge.c -o build/sh2/merge-bridge.o
-            "$OBJDUMP" -dr build/sh2/sh2zam_view_merge_tier.o > sh2-merge-tier-disassembly.txt
-            "$NM" -u build/sh2/sh2zam_view_merge_tier.o | tee sh2-merge-tier-undefined.txt
-            if grep -qE "memcpy|memset|memmove" sh2-merge-tier-undefined.txt; then exit 1; fi
-            grep -q "<_sh2zi_merge_tier24>:" sh2-merge-tier-disassembly.txt
-            "$CC" -m2 -mb -nostdlib -nostartfiles -Wl,-T,saturn/benchmarks/integer-model/model.ld -Wl,-e,0 \
-              -o build/sh2/merge-model.elf build/sh2/merge-bridge.o build/sh2/libsh2zam.a -lgcc
-            # Fused shade bridge (shade-2) for the executed-instruction model. The library
-            # object must need no external symbol and must contain the hand-written kernel.
-            "$CC" -m2 -mb -O2 -ffreestanding -std=c11 -Wall -Wextra -Werror -DSH2Z_REQUIRE_SH2=1 \
-              -Isaturn/include -c saturn/benchmarks/shade-fused-model/bridge.c -o build/sh2/shade-fused-bridge.o
-            "$OBJDUMP" -dr build/sh2/sh2zam_shade_fused.o > sh2-shade-fused-disassembly.txt
-            "$NM" -u build/sh2/sh2zam_shade_fused.o | tee sh2-shade-fused-undefined.txt
-            if [ -s sh2-shade-fused-undefined.txt ]; then exit 1; fi
-            grep -q "<_sh2z_shade_fog_gouraud>:" sh2-shade-fused-disassembly.txt
-            grep -q "dmulu.l" sh2-shade-fused-disassembly.txt
-            grep -q "muls.w" sh2-shade-fused-disassembly.txt
-            "$CC" -m2 -mb -nostdlib -nostartfiles -Wl,-T,saturn/benchmarks/integer-model/model.ld -Wl,-e,0 \
-              -o build/sh2/shade-fused-model.elf build/sh2/shade-fused-bridge.o build/sh2/libsh2zam.a -lgcc
-            # trig12 bridge (trig12-1) for the executed-instruction model. The table object
-            # needs nothing external; the tangent uses CPU division steps (div1), and the
-            # bridge instantiates the header-inline sincos and divider quotients.
-            "$CC" -m2 -mb -O2 -ffreestanding -std=c11 -Wall -Wextra -Werror -DSH2Z_REQUIRE_SH2=1               -Isaturn/include -c saturn/benchmarks/trig12-model/bridge.c -o build/sh2/trig12-bridge.o
-            "$OBJDUMP" -dr build/sh2/sh2zam_trig12.o > sh2-trig12-disassembly.txt
-            "$OBJDUMP" -dr build/sh2/trig12-bridge.o > sh2-trig12-bridge-disassembly.txt
-            "$NM" -u build/sh2/sh2zam_trig12.o | tee sh2-trig12-undefined.txt
-            if [ -s sh2-trig12-undefined.txt ]; then exit 1; fi
-            grep -q "div1" sh2-trig12-disassembly.txt
-            "$CC" -m2 -mb -nostdlib -nostartfiles -Wl,-T,saturn/benchmarks/integer-model/model.ld -Wl,-e,0               -o build/sh2/trig12-model.elf build/sh2/trig12-bridge.o build/sh2/libsh2zam.a -lgcc
-            # unit30 bridge (fixed-unit-1) for the executed-instruction model. The library
-            # object must need nothing undefined (no memcpy/memset, no libgcc helper) and
-            # must contain the hand-written normalisation; the inline MAC.L dot product
-            # is instantiated in the bridge.
-            "$CC" -m2 -mb -O2 -ffreestanding -std=c11 -Wall -Wextra -Werror -DSH2Z_REQUIRE_SH2=1 \
-              -Isaturn/include -c saturn/benchmarks/unit30-model/bridge.c -o build/sh2/unit30-bridge.o
-            "$OBJDUMP" -dr build/sh2/sh2zam_unit30.o > sh2-unit30-disassembly.txt
-            "$OBJDUMP" -dr build/sh2/unit30-bridge.o > sh2-unit30-bridge-disassembly.txt
-            "$NM" -u build/sh2/sh2zam_unit30.o | tee sh2-unit30-undefined.txt
-            if [ -s sh2-unit30-undefined.txt ]; then exit 1; fi
-            grep -q "<_sh2z_vec3_normalize_u30>:" sh2-unit30-disassembly.txt
-            grep -q "dmuls.l" sh2-unit30-disassembly.txt
-            grep -q "mac.l" sh2-unit30-bridge-disassembly.txt
-            "$CC" -m2 -mb -nostdlib -nostartfiles -Wl,-T,saturn/benchmarks/integer-model/model.ld -Wl,-e,0 \
-              -o build/sh2/unit30-model.elf build/sh2/unit30-bridge.o build/sh2/libsh2zam.a -lgcc
-            # Vehicle kernels (vehicle-kernels-1) for the executed-instruction model. The library
-            # objects must not need memcpy/memset and must contain the hand-written SH-2 loops.
-            "$CC" -m2 -mb -O2 -ffreestanding -std=c11 -Wall -Wextra -Werror -DSH2Z_REQUIRE_SH2=1 \
-              -Isaturn/include -c saturn/benchmarks/vehicle-model/bridge.c -o build/sh2/vehicle-bridge.o
-            "$OBJDUMP" -dr build/sh2/sh2zam_vehicle.o build/sh2/sh2zam_view_indexed.o > sh2-vehicle-disassembly.txt
-            "$NM" -u build/sh2/sh2zam_vehicle.o build/sh2/sh2zam_view_indexed.o | tee sh2-vehicle-undefined.txt
-            if grep -qE "memcpy|memset|memmove" sh2-vehicle-undefined.txt; then exit 1; fi
-            grep -q "<_sh2zi_facing_pos>:" sh2-vehicle-disassembly.txt
-            grep -q "<_sh2zi_light_run_sat>:" sh2-vehicle-disassembly.txt
-            grep -q "<_sh2zi_gouraud_run>:" sh2-vehicle-disassembly.txt
-            grep -q "<_sh2zi_view_divu_indexed>:" sh2-vehicle-disassembly.txt
-            "$CC" -m2 -mb -nostdlib -nostartfiles -Wl,-T,saturn/benchmarks/integer-model/model.ld -Wl,-e,0 \
-              -o build/sh2/vehicle-model.elf build/sh2/vehicle-bridge.o build/sh2/libsh2zam.a -lgcc
-            # View-from-camera bridge (view-camera-1) for the executed-instruction model. The
-            # library object must need nothing from libgcc or libc (no 64-bit shift helpers).
-            "$CC" -m2 -mb -O2 -ffreestanding -std=c11 -Wall -Wextra -Werror -DSH2Z_REQUIRE_SH2=1 \
-              -Isaturn/include -c saturn/benchmarks/camera-model/bridge.c -o build/sh2/camera-bridge.o
-            "$OBJDUMP" -dr build/sh2/sh2zam_view_camera.o > sh2-camera-disassembly.txt
-            "$NM" -u build/sh2/sh2zam_view_camera.o | tee sh2-camera-undefined.txt
-            if [ -s sh2-camera-undefined.txt ]; then exit 1; fi
-            grep -q "dmuls.l" sh2-camera-disassembly.txt
-            "$CC" -m2 -mb -nostdlib -nostartfiles -Wl,-T,saturn/benchmarks/integer-model/model.ld -Wl,-e,0 \
-              -o build/sh2/camera-model.elf build/sh2/camera-bridge.o build/sh2/libsh2zam.a -lgcc
+            # Each model suite builds and audits its bridge and links its model ELF:
+            # saturn/benchmarks/<suite>/ci.sh build, in C-locale suite order
+            # (saturn/CONTRIBUTING-KERNELS.md). The tools go to the suites under
+            # their own names only, so the Yaul makefiles below never see them.
+            SH2Z_CC="$CC" SH2Z_OBJDUMP="$OBJDUMP" SH2Z_NM="$NM" bash saturn/benchmarks/ci/suites.sh build
             make -C saturn/examples/yaul-smoke
             make -C saturn/benchmarks/yaul
             "$CC" -m2 -mb -O2 -ffreestanding -std=c11 -fno-fast-math -ffp-contract=off -fno-lto -DSH2Z_REQUIRE_SH2=1 -DSH2Z_EXHIBIT_CAPACITY=4096 -Isaturn/include -c exhibits/bridge.c -o build/sh2/benchmark-bridge.o
@@ -177,139 +80,20 @@ jobs:
         run: python3 saturn/benchmarks/audit-batch.py sh2-batch-disassembly.txt | tee sh2-batch-audit.txt
       - name: Inspect experimental fused instructions
         run: python3 saturn/benchmarks/audit-fused.py sh2-fused-disassembly.txt | tee sh2-fused-audit.txt
-      - name: Execute old and optimized math in the SH-2 instruction model
+      - name: List the model suites and their phases
+        run: bash saturn/benchmarks/ci/suites.sh list
+      - name: Verify and cost every model suite in the SH-2 instruction model
         env:
-          MODEL_SUITE: math
-          MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          bash saturn/benchmarks/sh2-model/run.sh \
-            saturn/benchmarks/yaul/build/sh2zam-benchmark.elf \
-            saturn/benchmarks/yaul/build/sh2zam-benchmark.sym \
-            build/sh2-model/math-results.json
-          node saturn/benchmarks/math-model/validate.cjs build/sh2-model/math-results.json
-      - name: Execute complete workloads in the SH-2 instruction model
+          SH2Z_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SH2Z_TOOLCHAIN: Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)
+          SH2Z_SOURCE_COMMIT: ${{ github.sha }}
+        run: bash saturn/benchmarks/ci/suites.sh model
+      - name: Cross-suite reports (memory placement for the view, shade, vlc and merge kernels)
         env:
-          MODEL_SUITE: workloads
-          MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          bash saturn/benchmarks/sh2-model/run.sh \
-            saturn/benchmarks/yaul/build/sh2zam-benchmark.elf \
-            saturn/benchmarks/yaul/build/sh2zam-benchmark.sym \
-            build/sh2-model/workload-results.json
-          node saturn/benchmarks/workload-model/validate.cjs build/sh2-model/workload-results.json
-      - name: Execute the view batch and divider kernel in the SH-2 instruction model
-        env:
-          MODEL_SUITE: view
-          MODEL_PLACEMENT_LOG: ${{ github.workspace }}/build/sh2-model/view-placement.jsonl
-          MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          bash saturn/benchmarks/sh2-model/run.sh \
-            saturn/benchmarks/yaul/build/sh2zam-benchmark.elf \
-            saturn/benchmarks/yaul/build/sh2zam-benchmark.sym \
-            build/sh2-model/view-results.json
-      - name: Execute compiled SH-2 kernels in the isolated instruction model
-        env:
-          MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          bash saturn/benchmarks/sh2-model/run.sh \
-            saturn/benchmarks/yaul/build/sh2zam-benchmark.elf \
-            saturn/benchmarks/yaul/build/sh2zam-benchmark.sym \
-            build/sh2-model/results.json
-          node saturn/benchmarks/compile-model-results.cjs build/sh2-model/results.json
-      - name: Verify and cost the integer kernels in the SH-2 instruction model
-        env:
-          MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          MODEL_TOOLCHAIN: Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)
-          MODEL_SOURCE_COMMIT: ${{ github.sha }}
-        run: |
-          bash saturn/benchmarks/integer-model/run.sh \
-            build/sh2/integer-model.elf \
-            build/sh2-model/integer-results.json
-      - name: Verify and cost the shade kernels in the SH-2 instruction model
-        env:
-          MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          MODEL_TOOLCHAIN: Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)
-          MODEL_SOURCE_COMMIT: ${{ github.sha }}
-          MODEL_PLACEMENT_LOG: ${{ github.workspace }}/build/sh2-model/shade-placement.jsonl
-        run: |
-          bash saturn/benchmarks/shade-model/run.sh \
-            build/sh2/shade-model.elf \
-            build/sh2-model/shade-results.json
-      - name: Verify and cost the vlc kernels in the SH-2 instruction model
-        env:
-          MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          MODEL_TOOLCHAIN: Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)
-          MODEL_SOURCE_COMMIT: ${{ github.sha }}
-          MODEL_PLACEMENT_LOG: ${{ github.workspace }}/build/sh2-model/vlc-placement.jsonl
-        run: |
-          bash saturn/benchmarks/vlc-model/run.sh \
-            build/sh2/vlc-model.elf \
-            build/sh2-model/vlc-results.json
-      - name: Verify and cost the unit-vector kernels in the SH-2 instruction model
-        env:
-          MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          MODEL_TOOLCHAIN: Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)
-          MODEL_SOURCE_COMMIT: ${{ github.sha }}
-        run: |
-          bash saturn/benchmarks/unit30-model/run.sh \
-            build/sh2/unit30-model.elf \
-            build/sh2-model/unit30-results.json
-      - name: Verify and cost the tier merge planner in the SH-2 instruction model
-        env:
-          MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          MODEL_TOOLCHAIN: Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)
-          MODEL_SOURCE_COMMIT: ${{ github.sha }}
-          MODEL_PLACEMENT_LOG: ${{ github.workspace }}/build/sh2-model/merge-placement.jsonl
-        run: |
-          bash saturn/benchmarks/merge-model/run.sh \
-            build/sh2/merge-model.elf \
-            build/sh2-model/merge-results.json
-      - name: Verify and cost the fused shade kernel in the SH-2 instruction model
-        env:
-          MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          MODEL_TOOLCHAIN: Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)
-          MODEL_SOURCE_COMMIT: ${{ github.sha }}
-        run: |
-          bash saturn/benchmarks/shade-fused-model/run.sh \
-            build/sh2/shade-fused-model.elf \
-            build/sh2-model/shade-fused-results.json
-      - name: Cost memory placement for the view, shade, vlc and merge kernels
-        run: |
-          python3 saturn/benchmarks/placement-model/collect.py \
-            --view-log build/sh2-model/view-placement.jsonl --view-results build/sh2-model/view-results.json \
-            --shade-log build/sh2-model/shade-placement.jsonl --shade-results build/sh2-model/shade-results.json \
-            --vlc-log build/sh2-model/vlc-placement.jsonl --vlc-results build/sh2-model/vlc-results.json \
-            --merge-log build/sh2-model/merge-placement.jsonl --merge-results build/sh2-model/merge-results.json \
-            --committed-root . \
-            --evidence-url https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }} \
-            --output build/sh2-model/placement-results.json \
-            --markdown build/sh2-model/placement-tables.md
-          cat build/sh2-model/placement-tables.md
-      - name: Verify and cost the trig12 kernels in the SH-2 instruction model
-        env:
-          MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          MODEL_TOOLCHAIN: Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)
-          MODEL_SOURCE_COMMIT: ${{ github.sha }}
-        run: |
-          bash saturn/benchmarks/trig12-model/run.sh             build/sh2/trig12-model.elf             build/sh2-model/trig12-results.json
-      - name: Verify and cost the vehicle kernels in the SH-2 instruction model
-        env:
-          MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          MODEL_TOOLCHAIN: Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)
-          MODEL_SOURCE_COMMIT: ${{ github.sha }}
-        run: |
-          bash saturn/benchmarks/vehicle-model/run.sh \
-            build/sh2/vehicle-model.elf \
-            build/sh2-model/vehicle-results.json
-      - name: Verify and cost the view-from-camera build in the SH-2 instruction model
-        env:
-          MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          MODEL_TOOLCHAIN: Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)
-          MODEL_SOURCE_COMMIT: ${{ github.sha }}
-        run: |
-          bash saturn/benchmarks/camera-model/run.sh \
-            build/sh2/camera-model.elf \
-            build/sh2-model/camera-results.json
+          SH2Z_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SH2Z_TOOLCHAIN: Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)
+          SH2Z_SOURCE_COMMIT: ${{ github.sha }}
+        run: bash saturn/benchmarks/ci/suites.sh report
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -332,35 +116,6 @@ jobs:
             saturn/benchmarks/yaul/calibration/build/*.elf
             saturn/benchmarks/yaul/calibration/build/*.map
             saturn/benchmarks/manifest.json
-            build/sh2-model/results.json
-            build/sh2-model/raw.json
-            build/sh2-model/math-results.json
-            build/sh2-model/math-raw.json
-            build/sh2-model/workload-results.json
-            build/sh2-model/workload-raw.json
-            build/sh2-model/view-results.json
-            build/sh2-model/view-raw.json
-            build/sh2-model/integer-results.json
-            build/sh2-model/integer-raw.json
-            build/sh2-model/shade-results.json
-            build/sh2-model/shade-raw.json
-            build/sh2-model/vlc-results.json
-            build/sh2-model/vlc-raw.json
-            build/sh2-model/merge-results.json
-            build/sh2-model/merge-raw.json
-            build/sh2-model/shade-fused-results.json
-            build/sh2-model/shade-fused-raw.json
-            build/sh2-model/view-placement.jsonl
-            build/sh2-model/shade-placement.jsonl
-            build/sh2-model/vlc-placement.jsonl
-            build/sh2-model/merge-placement.jsonl
-            build/sh2-model/placement-results.json
-            build/sh2-model/placement-tables.md
-            build/sh2-model/trig12-results.json
-            build/sh2-model/trig12-raw.json
-            build/sh2-model/unit30-results.json
-            build/sh2-model/unit30-raw.json
-            build/sh2-model/vehicle-results.json
-            build/sh2-model/vehicle-raw.json
-            build/sh2-model/camera-results.json
-            build/sh2-model/camera-raw.json
+            build/sh2-model/*.json
+            build/sh2-model/*.jsonl
+            build/sh2-model/*.md

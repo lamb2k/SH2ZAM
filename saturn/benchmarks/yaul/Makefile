@@ -61,6 +61,11 @@ SH_LDFLAGS += -Wl,--undefined=_view_run_portable,--undefined=_view_run_divu,--un
   -Wl,--undefined=_view_center_clip_portable,--undefined=_view_center_clip_divu \
   -Wl,--undefined=_view_center_guard_portable,--undefined=_view_center_guard_divu \
   -Wl,--undefined=_view_center_src_guard_portable,--undefined=_view_center_src_guard_divu
+# Additions for new contracts go in parts/<tag>.mk, one file per contract, each
+# appending to SH_SRCS and SH_LDFLAGS (sources relative to this directory). The
+# parts are read in name order after the lists above, so the link order of the
+# existing benchmark ELF never changes. See saturn/CONTRIBUTING-KERNELS.md.
+include $(sort $(wildcard parts/*.mk))
 IP_VERSION := V0.200
 IP_RELEASE_DATE := 20261113
 IP_AREAS := JTUBKAEL
