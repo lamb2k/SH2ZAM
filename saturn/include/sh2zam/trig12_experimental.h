@@ -1,5 +1,5 @@
 /* Experimental sine, cosine and tangent for 12-bit angles (4096 per turn).
- * Not selected by any default dispatch. MIT; SH2ZAM Contributors.
+ * Not selected by any default dispatch.
  *
  * Contract tag: trig12-1. The table values and every result below are frozen
  * at that tag; a faster path may replace an implementation only if it returns
@@ -49,7 +49,11 @@
  * tangent, all of it within 0.6 degrees of a pole).
  *
  * No function here uses floating point, the memory-mapped divider, global
- * state, libc or allocation. Host and SH-2 builds return identical values. */
+ * state, libc or allocation. Host and SH-2 builds return identical values.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #ifndef SH2ZAM_TRIG12_EXPERIMENTAL_H
 #define SH2ZAM_TRIG12_EXPERIMENTAL_H
 

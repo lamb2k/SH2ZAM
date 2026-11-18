@@ -3,7 +3,11 @@
  * that every earlier view function compiles exactly as before. The SH-2
  * path instantiates the view-sh2-1 division pipeline (sh2zam_view_asm.h)
  * with an indexed load in place of the sequential one; the per-vertex code
- * after the load is the same instructions. MIT; SH2ZAM Contributors. */
+ * after the load is the same instructions.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #if defined(__GNUC__)
 /* The shared header holds every view path's helpers; this file uses a few. */
 #pragma GCC diagnostic ignored "-Wunused-function"

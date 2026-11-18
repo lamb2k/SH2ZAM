@@ -1,5 +1,9 @@
 /* Integer view transform, projection and clip codes. Portable definition of
- * the view-contract-1 results. MIT; SH2ZAM Contributors. */
+ * the view-contract-1 results.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam_view_internal.h"
 
 _Static_assert(sizeof(sh2z_pos16_t)==6,"sh2z_pos16_t is 6 bytes");

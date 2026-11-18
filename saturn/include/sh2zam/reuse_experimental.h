@@ -1,4 +1,8 @@
-/* Exact coordinate-reuse transforms. MIT; SH2ZAM Contributors. */
+/* Exact coordinate-reuse transforms.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #ifndef SH2ZAM_REUSE_EXPERIMENTAL_H
 #define SH2ZAM_REUSE_EXPERIMENTAL_H
 #include "sh2zam.h"

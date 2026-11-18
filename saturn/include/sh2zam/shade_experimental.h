@@ -1,7 +1,6 @@
 /* Experimental integer shading kernels for SH-2 renderers: per-normal
  * directional light, Gouraud packing, conservative face culling and
  * threshold depth fog. Not selected by any default dispatch.
- * MIT; SH2ZAM Contributors.
  *
  * Contract tag: shade-1. Struct layouts and the numeric definitions below are
  * frozen at that tag. A faster path may replace an implementation only if it
@@ -10,7 +9,11 @@
  * Every definition is written in exact integer arithmetic. C operators have
  * their C meaning: / and % truncate toward zero. A 5:5:5 colour packs channel
  * k (k = 0, 1, 2) at bits 5k .. 5k+4. No function uses floating point, the
- * hardware divider, global state or allocation; all are reentrant. */
+ * hardware divider, global state or allocation; all are reentrant.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #ifndef SH2ZAM_SHADE_EXPERIMENTAL_H
 #define SH2ZAM_SHADE_EXPERIMENTAL_H
 

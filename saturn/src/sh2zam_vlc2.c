@@ -1,7 +1,10 @@
 /* Per-symbol variable-length decoding (vlc2_experimental.h, contract tag
  * vlc-2): the decoder's constant block, the table builder and the table
  * check. The decoder itself is inline in the header. No libc.
- * MIT; Copyright (c) 2026 SH2ZAM Contributors. */
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam/vlc2_experimental.h"
 
 const uint32_t sh2z_vlc2_consts[64]={

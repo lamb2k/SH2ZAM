@@ -1,7 +1,7 @@
 /* Experimental variable-length decoding of byte symbols for SH-2: a bounded
  * marker-bit reader over a 16-bit-unit stream, a length-limited canonical code
  * builder and a two-level table decoder with a hand-written SH-2 kernel.
- * Not selected by any default dispatch. MIT; SH2ZAM Contributors.
+ * Not selected by any default dispatch.
  *
  * Contract tag: vlc-1. The stream format, the table layout and the code
  * lengths sh2z_vlc8_build chooses are frozen at that tag. A faster path may
@@ -66,7 +66,11 @@
  * when bb >= 0x10000 and no count is kept. Between calls at least 16 bits are
  * buffered; when fewer are left after a symbol, one unit is appended (a zero
  * unit once the stream is exhausted). The reader therefore reads one unit
- * ahead of the last bit it has consumed, but never past the stream. */
+ * ahead of the last bit it has consumed, but never past the stream.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #ifndef SH2ZAM_VLC_EXPERIMENTAL_H
 #define SH2ZAM_VLC_EXPERIMENTAL_H
 

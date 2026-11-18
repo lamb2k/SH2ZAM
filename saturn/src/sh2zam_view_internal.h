@@ -1,7 +1,10 @@
 /* Private to sh2zam_view.c and sh2zam_view_round.c: argument rules, the
  * edge stepper's fixed-point axes, the near clip and the guard clip's planes
- * and passes. Each file compiles its own static copy. MIT; SH2ZAM
- * Contributors. */
+ * and passes. Each file compiles its own static copy.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #ifndef SH2ZAM_VIEW_INTERNAL_H
 #define SH2ZAM_VIEW_INTERNAL_H
 

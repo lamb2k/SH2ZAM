@@ -1,4 +1,8 @@
-/* Explicit SH-2 division unit helper. MIT; SH2ZAM Contributors. */
+/* Explicit SH-2 division unit helper.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam/divu_experimental.h"
 
 int32_t sh2z_divu_div64(int64_t n,int32_t divisor,bool *overflow) {

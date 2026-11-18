@@ -1,6 +1,6 @@
 /* 68000-exact integer arithmetic for code lifted from or modelled on the Motorola
  * 68000: MULS.W, MULU.W, DIVS.W, DIVU.W and the condition codes they define.
- * MIT; Copyright (c) 2026 SH2ZAM Contributors. Game-neutral: no title, data or
+ * Game-neutral: no title, data or
  * hardware layout is assumed. Not part of SH4ZAM; there is no SH-4 path.
  *
  * Contract (all four operations)
@@ -40,7 +40,11 @@
  * inside the single asm block and are reset by DIV0U on entry); SR.S is not
  * changed. Elsewhere (or with SH2Z_FORCE_PORTABLE=1) plain C division is used.
  * sh2z_m68k_ref_* are always plain C, written independently of the fast path,
- * for tests and as the specification. */
+ * for tests and as the specification.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #ifndef SH2ZAM_M68K_H
 #define SH2ZAM_M68K_H
 #include "sh2zam.h"

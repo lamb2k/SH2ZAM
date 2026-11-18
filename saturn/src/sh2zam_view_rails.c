@@ -5,7 +5,11 @@
  * once per rail, instead of twelve 64-bit divisions. On SH-2 the _divu
  * entry is hand-written assembly: the setup, then one loop that steps and
  * projects the points of both rails with the view-center-1 kernel
- * (sh2zam_view_asm.h). MIT; SH2ZAM Contributors. */
+ * (sh2zam_view_asm.h).
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam_view_internal.h"
 #include "sh2zam_view_center_internal.h"
 

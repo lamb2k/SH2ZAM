@@ -1,5 +1,5 @@
 /* Batch placement of 16x16 sprite cells: mirror, offset, clip, compact.
- * MIT; Copyright (c) 2026 SH2ZAM Contributors. Renderer-neutral: the output is
+ * Renderer-neutral: the output is
  * screen positions and source indices; the caller builds whatever command or
  * quad list its renderer needs. Nothing here knows a VDP, a palette or a tile
  * format, and no screen size is assumed.
@@ -27,7 +27,11 @@
  * only uses the two defined bits; outputs do not overlap each other or the
  * input. All arithmetic is exact in int32. Reentrant, allocation-free, no global
  * state; the caller owns synchronization and cache/DMA coherency. SH-2: compiled
- * C, no MAC registers, no hardware divider. */
+ * C, no MAC registers, no hardware divider.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #ifndef SH2ZAM_CELL16_H
 #define SH2ZAM_CELL16_H
 #include "sh2zam.h"

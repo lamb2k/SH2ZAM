@@ -1,6 +1,10 @@
 /* Private to sh2zam_view_center.c and sh2zam_view_rails.c: the view-center-1
  * projection rule (Q16 centre, final-coordinate truncation) and its validity
- * check. Include after sh2zam_view_internal.h. MIT; SH2ZAM Contributors. */
+ * check. Include after sh2zam_view_internal.h.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #ifndef SH2ZAM_VIEW_CENTER_INTERNAL_H
 #define SH2ZAM_VIEW_CENTER_INTERNAL_H
 

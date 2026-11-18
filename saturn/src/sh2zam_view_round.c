@@ -2,7 +2,11 @@
  * toward zero instead of the quotient floored. Same paths as sh2zam_view.c,
  * whose code this file shares through sh2zam_view_internal.h and
  * sh2zam_view_paths.h; a separate file so that the view-contract-1 functions
- * compile exactly as before. MIT; SH2ZAM Contributors. */
+ * compile exactly as before.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam_view_internal.h"
 
 /* Clamp to +/-(2^31 - 1), the symmetric quotient range of view-round-1. */

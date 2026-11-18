@@ -1,4 +1,8 @@
-/* Exact caller-owned spatial queries. MIT; SH2ZAM Contributors. */
+/* Exact caller-owned spatial queries.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #ifndef SH2ZAM_SPATIAL_H
 #define SH2ZAM_SPATIAL_H
 #include "sh2zam.h"

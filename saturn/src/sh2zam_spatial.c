@@ -1,4 +1,8 @@
-/* Exact static AABB index and moving-sphere queries. MIT; SH2ZAM Contributors. */
+/* Exact static AABB index and moving-sphere queries.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam/spatial.h"
 #include <limits.h>
 

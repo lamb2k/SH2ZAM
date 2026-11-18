@@ -1,7 +1,10 @@
 /* Variable-length decoding of byte symbols (vlc_experimental.h, contract tag
  * vlc-1): bounded marker-bit reader, length-limited canonical code builder,
  * two-level table decoder in C and in SH-2 assembly. No libc.
- * MIT; Copyright (c) 2026 SH2ZAM Contributors. */
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam/vlc_experimental.h"
 
 #if defined(__sh__) && defined(__SH2__) && (!defined(SH2Z_FORCE_PORTABLE) || !SH2Z_FORCE_PORTABLE)

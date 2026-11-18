@@ -1,7 +1,10 @@
 /* Fused fade lookup and 5:5:5 colour per vertex batch with prepared fog and
  * colour handles (contract tag shade-2, shade_experimental.h), in C and, for
  * SH-2, in hand-written assembly with identical results.
- * MIT; SH2ZAM Contributors. */
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam/shade_experimental.h"
 #include "sh2zam/cdiv_experimental.h"
 

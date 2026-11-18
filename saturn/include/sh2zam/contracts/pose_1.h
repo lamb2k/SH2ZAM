@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: MIT */
+/* Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 /* ---- Contract tag pose-1 ------------------------------------------------- */
 /* A model's pose (view, model-space eye, Q1.14 basis, plane-culling data)
  * from binary32 model state with no floating-point arithmetic. Reached

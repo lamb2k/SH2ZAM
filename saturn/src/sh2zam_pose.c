@@ -1,5 +1,4 @@
 /* Model pose from binary32 model state (contract tag pose-1).
- * MIT; SH2ZAM Contributors.
  *
  * No floating-point arithmetic: each float is read as its bit pattern and the
  * three binary32 operations of the definition (a difference, a product and a
@@ -22,7 +21,11 @@
  * sh2z_pose_from_f32 is the hand-written sequence further down, which
  * computes the same values with MAC.L dot products, DMULU.L shifts and DIV1
  * steps, and takes a shortcut for the common difference of two floats with
- * equal sign and exponent; with SR.S set it runs the C. */
+ * equal sign and exponent; with SR.S set it runs the C.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam/view_experimental.h"
 
 #if defined(__sh__) && defined(__SH2__) && (!defined(SH2Z_FORCE_PORTABLE) || !SH2Z_FORCE_PORTABLE)

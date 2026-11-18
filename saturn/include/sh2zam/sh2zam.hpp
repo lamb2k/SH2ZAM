@@ -1,4 +1,8 @@
-/* Optional C++11 conveniences; MIT; (c) 2026 SH2ZAM Contributors. */
+/* Optional C++11 conveniences.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #ifndef SH2ZAM_HPP
 #define SH2ZAM_HPP
 #include "sh2zam.h"

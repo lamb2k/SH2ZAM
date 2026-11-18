@@ -3,7 +3,6 @@
  * destination, a record copy that stops at an end marker, and a record-run
  * diff. Hand-written SH-2 kernels for the block and copy forms, portable C
  * everywhere. Not selected by any default dispatch.
- * MIT; SH2ZAM Contributors.
  *
  * Contract tag: memo-1. Every function below is exact: its outputs are a
  * pure function of its inputs, as stated, with no approximation. A faster
@@ -18,7 +17,11 @@
  * Words. A "word" is a uint16_t and a "longword" a uint32_t, each in the
  * CPU's own byte order. Record word k of an 8-byte record is element k of a
  * uint16_t[4] view of it. Nothing depends on byte order: the SH-2 kernels
- * read two words as one longword only where the result is the same. */
+ * read two words as one longword only where the result is the same.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #ifndef SH2ZAM_MEMO_EXPERIMENTAL_H
 #define SH2ZAM_MEMO_EXPERIMENTAL_H
 
