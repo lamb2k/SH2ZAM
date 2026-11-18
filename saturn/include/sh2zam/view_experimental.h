@@ -327,6 +327,61 @@ int sh2z_view_merge_runs(uint8_t *runs_out,const sh2z_view_vertex_t *left,
     const sh2z_view_vertex_t *right,const uint32_t *rows,const uint32_t *end_masks,
     unsigned count,uint32_t run_mask,uint32_t tol_q8,unsigned mode);
 
+/* ---- Contract tag view-merge-2 ------------------------------------------- */
+
+/** Run lengths sh2z_view_merge_tier accepts in run_mask: 1, 2, 4, 8, 16. */
+#define SH2Z_VIEW_MERGE_TIER_RUNS 0x00010116u
+
+/** Tier texture merge planner: the pixel-mode plan of sh2z_view_merge_runs
+ *  for strips whose merged repetitions have equal texture heights, such as
+ *  tier textures that hold 2 or 4 whole periods. It reads no rows, uses no
+ *  multiplication and costs far less.
+ *
+ *  Boundaries j = 0 .. count-1 cut the strip into count-1 repetitions, and
+ *  the reference draws one quad per repetition, as in sh2z_view_merge_runs.
+ *  Only sx, sy and outcode of left and right are read. The repetitions of a
+ *  run are taken to have equal texture height, so the reference draws the
+ *  row at fraction k/r of a run of r repetitions from boundary i at
+ *  P[i+k]. Permit a run, through run_mask and end_masks, only where that
+ *  holds (whole periods of one texture, for example). The bound below is
+ *  then against the true reference. If every permitted run has equal-height
+ *  repetitions under some rows[], the plan equals sh2z_view_merge_runs with
+ *  those rows, the same masks and SH2Z_VIEW_MERGE_PIXELS.
+ *
+ *  A run of r repetitions from boundary i passes when, on each rail P (left
+ *  and right) and for each interior boundary k = 1 .. r-1,
+ *      F = r * (P[i+k] - P[i]) - k * (P[i+r] - P[i])   (per axis, exact)
+ *      max(|F.x|, |F.y|) * 256 <= tol_q8 * r
+ *  F / r is how far, in pixels, the reference puts that boundary from where
+ *  the merged quad puts its row. Between boundaries both rails' errors are
+ *  linear in the row, and the quad interpolates between its rails, so every
+ *  texel of a merged quad lies within tol_q8 / 256 pixels (Chebyshev) of
+ *  its reference position. VIEW_BATCH.md has the proof.
+ *
+ *  Greedy plan, from boundary i = 0 until count-1: take the largest r of
+ *  16, 8, 4, 2 with i + r <= count-1 and all of:
+ *      bit r of run_mask is set;
+ *      end_masks is NULL, or bit r of end_masks[i+r] is set;
+ *      no boundary i .. i+r (ends included) has an outcode bit other than
+ *          LEFT, RIGHT, TOP, BOTTOM on either rail;
+ *      the run passes;
+ *  or r = 1 if there is none (a single repetition is the reference). Then
+ *  runs_out[n++] = r and i += r. Only bit r of end_masks[i+r] is read, for
+ *  the r above, so end_masks words mean what they mean for
+ *  sh2z_view_merge_runs.
+ *
+ *  Returns n >= 1, the number of runs written (they sum to count-1), or
+ *  SH2Z_VIEW_MERGE_INVALID, writing nothing, if runs_out, left or right is
+ *  null, count < 2 or count > SH2Z_VIEW_MERGE_MAX_COUNT,
+ *  tol_q8 > SH2Z_VIEW_MERGE_MAX_TOL, run_mask has a bit other than bit 0
+ *  and those of SH2Z_VIEW_MERGE_TIER_RUNS, or runs_out[0 .. count-2]
+ *  overlaps left[], right[] or end_masks[] (count words each). Every value
+ *  is exact in 32 bits: |F| < 2^22. No multiplication, division, floating
+ *  point, global state or allocation; reentrant. */
+int sh2z_view_merge_tier(uint8_t *runs_out,const sh2z_view_vertex_t *left,
+    const sh2z_view_vertex_t *right,const uint32_t *end_masks,unsigned count,
+    uint32_t run_mask,uint32_t tol_q8);
+
 /* ---- Contract tag view-round-1 ------------------------------------------- */
 
 /** Final-coordinate truncation (opt-in). For a renderer that matches a source
