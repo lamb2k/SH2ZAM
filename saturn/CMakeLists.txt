@@ -19,6 +19,8 @@ endif()
 set(SH2Z_SOURCES src/sh2zam.c src/sh2zam_trig.c src/sh2zam_angles.c src/sh2zam_transform.c src/sh2zam_prepared.c src/sh2zam_reuse.c src/sh2zam_batch_sh2.c src/sh2zam_geometry.c src/sh2zam_rotation_batch.c src/sh2zam_spatial.c src/sh2zam_view.c src/sh2zam_view_round.c src/sh2zam_view_guard_src.c src/sh2zam_view_center.c src/sh2zam_view_guard_src_center.c src/sh2zam_view_merge_tier.c src/sh2zam_divu.c src/sh2zam_m68k.c src/sh2zam_box2.c src/sh2zam_cell16.c src/sh2zam_shade.c src/sh2zam_vlc.c)
 # shade-2: fused fade and colour (one line per lane source keeps merges small)
 list(APPEND SH2Z_SOURCES src/sh2zam_shade_fused.c)
+# trig12-1: 12-bit-angle sine table and tangent.
+list(APPEND SH2Z_SOURCES src/sh2zam_trig12.c)
 add_library(sh2zam STATIC ${SH2Z_SOURCES})
 add_library(SH2ZAM::sh2zam ALIAS sh2zam)
 target_include_directories(sh2zam PUBLIC
@@ -88,6 +90,17 @@ if(SH2Z_BUILD_TESTS AND NOT CMAKE_CROSSCOMPILING)
     endif()
   endif()
   add_test(NAME shade_fused_exact COMMAND sh2zam_shade_fused_tests)
+  foreach(family trig12 divq)  # trig12-1
+    add_executable(sh2zam_${family}_tests tests/test_${family}.c)
+    target_link_libraries(sh2zam_${family}_tests PRIVATE sh2zam m)
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+      target_compile_options(sh2zam_${family}_tests PRIVATE -Wall -Wextra -Wconversion -Wshadow)
+      if(SH2Z_STRICT)
+        target_compile_options(sh2zam_${family}_tests PRIVATE -Werror -Wpedantic)
+      endif()
+    endif()
+    add_test(NAME ${family}_exact COMMAND sh2zam_${family}_tests)
+  endforeach()
   add_library(sh2zam_workload_prior STATIC
     benchmarks/workload-model/prior_sh2zam.c
     benchmarks/workload-model/prior_sh2zam_trig.c

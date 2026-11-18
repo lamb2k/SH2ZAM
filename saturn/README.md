@@ -25,6 +25,8 @@ The maintained overview, build commands, API scope and upstream credits are in t
 - [Fused shade instruction model](benchmarks/shade-fused-model/README.md)
 - [Experimental variable-length decoding: bounded bit reader, length-limited canonical codes, SH-2 table decoder](VLC.md)
 - [vlc instruction model](benchmarks/vlc-model/README.md)
+- [Experimental 12-bit-angle sin/cos/tan and inline divider quotients](TRIG12.md)
+- [trig12 instruction model](benchmarks/trig12-model/README.md)
 - [Remaining work](PORTING_PLAN.md)
 
 Both `cmake -S .` from the repository root and `cmake -S saturn` build the Saturn library. Batch transforms now select a specialized exact kernel when the matrix proves direct accumulation safe, with a general fallback for the remaining matrices. Full SH4ZAM API parity and physical-console performance qualification remain incomplete.

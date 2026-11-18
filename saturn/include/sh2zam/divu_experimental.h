@@ -151,6 +151,73 @@ static inline void sh2z_divu_restore(const sh2z_divu_state_t *s) {
  *  be null. On SH-2 this uses the divider between its own start and finish. */
 int32_t sh2z_divu_div64(int64_t n,int32_t divisor,bool *overflow);
 
+/* ---- Contract tag trig12-1: inline fixed-point quotients ----
+ *
+ * sh2z_divu_q(num, den, f) is the quotient num * 2^f / den: with num and den
+ * in the same format, the ratio in a format with f fraction bits (Q16.16 for
+ * f = 16, Q2.30 for f = 30). It is the division above with the dividend
+ * num * 2^f, so the result rule is the same, written for these operands:
+ *
+ *     result   = trunc(num * 2^f / den)          when |num| * 2^f < |den| * 2^31
+ *              = num, den of different signs ? INT32_MIN : INT32_MAX
+ *                                                 otherwise, den != 0
+ *              = num >= 0 ? INT32_MAX : INT32_MIN when den == 0 (0 / 0 too)
+ *     overflow = !(den != 0 && |num| * 2^f < |den| * 2^31)
+ *
+ * Rounding is toward zero on both signs (-7 / 2 is -3, not -4). An exact
+ * quotient of -2^31 is returned exactly and flagged, as above. num = 0 with
+ * den != 0 gives 0. 0 <= f <= 31; pass a constant f, because the SH-2 has no
+ * variable shift (a variable f compiles to libgcc shift calls).
+ * sh2z_divu_q16 equals sh2z_div for every input except 0 / 0, which sh2z_div
+ * answers with 0; sh2z_recip_q16 equals sh2z_recip for every input.
+ *
+ * The fit test is |num| >> (31 - f) < |den| as unsigned 32-bit values (|den|
+ * of zero never passes), which is exact and costs a few instructions. On
+ * SH-2, sh2z_divu_q_start writes the divider and returns; sh2z_divu_finish
+ * collects the quotient, so up to ~39 cycles of independent work can run in
+ * between. The blocking forms wait. The caller promise at the top of this
+ * header applies between start and finish. */
+
+/** Start num * 2^frac_bits / den; collect it with sh2z_divu_finish. */
+static inline void sh2z_divu_q_start(sh2z_divu_t *t,int32_t num,int32_t den,unsigned frac_bits) {
+    const uint32_t an=num<0?(uint32_t)0-(uint32_t)num:(uint32_t)num;
+    const uint32_t ad=den<0?(uint32_t)0-(uint32_t)den:(uint32_t)den;
+    if((an>>(31u-frac_bits))>=ad) {
+        t->quotient=sh2z_divu_saturated(num,den);
+        t->in_software=1;t->overflow=1;
+        return;
+    }
+    /* num * 2^f as hi:lo (two's complement), without signed shifts. */
+    const uint64_t n=(uint64_t)(int64_t)num<<frac_bits;
+    const uint32_t hi=(uint32_t)(n>>32),lo=(uint32_t)n;
+    t->overflow=0;
+#if SH2Z_DIVU_NATIVE
+    t->in_software=0;
+    *(volatile uint32_t *)SH2Z_DIVU_DVSR_ADDRESS=(uint32_t)den;
+    *(volatile uint32_t *)SH2Z_DIVU_DVDNTH_ADDRESS=hi;
+    *(volatile uint32_t *)SH2Z_DIVU_DVDNTL_ADDRESS=lo;     /* starts the division */
+#else
+    t->in_software=1;
+    t->quotient=sh2z_divu_portable_quotient((int32_t)hi,lo,den);
+#endif
+}
+
+/** Blocking num * 2^frac_bits / den (rule above). */
+static inline int32_t sh2z_divu_q(int32_t num,int32_t den,unsigned frac_bits) {
+    sh2z_divu_t t;
+    sh2z_divu_q_start(&t,num,den,frac_bits);
+    return sh2z_divu_finish(&t,NULL);
+}
+/** Ratio of two same-format values in Q16.16: num * 2^16 / den. */
+static inline int32_t sh2z_divu_q16(int32_t num,int32_t den) {return sh2z_divu_q(num,den,16u);}
+/** Ratio of two same-format values in Q2.30: num * 2^30 / den. */
+static inline int32_t sh2z_divu_q30(int32_t num,int32_t den) {return sh2z_divu_q(num,den,30u);}
+/** 1 / x for a Q16.16 x, in Q16.16: 2^32 / den. */
+static inline int32_t sh2z_recip_q16(int32_t den) {return sh2z_divu_q(INT32_C(1)<<16,den,16u);}
+/** 1 / x for a Q2.30 x, in Q2.30: 2^60 / den. Fits (no saturation) only for
+ *  |den| > 2^29, that is |x| > 0.5. */
+static inline int32_t sh2z_recip_q30(int32_t den) {return sh2z_divu_q(INT32_C(1)<<30,den,30u);}
+
 #ifdef __cplusplus
 }
 #endif
