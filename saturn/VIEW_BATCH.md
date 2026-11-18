@@ -15,6 +15,7 @@ planes per vertex in 64-bit arithmetic. Contract tag: `view-contract-1`.
 | View-space projection, edge stepper, near clip | Landed, `view-edges-1` (see below) |
 | Guard-band polygon clip (near, far, sides; attributes) | Landed, `view-guard-1` (see below) |
 | Bounded texture-merge planner (pixel or row tolerance) | Landed, `view-merge-1` (see below): HOST and MODELLED; 223 modelled cycles per boundary at 1 px |
+| Tier texture-merge planner (equal-height runs, no rows) | `view-merge-2` (see below): HOST and MODELLED; 38.7 modelled cycles per boundary at 1 px, 64 boundaries (65.5 at 8); same plans as `view-merge-1` |
 | Final-coordinate truncation (`_trunc` forms of every projecting path) | `view-round-1` (see below): HOST and MODELLED; +8.4 modelled cycles per batch vertex |
 | Guard clip in a source clipper's vertex order (fan-mapped textures) | `view-guard-src-1` (see below): HOST and MODELLED; −10% to +6% modelled cycles against the `view-round-1` guard clip |
 | Fractional (Q16) centre (`_center` forms of every `_trunc` path and of the source-order guard clip) | `view-center-1` (see below): HOST and MODELLED; +4.3 modelled cycles per batch vertex over `_trunc`, +6 to +9 per source-order clip (divider) |
@@ -485,6 +486,201 @@ or emulator run.
   corners with `sh2z_view_batch_divu` (2 × 134.7). Rows
   mode costs 2.4 times as much and merges far less, because the row test is
   strict where the road is minified.
+
+## Tier texture-merge planner (`view-merge-2`)
+
+`sh2z_view_merge_runs` costs about 223 modelled cycles per boundary at 1 px.
+A road renderer calls it about 51 times a frame for about 397 boundaries,
+and the caller measured 4.8 ms mean and 11.0 ms p99 a frame for its merge
+planning. Its strips use tier textures that hold 2 or 4 whole periods, and
+it permits a run only where the run covers whole periods (its end masks).
+The repetitions of every permitted run then have the same texture height,
+and the general test collapses to a few subtractions per boundary.
+`sh2z_view_merge_tier` is that planner. It reads no rows and uses no
+multiplication, and on SH-2 runs of 2 and 4 go through a hand-written
+kernel. For such strips its plan is the plan of `sh2z_view_merge_runs` in
+pixel mode, byte for byte.
+
+### Contract
+
+```c
+#define SH2Z_VIEW_MERGE_TIER_RUNS 0x00010116u   /* runs of 1, 2, 4, 8, 16 */
+int sh2z_view_merge_tier(uint8_t *runs_out, const sh2z_view_vertex_t *left,
+    const sh2z_view_vertex_t *right, const uint32_t *end_masks, unsigned count,
+    uint32_t run_mask, uint32_t tol_q8);
+```
+
+- **Strip, end masks, blocking, plan, output.** As for `sh2z_view_merge_runs`:
+  `count` boundaries (2 to 65,536), only `sx`, `sy` and `outcode` read; bit
+  `r` of `end_masks[j]` lets a run of `r` end at boundary `j`; a boundary with
+  an outcode bit other than LEFT, RIGHT, TOP or BOTTOM on either rail is never
+  part of a merged run; greedy longest run first; `runs_out` gets the run
+  lengths, which sum to `count - 1`.
+- **Run lengths.** 1, 2, 4, 8 and 16 (`run_mask` bits in
+  `SH2Z_VIEW_MERGE_TIER_RUNS`). The road renderer's masks (`0x16`, `0x6`,
+  `0x2`) pass unchanged.
+- **No rows.** The repetitions of a run are taken to have equal texture
+  height. Permit a run (through `run_mask` and `end_masks`) only where that
+  holds. With equal heights the plan equals `sh2z_view_merge_runs(...,
+  rows, ..., SH2Z_VIEW_MERGE_PIXELS)` for any such `rows`.
+- **Invalid arguments** return `SH2Z_VIEW_MERGE_INVALID` and write nothing:
+  a null `runs_out`, `left` or `right`, `count` out of range,
+  `tol_q8 > 2^24`, a `run_mask` bit other than bit 0 and the five lengths, or
+  `runs_out` overlapping an input.
+
+**The test.** For a run of `r` repetitions from boundary `i`, on each rail
+`P` and for each interior boundary `k = 1 .. r-1`:
+
+```
+F = r * (P[i+k] - P[i]) - k * (P[i+r] - P[i])     (per axis, exact)
+passes when  max(|F.x|, |F.y|) * 256 <= tol_q8 * r
+```
+
+Because `F` is an integer, this is `|F| <= tol_q8 >> (8 - log2 r)`: limit
+`tol_q8 >> 7` for runs of 2, `>> 6` for 4, `>> 5` for 8, `>> 4` for 16.
+
+### The bound and its proof
+
+**Every texel of a merged quad, on its rails and inside, is drawn within
+`tol_q8 / 256` px (Chebyshev) of where the one-quad-per-repetition
+reference draws it**, provided the run's repetitions have equal texture
+height. The maximum is reached at a boundary vertex.
+
+Proof. Give each repetition of the run `h` rows, so `S = r h` and boundary
+`k` sits at row `t = k h`. The `view-merge-1` error of boundary `k` is then
+
+```
+E = S (P[i+k] - P[i]) - t (P[i+r] - P[i]) = h F,     E / S = F / r.
+```
+
+`F / r` is the distance in pixels from the reference's boundary vertex to the
+point where the merged quad draws the same row. The test is
+`max |F| / r <= tol_q8 / 256`, which is exactly the pixel-mode test of
+`view-merge-1` with these rows. The `view-merge-1` proof
+([above](#why-the-boundary-test-bounds-the-whole-quad-pixel-mode)) then
+applies unchanged. Each rail's error is linear between boundaries and zero at
+the run's ends, the quad interpolates its rails, and the Chebyshev norm is
+convex. So no texel drifts further than the worst boundary, and the worst
+boundary is within the tolerance. ∎
+
+If a permitted run has repetitions of unequal height, the bound holds against
+a reference with equal heights, not against the true one. The caller's end
+masks are what make the heights equal.
+
+A cheaper test that checks only the middle boundary of a run of 4 does **not**
+bound the drift. On the host road strips below it let boundaries 1 and 3
+drift by up to 41 px at 0.5 px, 120 px at 1 px and 166 px at 2 px.
+
+### Ranges
+
+`sx`, `sy` differences are below 2^16 and `r <= 16`, so `|F| < 2^21`. With
+the limit (at most 2^20), every value fits 32 bits. Each comparison is one
+unsigned compare: `|f| <= L` exactly when `f + L` lies in `0 .. 2L` as an
+unsigned value.
+
+### SH-2 kernel
+
+On SH-2, masks with runs of {2, 4} or {2} (the road renderer's ×4 and ×2
+tiers) go to `sh2zi_merge_tier24`, hand-written assembly in
+`sh2zam_view_merge_tier.c`. Runs of 8 and 16 and host builds use the
+library's C, which follows the same contract.
+
+- A run of 4 tests the middle boundary first, then the outer two. With
+  `K = 2 (P[0] + P[4]) - L4` and `D = P[4] - P[0]`, the shifted errors are
+  `F2 + L4 = 4 P[2] - K`, `F1 + L4 = 4 P[1] - K + D` and
+  `F3 + L4 = 4 P[3] - K - D`. Each is one `CMP/HI` against `2 L4`. A rail
+  costs 53 instructions when it passes, fewer when it fails early.
+- A run of 2 tests `4 P[1] - (2 (P[0] + P[2]) - L4)` against `2 L4`, which is
+  `2 F + L4`. `|2 F| <= L4` exactly when `|F| <= L4 >> 1`, the run-of-2 limit.
+  This costs 22 instructions per rail.
+- Blocked boundaries are found by a scan that tests four boundaries a step,
+  one long load per rail each (the outcode is the long's top byte), and stops
+  the fast loop before the next blocked boundary.
+
+### Evidence
+
+**HOST** (`tests/test_merge_tier.c`; GCC strict, Clang strict, ASan/UBSan):
+- **Oracle.** An independent oracle, written from the header text, uses
+  128-bit arithmetic and a brute-force blocking scan.
+- **Strips.** 40,000 road strips with rows and end masks as a road renderer
+  builds them (×1, ×2, ×4, ×8, ×16 tiers, partial first and last
+  repetitions, corners outside ±900 px flagged `0x80`). 40,000 strips of
+  straight quads stepped by `sh2z_view_edge_steps`. 60,000 adversarial strips
+  (int16 extremes, near-linear rails, random outcodes, random masks).
+  Tolerances 0 to the maximum.
+- **Exactness.** 6,387,501 runs (839,811 merged: 497,948 ×2, 294,882 ×4,
+  37,056 ×8, 9,925 ×16) equal the oracle. Nothing is written past them.
+- **Against view-merge-1.** 130,022 plans (6,076,461 runs) equal
+  `sh2z_view_merge_runs` in pixel mode: every strip whose permitted runs
+  have equal-height repetitions.
+- **Blocking exercised.** On 23,659 adversarial strips the plan changes when
+  the NEAR, FAR and undefined outcode bits are cleared.
+- **Controls detected.** Only the middle boundary tested: 24,993 plans
+  differ. Right rail not checked: 43,167. Strict `<` at the threshold:
+  25,074. Greedy takes the smallest passing run: 40,698. NEAR/FAR checked
+  only inside the run: 24,920. End mask read at the run's start: 37,950.
+  Interior boundary `k` tested as `r - k`: 32,964.
+- **Hand cases.** Linear strips, blocking flags, end masks, exact thresholds
+  for runs of 2, 4, 8 and 16, and int16 extremes. Rejected calls (null
+  pointers, count, tolerance, run lengths, overlap with each input) write
+  nothing.
+- **Drift property.** 335,915 merged quads, 113,284,539 texel samples. The
+  drift never exceeded the tolerance or the quad's boundary maximum (by more
+  than 2.3e-13 px of floating-point rounding). **The bound holds.**
+- **Total.** 22,147,066 checks.
+
+**Commands and drift** on host road strips (4,000 strips of 64 boundaries,
+runs {1, 2, 4} on whole periods, a road renderer's end masks):
+
+| Tolerance | Quads per 63 repetitions, view-merge-2 | view-merge-1, same end masks | Drift p50 | Drift p99 | Drift max |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 0.5 px | 38.092 | 38.092 | 0.126 px | 0.501 px | 0.5000 px |
+| 1 px | 33.095 | 33.095 | 0.209 px | 0.896 px | 1.0000 px |
+| 2 px | 31.316 | 31.316 | 0.229 px | 1.501 px | 2.0000 px |
+
+The command count is identical to `view-merge-1` at every tolerance, because
+the plans are identical. Percentiles are upper edges of 1/1024 px bins.
+
+**MODELLED** (SH-2 model capture, `merge-model`):
+- **Exactness.** 12,000 strips (road and adversarial, 2 to 200 boundaries),
+  1,065,023 boundaries. All 806,730 runs (114,985 merged: 68,721 ×2,
+  39,745 ×4, 4,931 ×8, 1,588 ×16) equal the harness oracle. 10,969 plans also
+  equal `sh2z_view_merge_runs` on the target. 2,987 calls with one argument
+  broken returned -1 and wrote nothing.
+- **Timing.** 64 road strips per row, the same strips for both planners. Both
+  return the same plan. Whole calls, argument checks included:
+
+| Strip | Quads | view-merge-2, median cycles per boundary | Max | view-merge-1 | Ratio | Drift p99 / max |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 64 boundaries, 0.5 px | 32.23 | 50.02 | 60.02 | 261.21 | 5.22 | 0.501 / 0.500 px |
+| **64 boundaries, 1 px** | **24.73** | **38.74** | 45.52 | 188.60 | 4.87 | 0.876 / 1.000 px |
+| 64 boundaries, 2 px | 22.09 | 38.30 | 42.80 | 179.95 | 4.70 | 1.292 / 2.000 px |
+| 64 boundaries, 1 px, runs {1, 2} | 36.53 | 40.92 | 42.92 | 214.23 | 5.24 | 0.501 / 1.000 px |
+| 64 boundaries, 1 px, no end masks | 23.42 | 37.77 | 47.25 | 186.54 | 4.94 | 0.806 / 1.000 px |
+| 64 boundaries, runs of 1 only | 63.00 | 6.89 | 6.89 | 67.33 | 9.77 | — |
+| **8 boundaries, 1 px** | 5.03 | 65.50 (524 a call) | 117.12 | 248.88 | 3.80 | 0.917 / 1.000 px |
+| 8 boundaries, runs of 1 only | 7.00 | 20.12 (161 a call) | 20.12 | 83.62 | 4.16 | — |
+
+A call costs about 200 modelled cycles before its first boundary: argument
+checks, the overlap test, saved registers and the first blocking scan. At the
+road renderer's mean of about 8 boundaries a call, that overhead is why the
+cost per boundary is 65.5 rather than 39. No console or emulator run.
+
+### Caller guidance
+
+- **Switch.** Replace the `sh2z_view_merge_runs` call with
+  `sh2z_view_merge_tier(runs, left, right, end_masks, count, mask, 256u)`.
+  Keep `runs`, the end masks, the mask and the tolerance. The rows are no
+  longer needed. The output is the same, so the drawing code does not change.
+- **Equal heights.** Keep the end masks that permit a run only where it covers
+  whole periods (a span of `r` periods from an aligned boundary). Those runs
+  have equal-height repetitions, which the bound needs. Partial first and
+  last repetitions stay single quads.
+- **Runs of 1 only.** With mask `0x2` there is nothing to merge. The call
+  fills `runs` with 1 in 6.9 modelled cycles per boundary, or the caller can
+  skip it.
+- **Tolerance.** `tol_q8 = 256` bounds every texel's drift by 1 px, as with
+  `view-merge-1` in pixel mode. `128` and `512` give 0.5 and 2 px.
 
 ## Final-coordinate truncation (`view-round-1`)
 
