@@ -486,10 +486,10 @@
   }
  },
  "label": "MODELLED: executed SH-2 instructions in the Yabause interpreter; flat RAM, no caches or wait states; not Saturn hardware",
- "sourceCommit": "10fce21fe4d0bf1123cbdcbd1b76528f6b5c6129",
+ "sourceCommit": "5ea01990c036957b4817a9eb21e575c890725cc4",
  "elfSha256": "069c798aa5427d1c709a777f8d3df3ff912cf001359fbf283b9448bd36fc8f0c",
  "toolchain": "Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)",
- "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44207683875",
+ "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44208795496",
  "yabauseCommit": "7e38821dbac265490f115e163c523a939acda759",
  "cyclesPerVertex": {
   "textured_pieces_64": {
