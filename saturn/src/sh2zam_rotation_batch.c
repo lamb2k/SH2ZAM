@@ -1,5 +1,8 @@
 /* Share exact quaternion setup across an entire vector batch.
- * MIT; Copyright (c) 2026 SH2ZAM Contributors. */
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam/rotation_batch.h"
 #include "sh2zam/batch_experimental.h"
 #include "sh2zam_internal.h"

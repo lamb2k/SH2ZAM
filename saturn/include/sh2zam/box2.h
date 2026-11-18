@@ -1,5 +1,5 @@
 /* Exact 2D integer box overlap, scalar and batched with packed bitmask results.
- * MIT; Copyright (c) 2026 SH2ZAM Contributors. Game-neutral: the library knows
+ * Game-neutral: the library knows
  * nothing about what a box means (hitbox, hurtbox, trigger, tile range).
  *
  * Two box layouts, both int32 per field and both exact over the full int32 range
@@ -39,7 +39,11 @@
  * output; empty inputs permit null pointers. All functions are reentrant,
  * allocation-free and use no global state; the caller owns synchronization and
  * cache/DMA coherency of the buffers. SH-2: compiled C, no MAC registers, no
- * hardware divider, no SR bits other than T. */
+ * hardware divider, no SR bits other than T.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #ifndef SH2ZAM_BOX2_H
 #define SH2ZAM_BOX2_H
 #include "sh2zam.h"

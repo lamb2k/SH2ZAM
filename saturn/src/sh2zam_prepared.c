@@ -1,5 +1,7 @@
 /* SH2ZAM - Saturn-native fixed-point mathematics.
- * Copyright (c) 2026 SH2ZAM Contributors. MIT; see root LICENSE.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
  */
 #include "sh2zam_prepared_internal.h"
 

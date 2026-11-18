@@ -2,7 +2,7 @@
  * multiply, dot and cross products, a seeded multiply-only reciprocal square
  * root, vector normalisation, a rounded integer square root and the two
  * cross-product orthonormalisations of a 3x3 basis. Not selected by any
- * default dispatch. MIT; SH2ZAM Contributors.
+ * default dispatch.
  *
  * Contract tag: fixed-unit-1. The numeric definitions below are frozen at
  * that tag. Every result is a fixed function of the inputs: the portable C
@@ -21,7 +21,11 @@
  * SH-2 notes: sh2z_u30_dot3 uses MAC.L. It saves SR, clears SR.S for its
  * three MAC.L and restores SR, so it is correct whatever the caller's S bit
  * and leaves it unchanged. All functions clobber MACH/MACL; interrupt
- * handlers that use the MAC must save it (as for the rest of the library). */
+ * handlers that use the MAC must save it (as for the rest of the library).
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #ifndef SH2ZAM_UNIT30_EXPERIMENTAL_H
 #define SH2ZAM_UNIT30_EXPERIMENTAL_H
 

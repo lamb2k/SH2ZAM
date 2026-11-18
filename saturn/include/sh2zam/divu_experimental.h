@@ -1,5 +1,5 @@
 /* Experimental explicit access to the SH-2 on-chip division unit (DIVU).
- * Not used by any default dispatch. MIT; SH2ZAM Contributors.
+ * Not used by any default dispatch.
  *
  * Each SH-2 has its own divider, memory mapped at 0xFFFFFF00, which divides a
  * signed 64-bit dividend by a signed 32-bit divisor in about 39 cycles while
@@ -29,7 +29,11 @@
  * writing DVDNTL starts a 64/32 division of DVDNTH:DVDNTL by DVSR; the
  * quotient truncates toward zero; reading DVDNTL or DVDNTH before the
  * division completes holds the CPU until it does. The SH-2 model harness
- * implements the same assumptions on its side; it is not evidence for them. */
+ * implements the same assumptions on its side; it is not evidence for them.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #ifndef SH2ZAM_DIVU_EXPERIMENTAL_H
 #define SH2ZAM_DIVU_EXPERIMENTAL_H
 

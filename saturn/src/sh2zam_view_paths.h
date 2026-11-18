@@ -5,7 +5,11 @@
  *     SH2ZI_VIEW_RANGE       in-place range projector (out, v, in, count)
  *     SH2ZI_VIEW_RANGE_DIVU  the same through the hardware divider
  * (the _DIVU forms are used only when SH2Z_DIVU_NATIVE). Include once per
- * file, after sh2zam_view_internal.h. MIT; SH2ZAM Contributors. */
+ * file, after sh2zam_view_internal.h.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 
 static bool edge_steps(sh2z_view_vertex_t *out,const sh2z_view_t *v,
     const sh2z_view_vertex_t *from,const sh2z_view_vertex_t *to,

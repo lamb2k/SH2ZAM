@@ -2,7 +2,7 @@
  * that keeps the bit reader in the caller's registers and takes a table
  * pointer per symbol, compact byte tables that pack together in one arena,
  * and a reader that starts at any byte offset of the caller's stream.
- * Not selected by any default dispatch. MIT; SH2ZAM Contributors.
+ * Not selected by any default dispatch.
  *
  * Contract tag: vlc-2. The stream format, the table layout, the reader state
  * and the constant block are frozen at that tag. A faster path may replace an
@@ -70,7 +70,11 @@
  * stream contains: the caller tests that once per stream against its buffer
  * size, and then needs no test per symbol. A well-formed stream of E bits
  * reads at most 2 bytes past its last byte. sh2z_vlc2_bitpos tells how many
- * bits were consumed, for a truncation test after the stream. */
+ * bits were consumed, for a truncation test after the stream.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #ifndef SH2ZAM_VLC2_EXPERIMENTAL_H
 #define SH2ZAM_VLC2_EXPERIMENTAL_H
 

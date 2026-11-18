@@ -1,4 +1,8 @@
-/* Exact 2D integer box overlap batches. MIT; Copyright (c) 2026 SH2ZAM Contributors. */
+/* Exact 2D integer box overlap batches.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam/box2.h"
 
 /* Always inlined: size and alignment are compile-time constants at every call,

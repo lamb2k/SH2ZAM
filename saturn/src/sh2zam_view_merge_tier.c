@@ -1,6 +1,6 @@
 /* view-merge-2: the tier texture merge planner, sh2z_view_merge_tier. It is
  * in a file of its own so that every existing object compiles exactly as
- * before. MIT; SH2ZAM Contributors.
+ * before.
  *
  * With equal-height repetitions the view-merge-1 error of interior boundary
  * k of a run of r is E = h * F (h rows per repetition), where
@@ -8,7 +8,11 @@
  * and the pixel test |E| * 256 <= tol_q8 * r * h becomes
  * |F| <= floor(tol_q8 * r / 256) = tol_q8 >> (8 - log2 r). F needs only
  * subtractions and constant shifts, so a run test is a few dozen
- * instructions with no multiply and no 64-bit value. */
+ * instructions with no multiply and no 64-bit value.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam/view_experimental.h"
 
 #if defined(__sh__) && defined(__SH2__) && (!defined(SH2Z_FORCE_PORTABLE) || !SH2Z_FORCE_PORTABLE)

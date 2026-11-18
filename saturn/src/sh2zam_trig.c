@@ -1,6 +1,8 @@
 /* SH2ZAM quarter-wave sine lookup: Q16.16, 257 samples, 1,028-byte table.
- * Values generated from the mathematical sin() definition; MIT, root LICENSE.
- * Copyright (c) 2026 SH2ZAM Contributors.
+ * Values generated from the mathematical sin() definition.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
  */
 #include "sh2zam_internal.h"
 

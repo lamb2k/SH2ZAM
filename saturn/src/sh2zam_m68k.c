@@ -1,4 +1,8 @@
-/* Portable 68000 arithmetic specification. MIT; Copyright (c) 2026 SH2ZAM Contributors. */
+/* Portable 68000 arithmetic specification.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam/m68k.h"
 
 uint32_t sh2z_m68k_ref_mulu_w(uint32_t *dn,uint16_t src) {

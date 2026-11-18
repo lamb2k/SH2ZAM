@@ -2,7 +2,11 @@
  * and a lens, and sh2z_view_place for a Q20.12 eye. A separate file, so that
  * every existing view object compiles exactly as before. Integer only; no
  * 64-bit shifts (SH-2 GCC may call libgcc for them) and no implementation-
- * defined signed conversions. MIT; SH2ZAM Contributors. */
+ * defined signed conversions.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam/view_experimental.h"
 
 /* C[h] = round(cot(pi * h / 2048) * 2^20), ties up, h = 1..1023 (Q12.20);

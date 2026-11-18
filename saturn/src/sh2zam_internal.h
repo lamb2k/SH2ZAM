@@ -1,4 +1,8 @@
-/* Internal arithmetic helpers. MIT; Copyright (c) 2026 SH2ZAM Contributors. */
+/* Internal arithmetic helpers.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #ifndef SH2ZAM_INTERNAL_H
 #define SH2ZAM_INTERNAL_H
 #include "sh2zam/sh2zam.h"

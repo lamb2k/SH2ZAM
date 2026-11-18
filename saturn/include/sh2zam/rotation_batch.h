@@ -1,5 +1,8 @@
 /* Exact quaternion rotation of whole vector batches.
- * MIT; Copyright (c) 2026 SH2ZAM Contributors. */
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #ifndef SH2ZAM_ROTATION_BATCH_H
 #define SH2ZAM_ROTATION_BATCH_H
 

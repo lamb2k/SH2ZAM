@@ -1,4 +1,8 @@
-/* SH2ZAM matrix/rotation operations. MIT; Copyright (c) 2026 SH2ZAM Contributors. */
+/* SH2ZAM matrix/rotation operations.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam_internal.h"
 
 /* If one side's unsigned magnitude sum fits 32 bits, multiplying it by any

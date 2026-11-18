@@ -1,4 +1,8 @@
-/* SH2ZAM scalar/vector core. MIT; Copyright (c) 2026 SH2ZAM Contributors. */
+/* SH2ZAM scalar/vector core.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam_internal.h"
 
 const char *sh2z_backend(void) {

@@ -1,5 +1,8 @@
 /* Experimental fused SH-2 prepared-batch kernels; neither is default dispatch.
- * MIT; Copyright (c) 2026 SH2ZAM Contributors. */
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam/batch_experimental.h"
 #include "sh2zam_internal.h"
 #include "sh2zam_prepared_internal.h"

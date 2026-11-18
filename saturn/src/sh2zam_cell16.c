@@ -1,4 +1,8 @@
-/* Batch placement of 16x16 sprite cells. MIT; Copyright (c) 2026 SH2ZAM Contributors. */
+/* Batch placement of 16x16 sprite cells.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam/cell16.h"
 
 static bool cell_overlap(const void *a,size_t an,const void *b,size_t bn) {

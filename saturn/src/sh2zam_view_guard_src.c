@@ -6,8 +6,11 @@
  * view-round-1 truncating projection. The centre enters as Q16 internally.
  * A separate file, so every earlier function compiles exactly as before.
  * The clip itself is in sh2zam_view_guard_src_core.h, shared with the
- * view-center-1 forms in sh2zam_view_guard_src_center.c. MIT; SH2ZAM
- * Contributors. */
+ * view-center-1 forms in sh2zam_view_guard_src_center.c.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam_view_guard_src_core.h"
 
 int sh2z_view_clip_guard_src_trunc(sh2z_view_guard_vertex_t out[SH2Z_VIEW_GUARD_MAX_OUT],

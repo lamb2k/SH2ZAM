@@ -1,9 +1,13 @@
 /* Experimental integer view transform, projection and clip codes for SH-2
- * renderers. Not selected by any default dispatch. MIT; SH2ZAM Contributors.
+ * renderers. Not selected by any default dispatch.
  *
  * Contract tag: view-contract-1. Struct layouts and the numeric definitions
  * below are frozen at that tag. A faster path may replace the implementation
- * only if it produces identical bytes; new behaviour gets a new function. */
+ * only if it produces identical bytes; new behaviour gets a new function.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #ifndef SH2ZAM_VIEW_EXPERIMENTAL_H
 #define SH2ZAM_VIEW_EXPERIMENTAL_H
 

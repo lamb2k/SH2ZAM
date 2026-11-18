@@ -3,7 +3,10 @@
  * top-level __asm__ statement (gas macros are per file, so each file that
  * instantiates them includes this). With the default arguments the macros
  * expand to exactly the view-sh2-1 / view-round-1 instructions.
- * MIT; SH2ZAM Contributors. */
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 /* Shared assembler macros: SH2ZI_VD_PROLOGUE saves registers and sets up
  * r2-r7 and r14; SH2ZI_VD_REST is everything after a vertex's view-space
  * x y z are in r11 r12 r13 and stored: division pipeline, classification,

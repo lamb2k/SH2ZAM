@@ -1,11 +1,14 @@
 /* Q2.30 unit-vector kernels (fixed-unit-1): reciprocal square root, vector
  * normalisation, rounded square root and basis orthonormalisation.
- * MIT; Copyright (c) 2026 SH2ZAM Contributors.
  *
  * Everything here is integer C. On SH-2, GCC turns each 32x32 -> 64 product
  * below into one DMULS.L or DMULU.L, so the SH-2 and host builds compute the
  * same bits by construction; the SH-2 instruction model checks that
- * (benchmarks/unit30-model). No libc, no floating point, no divider. */
+ * (benchmarks/unit30-model). No libc, no floating point, no divider.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam/unit30_experimental.h"
 
 volatile uint32_t sh2z_u30_overflows;

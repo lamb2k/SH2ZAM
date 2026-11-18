@@ -2,7 +2,11 @@
  * static functions. Included by sh2zam_view_guard_src.c (whole-pixel
  * centres) and sh2zam_view_guard_src_center.c (view-center-1), so each
  * object carries its own copy and the first compiles exactly as it did
- * before the split. MIT; SH2ZAM Contributors. */
+ * before the split.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #ifndef SH2ZAM_VIEW_GUARD_SRC_CORE_H
 #define SH2ZAM_VIEW_GUARD_SRC_CORE_H
 

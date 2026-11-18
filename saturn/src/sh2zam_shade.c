@@ -1,5 +1,8 @@
 /* Experimental integer shading kernels (contract tag shade-1).
- * MIT; SH2ZAM Contributors. */
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam/shade_experimental.h"
 
 static bool overlaps(const void *a,size_t a_bytes,const void *b,size_t b_bytes) {

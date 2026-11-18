@@ -1,5 +1,8 @@
 /* Experimental prepared-batch SH-2 kernels. Not selected by default dispatch.
- * MIT; Copyright (c) 2026 SH2ZAM Contributors. */
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #ifndef SH2ZAM_BATCH_EXPERIMENTAL_H
 #define SH2ZAM_BATCH_EXPERIMENTAL_H
 

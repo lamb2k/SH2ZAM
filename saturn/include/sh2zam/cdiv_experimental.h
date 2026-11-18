@@ -2,13 +2,16 @@
  * as inline functions. The SH-2 has no divide instruction (C division calls a
  * library routine of about 40 to 70 cycles); a multiply-high by a magic number
  * costs one DMULU.L. Not selected by any default dispatch.
- * MIT; SH2ZAM Contributors.
  *
  * Contract tag: shade-2. Every function states the inputs on which it is
  * exact; the tests check each named helper against C division for every input
  * of that domain and one input past it. Outside the domain results are
  * defined (no undefined behaviour) but not quotients. No libc, no hardware
- * divider, no state. */
+ * divider, no state.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #ifndef SH2ZAM_CDIV_EXPERIMENTAL_H
 #define SH2ZAM_CDIV_EXPERIMENTAL_H
 

@@ -1,7 +1,11 @@
 /* Vehicle kernels (contract tag vehicle-kernels-1): screen-space facing of
  * projected quads, lighting of referenced normals only, and the approximate
  * Gouraud packing. A separate file, so that the shade-1 functions compile
- * exactly as before. MIT; SH2ZAM Contributors. */
+ * exactly as before.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam/shade_experimental.h"
 
 #if defined(__sh__) && defined(__SH2__) && (!defined(SH2Z_FORCE_PORTABLE) || !SH2Z_FORCE_PORTABLE)

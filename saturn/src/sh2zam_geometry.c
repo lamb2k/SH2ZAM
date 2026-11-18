@@ -1,4 +1,8 @@
-/* SH2ZAM bounds and caller-owned matrix stack. MIT; (c) 2026 SH2ZAM Contributors. */
+/* SH2ZAM bounds and caller-owned matrix stack.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam_internal.h"
 
 sh2z_aabb_t sh2z_aabb(sh2z_vec3_t a,sh2z_vec3_t b) {

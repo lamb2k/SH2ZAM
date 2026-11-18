@@ -1,4 +1,8 @@
-/* Inverse trig and angle helpers. MIT; (c) 2026 SH2ZAM Contributors. */
+/* Inverse trig and angle helpers.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam_internal.h"
 
 int32_t sh2z_angle_delta(sh2z_angle_t a,sh2z_angle_t b) {

@@ -3,7 +3,11 @@
  * view-round-1 functions compile exactly as before; it shares their argument
  * rules, stepper axes, near clip and guard passes through
  * sh2zam_view_internal.h and their SH-2 assembly macros through
- * sh2zam_view_asm.h. MIT; SH2ZAM Contributors. */
+ * sh2zam_view_asm.h.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam_view_internal.h"
 
 _Static_assert(offsetof(sh2z_view_center_t,center_x16)==60,"center_x16 offset");

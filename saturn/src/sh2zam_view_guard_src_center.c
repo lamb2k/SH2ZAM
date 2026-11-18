@@ -1,8 +1,11 @@
 /* view-center-1 forms of the view-guard-src-1 clip: the source-order guard
  * clip with the Q16 centre of sh2z_view_center_t passed through unchanged.
  * A separate file with its own copy of the clip, so sh2zam_view_guard_src.c
- * and sh2zam_view_center.c compile exactly as before. MIT; SH2ZAM
- * Contributors. */
+ * and sh2zam_view_center.c compile exactly as before.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam_view_guard_src_core.h"
 
 /* floor(q / 65536) without implementation-defined signed shifts. */
