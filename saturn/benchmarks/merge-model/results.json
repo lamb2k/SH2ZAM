@@ -1,0 +1,324 @@
+{
+ "schema": 1,
+ "kind": "Yabause isolated SH2 interpreter flat-RAM model, not Saturn timing",
+ "verified": {
+  "strips": 12000,
+  "boundaries": 1065023,
+  "runs": 806730,
+  "mergedRuns": 114985,
+  "runLengths": {
+   "1": 691745,
+   "2": 68721,
+   "4": 39745,
+   "8": 4931,
+   "16": 1588
+  },
+  "plansEqualToViewMerge1": 10969,
+  "rejectedCalls": 2987,
+  "entries": "tier_plan against the oracle in this harness; runs_plan (view-merge-1, pixel mode) against it where every permitted run has equal-height repetitions; rejected calls return -1 and write nothing"
+ },
+ "configs": {
+  "pixel1": {
+   "description": "64 boundaries, runs of 1, 2, 4 on whole periods, 1 px",
+   "boundaries": 64,
+   "trials": 64,
+   "runMask": 22,
+   "tolQ8": 256,
+   "endMasks": true,
+   "meanQuads": 24.734,
+   "runLengths": {
+    "1": 644,
+    "2": 184,
+    "4": 755
+   },
+   "tier": {
+    "medianCyclesPerCall": 2479.5,
+    "medianCyclesPerBoundary": 38.74,
+    "meanCyclesPerBoundary": 38.9,
+    "maxCyclesPerBoundary": 45.52,
+    "instructionsPerBoundary": 37.47
+   },
+   "viewMerge1": {
+    "medianCyclesPerCall": 12070.5,
+    "medianCyclesPerBoundary": 188.6,
+    "meanCyclesPerBoundary": 190.13,
+    "maxCyclesPerBoundary": 236.38,
+    "instructionsPerBoundary": 167.69
+   },
+   "speedup": 4.87,
+   "drift": {
+    "mergedQuads": 939,
+    "texelSamples": 374355,
+    "p50Px": 0.209,
+    "p99Px": 0.876,
+    "maxPx": 1.0,
+    "boundPx": 1.0
+   }
+  },
+  "pixel0.5": {
+   "description": "64 boundaries, runs of 1, 2, 4 on whole periods, 0.5 px",
+   "boundaries": 64,
+   "trials": 64,
+   "runMask": 22,
+   "tolQ8": 128,
+   "endMasks": true,
+   "meanQuads": 32.234,
+   "runLengths": {
+    "1": 876,
+    "2": 796,
+    "4": 391
+   },
+   "tier": {
+    "medianCyclesPerCall": 3201.0,
+    "medianCyclesPerBoundary": 50.02,
+    "meanCyclesPerBoundary": 48.95,
+    "maxCyclesPerBoundary": 60.02,
+    "instructionsPerBoundary": 46.8
+   },
+   "viewMerge1": {
+    "medianCyclesPerCall": 16717.5,
+    "medianCyclesPerBoundary": 261.21,
+    "meanCyclesPerBoundary": 257.61,
+    "maxCyclesPerBoundary": 355.44,
+    "instructionsPerBoundary": 228.86
+   },
+   "speedup": 5.22,
+   "drift": {
+    "mergedQuads": 1187,
+    "texelSamples": 351531,
+    "p50Px": 0.1465,
+    "p99Px": 0.501,
+    "maxPx": 0.5,
+    "boundPx": 0.5
+   }
+  },
+  "pixel2": {
+   "description": "64 boundaries, runs of 1, 2, 4 on whole periods, 2 px",
+   "boundaries": 64,
+   "trials": 64,
+   "runMask": 22,
+   "tolQ8": 512,
+   "endMasks": true,
+   "meanQuads": 22.094,
+   "runLengths": {
+    "1": 476,
+    "2": 98,
+    "4": 840
+   },
+   "tier": {
+    "medianCyclesPerCall": 2451.5,
+    "medianCyclesPerBoundary": 38.3,
+    "meanCyclesPerBoundary": 37.76,
+    "maxCyclesPerBoundary": 42.8,
+    "instructionsPerBoundary": 36.53
+   },
+   "viewMerge1": {
+    "medianCyclesPerCall": 11517.0,
+    "medianCyclesPerBoundary": 179.95,
+    "meanCyclesPerBoundary": 180.32,
+    "maxCyclesPerBoundary": 212.36,
+    "instructionsPerBoundary": 158.55
+   },
+   "speedup": 4.7,
+   "drift": {
+    "mergedQuads": 938,
+    "texelSamples": 392490,
+    "p50Px": 0.2354,
+    "p99Px": 1.292,
+    "maxPx": 2.0,
+    "boundPx": 2.0
+   }
+  },
+  "pixel1Runs2": {
+   "description": "64 boundaries, runs of 1, 2 on whole periods, 1 px",
+   "boundaries": 64,
+   "trials": 64,
+   "runMask": 6,
+   "tolQ8": 256,
+   "endMasks": true,
+   "meanQuads": 36.531,
+   "runLengths": {
+    "1": 644,
+    "2": 1694,
+    "4": 0
+   },
+   "tier": {
+    "medianCyclesPerCall": 2619.0,
+    "medianCyclesPerBoundary": 40.92,
+    "meanCyclesPerBoundary": 39.12,
+    "maxCyclesPerBoundary": 42.92,
+    "instructionsPerBoundary": 36.72
+   },
+   "viewMerge1": {
+    "medianCyclesPerCall": 13711.0,
+    "medianCyclesPerBoundary": 214.23,
+    "meanCyclesPerBoundary": 202.81,
+    "maxCyclesPerBoundary": 227.19,
+    "instructionsPerBoundary": 182.19
+   },
+   "speedup": 5.24,
+   "drift": {
+    "mergedQuads": 1694,
+    "texelSamples": 381150,
+    "p50Px": 0.125,
+    "p99Px": 0.501,
+    "maxPx": 1.0,
+    "boundPx": 1.0
+   }
+  },
+  "pixel1Single": {
+   "description": "64 boundaries, runs of 1 only (nothing to merge)",
+   "boundaries": 64,
+   "trials": 64,
+   "runMask": 2,
+   "tolQ8": 256,
+   "endMasks": true,
+   "meanQuads": 63.0,
+   "runLengths": {
+    "1": 4032,
+    "2": 0,
+    "4": 0
+   },
+   "tier": {
+    "medianCyclesPerCall": 441.0,
+    "medianCyclesPerBoundary": 6.89,
+    "meanCyclesPerBoundary": 6.89,
+    "maxCyclesPerBoundary": 6.89,
+    "instructionsPerBoundary": 5.75
+   },
+   "viewMerge1": {
+    "medianCyclesPerCall": 4309.0,
+    "medianCyclesPerBoundary": 67.33,
+    "meanCyclesPerBoundary": 69.84,
+    "maxCyclesPerBoundary": 82.19,
+    "instructionsPerBoundary": 61.0
+   },
+   "speedup": 9.77,
+   "drift": {
+    "mergedQuads": 0,
+    "texelSamples": 0,
+    "p50Px": 0.0,
+    "p99Px": 0.0,
+    "maxPx": 0.0,
+    "boundPx": 1.0
+   }
+  },
+  "pixel1NoEndMasks": {
+   "description": "64 boundaries of whole periods, no end masks, runs of 1, 2, 4, 1 px",
+   "boundaries": 64,
+   "trials": 64,
+   "runMask": 22,
+   "tolQ8": 256,
+   "endMasks": false,
+   "meanQuads": 23.422,
+   "runLengths": {
+    "1": 540,
+    "2": 172,
+    "4": 787
+   },
+   "tier": {
+    "medianCyclesPerCall": 2417.5,
+    "medianCyclesPerBoundary": 37.77,
+    "meanCyclesPerBoundary": 37.44,
+    "maxCyclesPerBoundary": 47.25,
+    "instructionsPerBoundary": 36.12
+   },
+   "viewMerge1": {
+    "medianCyclesPerCall": 11938.5,
+    "medianCyclesPerBoundary": 186.54,
+    "meanCyclesPerBoundary": 189.47,
+    "maxCyclesPerBoundary": 257.91,
+    "instructionsPerBoundary": 166.23
+   },
+   "speedup": 4.94,
+   "drift": {
+    "mergedQuads": 959,
+    "texelSamples": 385767,
+    "p50Px": 0.209,
+    "p99Px": 0.8057,
+    "maxPx": 1.0,
+    "boundPx": 1.0
+   }
+  },
+  "short8Pixel1": {
+   "description": "8 boundaries, runs of 1, 2, 4 on whole periods, 1 px",
+   "boundaries": 8,
+   "trials": 64,
+   "runMask": 22,
+   "tolQ8": 256,
+   "endMasks": true,
+   "meanQuads": 5.031,
+   "runLengths": {
+    "1": 236,
+    "2": 66,
+    "4": 20
+   },
+   "tier": {
+    "medianCyclesPerCall": 524.0,
+    "medianCyclesPerBoundary": 65.5,
+    "meanCyclesPerBoundary": 67.25,
+    "maxCyclesPerBoundary": 117.12,
+    "instructionsPerBoundary": 60.9
+   },
+   "viewMerge1": {
+    "medianCyclesPerCall": 1991.0,
+    "medianCyclesPerBoundary": 248.88,
+    "meanCyclesPerBoundary": 250.76,
+    "maxCyclesPerBoundary": 566.38,
+    "instructionsPerBoundary": 224.32
+   },
+   "speedup": 3.8,
+   "drift": {
+    "mergedQuads": 86,
+    "texelSamples": 23670,
+    "p50Px": 0.209,
+    "p99Px": 0.917,
+    "maxPx": 1.0,
+    "boundPx": 1.0
+   }
+  },
+  "short8Single": {
+   "description": "8 boundaries, runs of 1 only",
+   "boundaries": 8,
+   "trials": 64,
+   "runMask": 2,
+   "tolQ8": 256,
+   "endMasks": true,
+   "meanQuads": 7.0,
+   "runLengths": {
+    "1": 448,
+    "2": 0,
+    "4": 0
+   },
+   "tier": {
+    "medianCyclesPerCall": 161.0,
+    "medianCyclesPerBoundary": 20.12,
+    "meanCyclesPerBoundary": 20.12,
+    "maxCyclesPerBoundary": 20.12,
+    "instructionsPerBoundary": 18.0
+   },
+   "viewMerge1": {
+    "medianCyclesPerCall": 669.0,
+    "medianCyclesPerBoundary": 83.62,
+    "meanCyclesPerBoundary": 83.82,
+    "maxCyclesPerBoundary": 95.12,
+    "instructionsPerBoundary": 74.58
+   },
+   "speedup": 4.16,
+   "drift": {
+    "mergedQuads": 0,
+    "texelSamples": 0,
+    "p50Px": 0.0,
+    "p99Px": 0.0,
+    "maxPx": 0.0,
+    "boundPx": 1.0
+   }
+  }
+ },
+ "label": "MODELLED: executed SH-2 instructions in the Yabause interpreter; flat RAM, no caches or wait states; not Saturn hardware",
+ "sourceCommit": "84d0542f1e8b315d0e8b83f0bc01e7b84e0a3259",
+ "elfSha256": "40ec20c19ba4dbd6040a8f6d7cb4df2da2b737cc29f2d3014f2280198235fb4a",
+ "toolchain": "Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)",
+ "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44206041141",
+ "yabauseCommit": "7e38821dbac265490f115e163c523a939acda759"
+}
