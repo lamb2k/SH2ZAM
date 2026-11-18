@@ -242,20 +242,25 @@ if a.markdown:
         return f'{v:,.2f}' if (v != int(v) or abs(v) < 1000) else f'{int(v):,}'
     def cell(v, base):
         return f'{fmt(v)} ({v / base:.2f}x)' if base else fmt(v)
-    main = ['center.batch', 'center.edgeSteps', 'center.clipNear', 'center.guardSide', 'srcGuard.inside', 'srcGuard.roadNear',
-            'merge.pixel1', 'shade.fast_light_normals', 'shade.fast_gouraud', 'shade.fast_cull', 'shade.fast_fog_build',
-            'shade.fast_fog', 'shade.fast_offset', 'shade.fast_mix', 'shade.fast_frame', 'shade.plain_frame',
-            'vlc.zipf256_w6_l12.fast', 'vlc.uniform256_w8_l8.fast', 'vlc.zipf256_w6_l12.plain']
+    main = ['center.batch', 'center.project', 'center.edgeSteps', 'center.clipNear', 'center.guardInside', 'center.guardSide',
+            'center.guardNearSide', 'srcGuard.inside', 'srcGuard.side', 'srcGuard.nearSide', 'srcGuard.roadNear',
+            'merge.pixel1', 'merge.rows1', 'shade.fast_light_normals', 'shade.fast_gouraud', 'shade.fast_cull',
+            'shade.fast_fog_build', 'shade.fast_fog', 'shade.fast_offset', 'shade.fast_mix', 'shade.fast_frame',
+            'shade.fast_frame_baked', 'shade.plain_frame', 'vlc.zipf256_w6_l12.fast', 'vlc.uniform256_w8_l8.fast',
+            'vlc.few40_w5_l10.fast', 'vlc.zipf256_w6_l12.portable', 'vlc.zipf256_w6_l12.plain']
     by = {k['id']: k for k in kernels}
-    out = []
-    for mode in MODES:
-        out += [f'Placed cycles, {mode} cache (ratio to CPU-only):', '',
-                '| Kernel | Fixture id | Unit | CPU-only | best | typical | worst | codeLow | cartTables | outVdp1 | outVdp2 |',
-                '| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |']
-        for i in main:
-            k = by[i]; c = k['cpuOnly']; p = k['placed']
-            out.append(f"| `{k['function']}` | {k['id']} | {k['unit']} | {fmt(c)} | " +
-                       ' | '.join(cell(p[n][mode], c) for n in names) + ' |')
-        out.append('')
-    a.markdown.write_text('\n'.join(out))
+    def label(k):
+        return f"`{k['function']}`" if k['function'].startswith('sh2z_') else k['function']
+    out = ['Best, typical and worst placement. Each cell is warm / cold, then the warm ratio to CPU-only.', '',
+           '| Kernel | Fixture | Unit | CPU-only | best | typical | worst |', '| --- | --- | --- | ---: | ---: | ---: | ---: |']
+    for i in main:
+        k = by[i]; c = k['cpuOnly']; p = k['placed']
+        out.append(f"| {label(k)} | {k['id']} | {k['unit']} | {fmt(c)} | " +
+                   ' | '.join(f"{fmt(p[n]['warm'])} / {fmt(p[n]['cold'])} ({p[n]['warm'] / c:.2f}x)" for n in ('best', 'typical', 'worst')) + ' |')
+    out += ['', 'Other placements, warm cache (ratio to CPU-only):', '',
+            '| Fixture | CPU-only | codeLow | cartTables | outVdp1 | outVdp2 |', '| --- | ---: | ---: | ---: | ---: | ---: |']
+    for i in main:
+        k = by[i]; c = k['cpuOnly']; p = k['placed']
+        out.append(f"| {k['id']} | {fmt(c)} | " + ' | '.join(cell(p[n]['warm'], c) for n in ('codeLow', 'cartTables', 'outVdp1', 'outVdp2')) + ' |')
+    a.markdown.write_text('\n'.join(out) + '\n')
     print('wrote', a.markdown)
