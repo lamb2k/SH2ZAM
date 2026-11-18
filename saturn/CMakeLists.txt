@@ -17,6 +17,8 @@ if(SH2Z_SANITIZE AND NOT CMAKE_CROSSCOMPILING)
   add_link_options(-fsanitize=address,undefined)
 endif()
 set(SH2Z_SOURCES src/sh2zam.c src/sh2zam_trig.c src/sh2zam_angles.c src/sh2zam_transform.c src/sh2zam_prepared.c src/sh2zam_reuse.c src/sh2zam_batch_sh2.c src/sh2zam_geometry.c src/sh2zam_rotation_batch.c src/sh2zam_spatial.c src/sh2zam_view.c src/sh2zam_view_round.c src/sh2zam_view_guard_src.c src/sh2zam_view_center.c src/sh2zam_view_guard_src_center.c src/sh2zam_divu.c src/sh2zam_m68k.c src/sh2zam_box2.c src/sh2zam_cell16.c src/sh2zam_shade.c src/sh2zam_vlc.c)
+# trig12-1: 12-bit-angle sine table and tangent.
+list(APPEND SH2Z_SOURCES src/sh2zam_trig12.c)
 add_library(sh2zam STATIC ${SH2Z_SOURCES})
 add_library(SH2ZAM::sh2zam ALIAS sh2zam)
 target_include_directories(sh2zam PUBLIC
