@@ -9,11 +9,13 @@ on:
     paths:
       - 'doc/**'
       - 'include/**'
+      - 'saturn/include/**'
       - '.github/workflows/docs-site.yml'
   pull_request:
     paths:
       - 'doc/**'
       - 'include/**'
+      - 'saturn/include/**'
       - '.github/workflows/docs-site.yml'
   workflow_dispatch:
 
