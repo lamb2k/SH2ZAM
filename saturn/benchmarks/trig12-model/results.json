@@ -1,0 +1,209 @@
+{
+ "schema": 1,
+ "kind": "Yabause isolated SH2 interpreter flat-RAM model, not Saturn timing",
+ "dividerLatencyCycles": 39,
+ "verified": {
+  "angles": 40960,
+  "quotients": 327680,
+  "hardwareDivisions": 138452,
+  "saturatedInSoftware": 90042,
+  "entries": "v_trig: sh2z_sincos12_u30, sh2z_sin12_u30, sh2z_cos12_u30, sh2z_tan12_q16 at every angle and with random high bits; v_divq: sh2z_divu_q_start/finish at f = 16, 30, 0, 31 with overflow flags, sh2z_divu_q16, sh2z_divu_q30, sh2z_recip_q16, sh2z_recip_q30; against tests/trig12_oracle.h; hardware division count equal to the oracle's fitting count"
+ },
+ "rows": {
+  "loop": {
+   "entry": "c_copy",
+   "description": "the loop alone: load an angle, store it",
+   "cyclesPerElement": 6.0,
+   "instructionsPerElement": 5.0,
+   "call1Cycles": 18,
+   "call4096Cycles": 24588,
+   "dividerStallCycles": 0,
+   "netCyclesPerElement": 0.0
+  },
+  "sincos12": {
+   "entry": "c_sincos12",
+   "description": "sh2z_sincos12_u30: sin and cos, Q2.30",
+   "cyclesPerElement": 25.0,
+   "instructionsPerElement": 22.5,
+   "call1Cycles": 53,
+   "call4096Cycles": 102445,
+   "dividerStallCycles": 0,
+   "netCyclesPerElement": 19.0
+  },
+  "sin12": {
+   "entry": "c_sin12",
+   "description": "sh2z_sin12_u30",
+   "cyclesPerElement": 16.99,
+   "instructionsPerElement": 14.98,
+   "call1Cycles": 39,
+   "call4096Cycles": 69609,
+   "dividerStallCycles": 0,
+   "netCyclesPerElement": 10.99
+  },
+  "floatLookup": {
+   "entry": "c_float_lookup",
+   "description": "control: two binary32 table loads (float sin/cos table idiom)",
+   "cyclesPerElement": 17.0,
+   "instructionsPerElement": 16.0,
+   "call1Cycles": 35,
+   "call4096Cycles": 69650,
+   "dividerStallCycles": 0,
+   "netCyclesPerElement": 11.0
+  },
+  "floatToU30": {
+   "entry": "c_float_to_u30",
+   "description": "control: two binary32 loads converted to Q2.30 (libgcc soft-float)",
+   "cyclesPerElement": 710.02,
+   "instructionsPerElement": 611.69,
+   "call1Cycles": 744,
+   "call4096Cycles": 2908286,
+   "dividerStallCycles": 0,
+   "netCyclesPerElement": 704.02
+  },
+  "sh2zSincos": {
+   "entry": "c_sh2z_sincos",
+   "description": "sh2z_sincos (16-bit angle, Q16.16, interpolated; out-of-line)",
+   "cyclesPerElement": 106.09,
+   "instructionsPerElement": 95.05,
+   "call1Cycles": 129,
+   "call4096Cycles": 434579,
+   "dividerStallCycles": 0,
+   "netCyclesPerElement": 100.09
+  },
+  "tan12": {
+   "entry": "c_tan12",
+   "description": "sh2z_tan12_q16 (out-of-line, CPU division steps)",
+   "cyclesPerElement": 109.49,
+   "instructionsPerElement": 105.01,
+   "call1Cycles": 132,
+   "call4096Cycles": 448493,
+   "dividerStallCycles": 0,
+   "netCyclesPerElement": 103.49
+  },
+  "floatTan": {
+   "entry": "c_float_tan",
+   "description": "control: binary32 sin / cos (libgcc __divsf3)",
+   "cyclesPerElement": 501.79,
+   "instructionsPerElement": 412.98,
+   "call1Cycles": 531,
+   "call4096Cycles": 2055355,
+   "dividerStallCycles": 0,
+   "netCyclesPerElement": 495.79
+  },
+  "sh2zTan": {
+   "entry": "c_sh2z_tan",
+   "description": "sh2z_tan (16-bit angle, Q16.16)",
+   "cyclesPerElement": 218.46,
+   "instructionsPerElement": 198.93,
+   "call1Cycles": 238,
+   "call4096Cycles": 894812,
+   "dividerStallCycles": 0,
+   "netCyclesPerElement": 212.46
+  },
+  "qloop": {
+   "entry": "c_qcopy",
+   "description": "the loop alone: load two operands, store one word",
+   "cyclesPerElement": 8.0,
+   "instructionsPerElement": 7.0,
+   "call1Cycles": 22,
+   "call4096Cycles": 32782,
+   "dividerStallCycles": 0,
+   "netCyclesPerElement": 0.0
+  },
+  "divuQ16": {
+   "entry": "c_q16",
+   "description": "sh2z_divu_q16, blocking",
+   "cyclesPerElement": 64.0,
+   "instructionsPerElement": 24.5,
+   "call1Cycles": 94,
+   "call4096Cycles": 262174,
+   "dividerStallCycles": 155686,
+   "netCyclesPerElement": 56.0
+  },
+  "divuQ30": {
+   "entry": "c_q30",
+   "description": "sh2z_divu_q30, blocking",
+   "cyclesPerElement": 65.49,
+   "instructionsPerElement": 25.99,
+   "call1Cycles": 95,
+   "call4096Cycles": 268286,
+   "dividerStallCycles": 155686,
+   "netCyclesPerElement": 57.49
+  },
+  "recipQ30": {
+   "entry": "c_recip30",
+   "description": "sh2z_recip_q30, blocking",
+   "cyclesPerElement": 53.49,
+   "instructionsPerElement": 14.0,
+   "call1Cycles": 90,
+   "call4096Cycles": 219147,
+   "dividerStallCycles": 155686,
+   "netCyclesPerElement": 45.49
+  },
+  "sh2zDiv": {
+   "entry": "c_sh2z_div",
+   "description": "sh2z_div (CPU division steps, out-of-line)",
+   "cyclesPerElement": 106.51,
+   "instructionsPerElement": 98.99,
+   "call1Cycles": 131,
+   "call4096Cycles": 436289,
+   "dividerStallCycles": 0,
+   "netCyclesPerElement": 98.51
+  },
+  "libgccQ16": {
+   "entry": "c_libgcc_q16",
+   "description": "control: clamp(((int64_t)num << 16) / den) (libgcc __divdi3)",
+   "cyclesPerElement": 261.03,
+   "instructionsPerElement": 220.39,
+   "call1Cycles": 288,
+   "call4096Cycles": 1069213,
+   "dividerStallCycles": 0,
+   "netCyclesPerElement": 253.03
+  },
+  "floatDiv": {
+   "entry": "c_float_div",
+   "description": "control: binary32 num / den (libgcc __divsf3)",
+   "cyclesPerElement": 493.04,
+   "instructionsPerElement": 404.27,
+   "call1Cycles": 521,
+   "call4096Cycles": 2019501,
+   "dividerStallCycles": 0,
+   "netCyclesPerElement": 485.04
+  },
+  "q16ThenSincos12": {
+   "entry": "c_q16_then_sincos",
+   "description": "blocking sh2z_divu_q16, then sh2z_sincos12_u30",
+   "cyclesPerElement": 92.52,
+   "instructionsPerElement": 51.52,
+   "call1Cycles": 133,
+   "call4096Cycles": 379016,
+   "dividerStallCycles": 155686,
+   "netCyclesPerElement": 84.52
+  },
+  "q16OverlapSincos12": {
+   "entry": "c_q16_overlap_sincos",
+   "description": "sh2z_divu_q_start, sh2z_sincos12_u30, sh2z_divu_finish",
+   "cyclesPerElement": 67.5,
+   "instructionsPerElement": 58.0,
+   "call1Cycles": 104,
+   "call4096Cycles": 276517,
+   "dividerStallCycles": 26615,
+   "netCyclesPerElement": 59.5
+  }
+ },
+ "label": "MODELLED: executed SH-2 instructions in the Yabause interpreter; flat RAM, no caches or wait states; divider latency assumed; not Saturn hardware",
+ "sourceCommit": "9e33abfe424ba0cc1387012c8ea75f55c796c30f",
+ "elfSha256": "daa027760771009ed3f5d9be8ff30756af4456abdb1216bed08dd3bf3a4b0e8a",
+ "toolchain": "Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)",
+ "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44218666950",
+ "yabauseCommit": "7e38821dbac265490f115e163c523a939acda759",
+ "speedups": {
+  "sincos12OverFloatToU30": 37.05,
+  "sincos12OverSh2zSincos": 5.27,
+  "tan12OverFloatTan": 4.79,
+  "divuQ16OverSh2zDiv": 1.76,
+  "divuQ16OverLibgcc": 4.52,
+  "divuQ16OverFloatDiv": 8.66,
+  "overlapSavedCyclesPerElement": 25.02
+ }
+}

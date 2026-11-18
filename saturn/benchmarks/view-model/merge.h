@@ -217,6 +217,7 @@ static int capture_merge(void) {
    uint8_t want[MERGE_CAP];
    const int w=merge_oracle(want,&st,0x16u,ends,ctol[c],cmode[c]);
    merge_store(&st,0x16u,ends,ctol[c],cmode[c]);merge_poison(st.n+4);
+   {char label[80];snprintf(label,sizeof label,"view.merge.%s",names[c]);place_tag(label,view_place_decl);}
    const struct cost cs=invoke("_view_merge",0,0,0,0);
    if((int32_t)cs.result!=w||!merge_check(w,want,st.n+4))fail("Merge timing result",t);
    cyc[c][t]=cs.cycles;quads[c]+=(uint64_t)w;instr[c]+=cs.instructions;

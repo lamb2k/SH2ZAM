@@ -195,6 +195,13 @@ reciprocal multiplies in place of its divisions. Host-exact tested against an in
 and costed in the SH-2 instruction model (modelled, no console run). See
 [the shading guide](saturn/SHADE.md).
 
+Contract tag `shade-2` adds `sh2z_shade_fog_gouraud`: a road renderer's per-piece fade lookup,
+fog variant and 5:5:5 colour in one hand-written SH-2 call with prepared fog and colour handles
+(fades, variants and solid colours exact; textured colours within +1 LSB of shade-1), and
+[`sh2zam/cdiv_experimental.h`](saturn/include/sh2zam/cdiv_experimental.h), division by constants
+through magic-number multiplies with exhaustively checked domains. See
+[the fused shade guide](saturn/SHADE_FUSED.md).
+
 ## Variable-length decoding
 
 [`sh2zam/vlc_experimental.h`](saturn/include/sh2zam/vlc_experimental.h) (contract tag `vlc-1`)
@@ -204,6 +211,18 @@ builder (from frequencies or from code lengths), a table check for untrusted tab
 two-level table decoder with a hand-written SH-2 kernel (`DMULU.L` in place of variable
 shifts). Host-exact tested against an independent oracle under ASan/UBSan and costed in the
 SH-2 instruction model (modelled, no console run). See [the vlc guide](saturn/VLC.md).
+
+## 12-bit-angle trig and divider quotients
+
+[`sh2zam/trig12_experimental.h`](saturn/include/sh2zam/trig12_experimental.h) (contract tag `trig12-1`)
+gives sine and cosine in Q2.30 for 12-bit angles from a 1,025-entry quarter table, generated
+offline from a common series construction for 4096-entry sine tables and checked in CI against
+its generator, and a rounded Q16.16 tangent with saturating poles. The `trig12-1` section of
+[`sh2zam/divu_experimental.h`](saturn/include/sh2zam/divu_experimental.h) adds inline
+`num * 2^f / den` quotients (Q16.16, Q2.30, any constant `f`) and reciprocals through the SH-2
+division unit, with start/finish forms that overlap the division with other work.
+Host-exact tested against an independent oracle under ASan/UBSan and costed in the SH-2
+instruction model (modelled, no console run). See [the trig12 guide](saturn/TRIG12.md).
 
 ## Model pose from binary32 state
 

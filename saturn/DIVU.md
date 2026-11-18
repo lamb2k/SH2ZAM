@@ -31,6 +31,23 @@ in the first row ever reach the hardware; the rest are answered in software
 before the divider is touched, so no result depends on the divider's overflow
 or divide-by-zero behaviour. Portable builds compute the same results in C.
 
+## Fixed-point quotients (contract tag `trig12-1`)
+
+```c
+int32_t r = sh2z_divu_q16(num, den);       /* num * 2^16 / den */
+int32_t u = sh2z_divu_q30(num, den);       /* num * 2^30 / den */
+int32_t q = sh2z_divu_q(num, den, f);      /* constant 0 <= f <= 31 */
+int32_t i = sh2z_recip_q30(den);           /* 2^60 / den; also sh2z_recip_q16 */
+sh2z_divu_q_start(&t, num, den, 16);       /* then sh2z_divu_finish(&t, &overflow) */
+```
+
+These are the division above with the dividend `num * 2^f`. The result rule and the overflow
+flag are the same, and rounding is toward zero. The fit test runs on 32-bit magnitudes
+(`abs(num) >> (31 - f) < abs(den)`). All forms are inline. `sh2z_divu_q16` equals `sh2z_div`
+except at `0/0`, and `sh2z_recip_q16` equals `sh2z_recip`. Edge cases, accuracy and modelled
+costs are in [TRIG12.md](TRIG12.md): 56 cycles for a blocking q16, against 98.5 for
+`sh2z_div`; about 41 cycles beyond the overlapped work.
+
 ## Caller promise
 
 Each SH-2 has its own divider. Between `sh2z_divu_start64` and

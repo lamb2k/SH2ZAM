@@ -6,7 +6,9 @@ the same unmodified Yabause SH-2 interpreter as [`sh2-model`](../sh2-model/READM
 (pinned commit `7e38821dbac265490f115e163c523a939acda759`, flat RAM, no caches, no wait
 states, no bus contention). **Cycle numbers are MODELLED. They are not Saturn measurements,
 not whole-frame timings, and not emulator-system timings.** No console or emulator run of
-these kernels has been done.
+these kernels has been done. The numbers here are CPU-only; what memory placement adds
+(cache fills, slow regions) is in the [placement model](../placement-model/README.md),
+which leaves them unchanged.
 
 ## What runs
 
