@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (c) 2026 SH2ZAM Contributors.
 """Inspect experimental SH-2 loops. Static counts are not cycle measurements.
 
 Usage: python3 audit-fused.py sh2-fused-disassembly.txt

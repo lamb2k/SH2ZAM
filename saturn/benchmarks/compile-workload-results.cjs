@@ -1,4 +1,9 @@
-/* Publish validated native SH-2 workloads; never synthesize measurements. MIT. */
+/*! \file
+ *  \brief Publish validated native SH-2 workloads; never synthesize measurements.
+ *
+ *  \author 2026 SH2ZAM Contributors
+ *  \copyright GPL-2.0-or-later
+ */
 'use strict';
 const fs=require('node:fs'),path=require('node:path');
 const {validate}=require('./workload-model/validate.cjs');

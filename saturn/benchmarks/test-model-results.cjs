@@ -1,4 +1,9 @@
-/* Evidence integrity and environment-label checks. MIT. */
+/*! \file
+ *  \brief Evidence integrity and environment-label checks.
+ *
+ *  \author 2026 SH2ZAM Contributors
+ *  \copyright GPL-2.0-or-later
+ */
 const assert=require('node:assert/strict');
 const {validate,KERNEL_SET}=require('./compile-model-results.cjs');
 const data=require('./sh2-model/results.json'),manifest=require('./manifest.json');

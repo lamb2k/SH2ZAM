@@ -1,4 +1,9 @@
-/* Validate five-kernel captures and generate the browser's dataset. MIT. */
+/*! \file
+ *  \brief Validate five-kernel captures and generate the browser's dataset.
+ *
+ *  \author 2026 SH2ZAM Contributors
+ *  \copyright GPL-2.0-or-later
+ */
 const fs=require('node:fs'),path=require('node:path');
 const SCHEMA=3,KERNEL_SET='float-safe-prepared-fused-v1',SAMPLES=21,MAX_ERROR_LSB=66,PREPARE_ITERATIONS=64;
 function validate(data,manifest){

@@ -1,4 +1,9 @@
-/* Synthetic validator tests only. These values are NEVER published. */
+/*! \file
+ *  \brief Synthetic validator tests only. These values are NEVER published.
+ *
+ *  \author 2026 SH2ZAM Contributors
+ *  \copyright GPL-2.0-or-later
+ */
 const assert=require('node:assert/strict'),{validate,SCHEMA,KERNEL_SET,PREPARE_ITERATIONS}=require('./compile-results.cjs'),m=require('./manifest.json');
 const pending={schema:SCHEMA,fixtureSHA256:m.fixtureSHA256,run:null,records:[]};
 assert.equal(validate(pending,m).records.length,0);

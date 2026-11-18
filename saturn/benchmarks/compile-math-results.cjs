@@ -1,4 +1,9 @@
-/* Publish only validated native SH-2 math observations. MIT. */
+/*! \file
+ *  \brief Publish only validated native SH-2 math observations.
+ *
+ *  \author 2026 SH2ZAM Contributors
+ *  \copyright GPL-2.0-or-later
+ */
 const fs=require('node:fs'),path=require('node:path');
 const {validate}=require('./math-model/validate.cjs');
 function compile(input,output){
