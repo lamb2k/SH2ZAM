@@ -438,3 +438,11 @@ bool sh2z_shade_gouraud_approx(uint16_t *out,uint32_t *saturated,const sh2z_shad
 #endif
 
 #endif /* SH2ZAM_SHADE_VEHICLE_KERNELS_1 */
+
+/* ---- Per-contract headers -------------------------------------------------
+ * A new shade contract goes in its own header, sh2zam/contracts/<tag>.h
+ * (the tag with '_' for '-', e.g. contracts/shade_example_1.h), with its own
+ * include guard and extern "C" block, starting with
+ * #include "../shade_experimental.h". List it below: one #include per line,
+ * sorted by file name. The sections above stay as they are, and every
+ * existing include keeps working. See saturn/CONTRIBUTING-KERNELS.md. */

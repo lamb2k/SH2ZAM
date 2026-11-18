@@ -33,6 +33,12 @@ jobs:
       - name: Check the committed trig12 table against its generator
         if: matrix.sanitize == 'OFF'
         run: python3 saturn/tools/sin12_table.py --check saturn/src/sh2zam_trig12.c
+      - name: Check the committed view-camera cotangent table against its generator
+        if: matrix.sanitize == 'OFF'
+        run: python3 saturn/tools/view_camera_cot.py --check saturn/src/sh2zam_view_camera.c
+      - name: Check the validation index lists every record
+        if: matrix.sanitize == 'OFF'
+        run: python3 saturn/tools/validation_index.py --check
       - name: Check standalone library and installed package
         if: matrix.sanitize == 'OFF'
         run: |

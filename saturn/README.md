@@ -14,25 +14,8 @@ The maintained overview, build commands, API scope and upstream credits are in t
 - [Exact math optimizations and SH-2 model results](MATH_OPTIMIZATIONS.md)
 - [48-operation native math comparison and reproduction](benchmarks/math-model/README.md)
 - [Exact rotation batches, static spatial queries and workload comparison](benchmarks/workload-model/README.md)
-- [Experimental view batch: transform, project, clip codes, guard clip, texture-merge planners, final-coordinate truncation, source-order guard clip, fractional centre, strip rails in one call](VIEW_BATCH.md)
-- [Merge-planner instruction model](benchmarks/merge-model/README.md)
-- [View-rails instruction model](benchmarks/rails-model/README.md)
-- [Experimental explicit SH-2 divider](DIVU.md)
-- [Integer kernels: 68000 arithmetic, 2D box overlap, 16x16 cell placement](INTEGER_KERNELS.md)
-- [Integer-kernel instruction model](benchmarks/integer-model/README.md)
-- [Experimental shading kernels: per-normal light, Gouraud packing, face culling, depth fog](SHADE.md)
-- [Shading-kernel instruction model](benchmarks/shade-model/README.md)
-- [Experimental fused fade and colour per piece, prepared fog, divides by constants](SHADE_FUSED.md)
-- [Fused shade instruction model](benchmarks/shade-fused-model/README.md)
-- [Experimental variable-length decoding: bounded bit reader, length-limited canonical codes, SH-2 table decoder](VLC.md)
-- [vlc instruction model](benchmarks/vlc-model/README.md)
-- [Experimental 12-bit-angle sin/cos/tan and inline divider quotients](TRIG12.md)
-- [trig12 instruction model](benchmarks/trig12-model/README.md)
-- [Experimental Q2.30 unit vectors: inline multiply, dot and cross, reciprocal square root, normalisation, basis orthonormalisation](UNIT30.md)
-- [unit30 instruction model](benchmarks/unit30-model/README.md)
-- [Experimental vehicle kernels: screen facing, indexed light and view batch, approximate Gouraud](VEHICLE_KERNELS.md)
-- [Vehicle-kernel instruction model](benchmarks/vehicle-model/README.md)
 - [Remaining work](PORTING_PLAN.md)
+- [How to add a kernel suite](CONTRIBUTING-KERNELS.md)
 
 Both `cmake -S .` from the repository root and `cmake -S saturn` build the Saturn library. Batch transforms now select a specialized exact kernel when the matrix proves direct accumulation safe, with a general fallback for the remaining matrices. Full SH4ZAM API parity and physical-console performance qualification remain incomplete.
 
@@ -54,3 +37,19 @@ buffer contracts, full setup costs, useful and adverse query patterns, and
 comparisons against both prior public APIs and competent composed/inline code.
 The workload suite uses `3374d77` as its prior baseline; the historical
 48-operation suite retains its separate `10786b6` baseline.
+
+## Experimental kernel guides
+
+One line per guide, sorted by guide file name; a kernel lane adds its own line
+(its guide, then its instruction model).
+
+- [Experimental explicit SH-2 divider](DIVU.md)
+- [Integer kernels: 68000 arithmetic, 2D box overlap, 16x16 cell placement](INTEGER_KERNELS.md); [Integer-kernel instruction model](benchmarks/integer-model/README.md)
+- [Experimental shading kernels: per-normal light, Gouraud packing, face culling, depth fog](SHADE.md); [Shading-kernel instruction model](benchmarks/shade-model/README.md)
+- [Experimental fused fade and colour per piece, prepared fog, divides by constants](SHADE_FUSED.md); [Fused shade instruction model](benchmarks/shade-fused-model/README.md)
+- [Experimental 12-bit-angle sin/cos/tan and inline divider quotients](TRIG12.md); [trig12 instruction model](benchmarks/trig12-model/README.md)
+- [Experimental Q2.30 unit vectors: inline multiply, dot and cross, reciprocal square root, normalisation, basis orthonormalisation](UNIT30.md); [unit30 instruction model](benchmarks/unit30-model/README.md)
+- [Experimental vehicle kernels: screen facing, indexed light and view batch, approximate Gouraud](VEHICLE_KERNELS.md); [Vehicle-kernel instruction model](benchmarks/vehicle-model/README.md)
+- [Experimental view batch: transform, project, clip codes, guard clip, texture-merge planners, final-coordinate truncation, source-order guard clip, fractional centre](VIEW_BATCH.md); [Merge-planner instruction model](benchmarks/merge-model/README.md)
+- [Experimental strip rails in one call: both rails of a strip quad, view prepared once](VIEW_RAILS.md); [View-rails instruction model](benchmarks/rails-model/README.md)
+- [Experimental variable-length decoding: bounded bit reader, length-limited canonical codes, SH-2 table decoder](VLC.md); [vlc instruction model](benchmarks/vlc-model/README.md)

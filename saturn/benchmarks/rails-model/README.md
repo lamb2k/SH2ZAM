@@ -59,7 +59,7 @@ RAILS_VERIFY=4000 bash saturn/benchmarks/rails-model/run.sh rails-model.elf resu
 
 [`results.json`](results.json) is the committed capture. It records the source commit, the
 ELF SHA-256, the toolchain and the Yabause commit. It is the `rails-results.json` from the
-`sh2-compile-evidence` artifact of the CI run named in [VIEW_BATCH.md](../../VIEW_BATCH.md).
+`sh2-compile-evidence` artifact of the CI run named in [VIEW_RAILS.md](../../VIEW_RAILS.md).
 Every CI run uploads a fresh capture there.
 
 ## Not covered
