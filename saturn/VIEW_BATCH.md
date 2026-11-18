@@ -1532,9 +1532,9 @@ fraction ignored (19,436) and the step rounded away from zero (213).
 
 **MODELLED** (`benchmarks/rails-model`, Yabause SH-2 interpreter, flat RAM;
 not Saturn timing). The model first checks every record of the assembly
-entry, the C path and the loop against the oracle (12,800 calls at
-`RAILS_VERIFY=400`, 2,582 rejected, 81,822 stepped points) and the argument
-rules through pointer tables (38 cases), then times them:
+entry, the C path and the loop against the oracle (128,000 calls, 25,150
+rejected, 837,716 stepped points; the loop on 63,998 road strips) and the
+argument rules through pointer tables (38 cases), then times them:
 
 | Entry (road camera) | Cycles per quad (one call, both rails) | Per stepped point |
 | --- | ---: | ---: |
