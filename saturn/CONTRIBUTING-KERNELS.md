@@ -28,6 +28,44 @@ Audit text files go at the repository root as `sh2-<name>-*.txt`. Model outputs
 go in `build/sh2-model/` as `<name>-results.json`, `<name>-raw.json` and
 `<name>-placement.jsonl`. The workflow uploads them by glob, with `build/sh2/`.
 
+## Sections: one per entry point and per table
+
+Consumers link with `-ffunction-sections -fdata-sections` and
+`-Wl,--gc-sections`, so that an entry point they never call costs no RAM.
+The compiler splits C by itself; hand-written assembly and tables must do it
+explicitly:
+
+- Each global assembly entry goes in its own section, named after the symbol
+  without the leading underscore, and leaves it again:
+  ```c
+  "    .pushsection .text.sh2zi_example_run,\"ax\",@progbits\n"
+  "    .align 2\n"
+  "    .global _sh2zi_example_run\n"
+  ...
+  "    .size _sh2zi_example_run,.-_sh2zi_example_run\n"
+  "    .popsection\n"
+  ```
+  Never write a bare `.text` in a top-level `__asm__`.
+- An SH-2 branch (`BRA`, `BSR`, `BT`, `BF`) cannot reach another section: gas
+  resolves it in place or fails. Code that two entries share by branching
+  must be split by instantiating it once per entry (a gas macro, as
+  `SH2ZI_FG_SEARCH` in `sh2zam_shade_fused.c`), or be reached by `JSR` or
+  `JMP` through a literal (`.long _symbol`), which is a normal relocation and
+  keeps the helper (in its own section) whenever any caller is kept.
+- A table that assembly defines goes in `.rodata.<symbol>` (for example
+  `.pushsection .rodata.sh2zi_vlc8_run,"a",@progbits`). A read-only C table
+  takes `SH2ZI_RODATA(<name>)` from `src/sh2zam_sections.h` on its definition
+  (`<name>` is its symbol, or `sh2zi_<name>` for a file-static one), which
+  places it in `.rodata.<name>` with or without `-fdata-sections`. A consumer's
+  linker script can then place a cold table by name, for example in low work
+  RAM: `.lwram_tables : { *(.rodata.sh2z_sin12_quarter_u30) } > lwram`.
+- `sh2z_require_per_symbol_sections saturn/src/sh2zam_<name>.c` (in
+  `ci/lib.sh`) compiles a source with the consumer flags and fails if any
+  global symbol, or anything at all, is left in plain `.text`, `.data`,
+  `.rodata` or `.bss`. The `gc-probe` suite runs it over every source and
+  links one-entry programs with `--gc-sections`; add a probe there for a new
+  contract (`benchmarks/gc-probe/README.md`).
+
 ## Single lines you touch
 
 | File | Line |
@@ -61,6 +99,7 @@ case "${1:?usage: ci.sh phases|build|model}" in
     "$SH2Z_OBJDUMP" -dr build/sh2/sh2zam_example.o > sh2-example-disassembly.txt
     "$SH2Z_NM" -u build/sh2/sh2zam_example.o | tee sh2-example-undefined.txt
     sh2z_require_no_undefined sh2-example-undefined.txt
+    sh2z_require_per_symbol_sections saturn/src/sh2zam_example.c
     grep -q "<_sh2z_example>:" sh2-example-disassembly.txt
     sh2z_model_elf build/sh2/example-bridge.o build/sh2/example-model.elf
     ;;
@@ -79,7 +118,8 @@ The phases are:
 - **`build`** runs inside the pinned Yaul image, after every library object is
   in `build/sh2/` and `libsh2zam.a` is archived. `lib.sh` gives
   `sh2z_bridge` and `sh2z_model_elf` (the flags every bridge uses),
-  `sh2z_require_no_undefined` and `sh2z_require_no_mem_calls`. The tools are
+  `sh2z_require_no_undefined`, `sh2z_require_no_mem_calls` and
+  `sh2z_require_per_symbol_sections`. The tools are
   `$SH2Z_CC`, `$SH2Z_OBJDUMP` and `$SH2Z_NM`.
 - **`model`** runs on the runner. `sh2z_model_env` exports `MODEL_EVIDENCE_URL`,
   `MODEL_TOOLCHAIN` and `MODEL_SOURCE_COMMIT` for your `run.sh`. Export

@@ -197,7 +197,7 @@ bool sh2z_view_batch(sh2z_view_vertex_t *out,const sh2z_view_t *v,
 
 __asm__(
 #include "sh2zam_view_asm.h"
-"    .text\n"
+"    .pushsection .text.sh2zi_view_divu_run,\"ax\",@progbits\n"
 "    .align 2\n"
 "    .global _sh2zi_view_divu_run\n"
 "    .type _sh2zi_view_divu_run,@function\n"
@@ -207,9 +207,11 @@ __asm__(
 "    SH2ZI_VD_TRANSFORM\n"
 "    SH2ZI_VD_REST T\n"
 "    .size _sh2zi_view_divu_run,.-_sh2zi_view_divu_run\n"
+"    .popsection\n"
 /* View-space entry: r6 points at sh2z_view_vertex_t records (stride 20);
  * x y z are read, copied to out and projected. in == out is allowed: a
  * record is read before any byte of it or of a later record is written. */
+"    .pushsection .text.sh2zi_view_divu_project,\"ax\",@progbits\n"
 "    .align 2\n"
 "    .global _sh2zi_view_divu_project\n"
 "    .type _sh2zi_view_divu_project,@function\n"
@@ -219,7 +221,9 @@ __asm__(
 "    SH2ZI_VD_LOAD\n"
 "    SH2ZI_VD_REST P\n"
 "    .size _sh2zi_view_divu_project,.-_sh2zi_view_divu_project\n"
+"    .popsection\n"
 /* view-round-1 entries (sh2zam_view_round.c): the truncating fix-ups. */
+"    .pushsection .text.sh2zi_view_divu_run_trunc,\"ax\",@progbits\n"
 "    .align 2\n"
 "    .global _sh2zi_view_divu_run_trunc\n"
 "    .type _sh2zi_view_divu_run_trunc,@function\n"
@@ -229,6 +233,8 @@ __asm__(
 "    SH2ZI_VD_TRANSFORM\n"
 "    SH2ZI_VD_REST TT, 1\n"
 "    .size _sh2zi_view_divu_run_trunc,.-_sh2zi_view_divu_run_trunc\n"
+"    .popsection\n"
+"    .pushsection .text.sh2zi_view_divu_project_trunc,\"ax\",@progbits\n"
 "    .align 2\n"
 "    .global _sh2zi_view_divu_project_trunc\n"
 "    .type _sh2zi_view_divu_project_trunc,@function\n"
@@ -238,6 +244,7 @@ __asm__(
 "    SH2ZI_VD_LOAD\n"
 "    SH2ZI_VD_REST PT, 1\n"
 "    .size _sh2zi_view_divu_project_trunc,.-_sh2zi_view_divu_project_trunc\n"
+"    .popsection\n"
 );
 
 static void batch_divu_native(sh2z_view_vertex_t *out,const sh2z_view_t *v,

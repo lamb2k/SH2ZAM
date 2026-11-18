@@ -170,7 +170,7 @@ __asm__(
 "    mov.l   r12,@(4,r4)\n"
 "    mov.l   r13,@(8,r4)\n"
 "    .endm\n"
-"    .text\n"
+"    .pushsection .text.sh2zi_view_divu_rails_center,\"ax\",@progbits\n"
 "    .align 2\n"
 "    .global _sh2zi_view_divu_rails_center\n"
 "    .type _sh2zi_view_divu_rails_center,@function\n"
@@ -180,6 +180,7 @@ __asm__(
 "    SH2ZI_VR_STEP\n"
 "    SH2ZI_VD_REST RC, 0, 1, 1\n"
 "    .size _sh2zi_view_divu_rails_center,.-_sh2zi_view_divu_rails_center\n"
+"    .popsection\n"
 /* sh2z_view_edge_rails_center_divu: the C path's rails() (below) in
  * assembly, then one call of the loop above for both runs.
  *
@@ -400,7 +401,7 @@ __asm__(
 "    mov.l   r1,@(36+\\off,r12)\n"
 "6:\n"
 "    .endm\n"
-"    .text\n"
+"    .pushsection .text.sh2z_view_edge_rails_center_divu,\"ax\",@progbits\n"
 "    .align 2\n"
 "    .global _sh2z_view_edge_rails_center_divu\n"
 "    .type _sh2z_view_edge_rails_center_divu,@function\n"
@@ -660,6 +661,7 @@ __asm__(
 ".Lsh2zi_vr_kernel:\n"
 "    .long   _sh2zi_view_divu_rails_center\n"
 "    .size _sh2z_view_edge_rails_center_divu,.-_sh2z_view_edge_rails_center_divu\n"
+"    .popsection\n"
 );
 
 #endif

@@ -4,8 +4,9 @@
  * sh2zam/trig12_experimental.h for its definition and bounds. */
 #include "sh2zam/trig12_experimental.h"
 #include "sh2zam_internal.h"
+#include "sh2zam_sections.h"
 
-const int32_t sh2z_sin12_quarter_u30[1025] = {
+const int32_t sh2z_sin12_quarter_u30[1025] SH2ZI_RODATA(sh2z_sin12_quarter_u30) = {
     0, 1647099, 3294193, 4941281, 6588356, 8235416,
     9882456, 11529474, 13176464, 14823423, 16470347, 18117233,
     19764076, 21410872, 23057618, 24704310, 26350943, 27997515,

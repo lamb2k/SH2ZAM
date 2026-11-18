@@ -89,7 +89,7 @@ def main(argv):
     table, worst_ref, worst_exact, tie_gap = build()
     if len(argv) == 3 and argv[1] == "--check":
         text = open(argv[2], encoding="ascii").read()
-        m = re.search(r"sh2z_sin12_quarter_u30\[1025\]\s*=\s*\{([^}]*)\}", text)
+        m = re.search(r"sh2z_sin12_quarter_u30\[1025\](?:\s*SH2ZI_RODATA\(\w+\))?\s*=\s*\{([^}]*)\}", text)
         if not m:
             raise SystemExit("table not found")
         got = [int(v) for v in re.findall(r"-?\d+", m.group(1))]

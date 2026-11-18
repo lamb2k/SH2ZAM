@@ -3,8 +3,9 @@
  * check. The decoder itself is inline in the header. No libc.
  * MIT; Copyright (c) 2026 SH2ZAM Contributors. */
 #include "sh2zam/vlc2_experimental.h"
+#include "sh2zam_sections.h"
 
-const uint32_t sh2z_vlc2_consts[64]={
+const uint32_t sh2z_vlc2_consts[64] SH2ZI_RODATA(sh2z_vlc2_consts)={
     /* 0..15: 2^(32-i) (entry 0 unused) */
     0u,0x80000000u,0x40000000u,0x20000000u,0x10000000u,0x08000000u,0x04000000u,0x02000000u,
     0x01000000u,0x00800000u,0x00400000u,0x00200000u,0x00100000u,0x00080000u,0x00040000u,0x00020000u,
@@ -20,7 +21,7 @@ const uint32_t sh2z_vlc2_consts[64]={
 
 /* 2^i: the SH-2 has no variable shift, and the builder and the check should
  * need no libgcc helper. */
-static const uint16_t pow2[16]={1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768};
+static const uint16_t pow2[16] SH2ZI_RODATA(sh2zi_vlc2_pow2)={1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768};
 static unsigned shr(unsigned v,unsigned n) {
     while(n--)v>>=1;
     return v;

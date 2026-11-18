@@ -34,7 +34,12 @@ extern "C" {
 /* ---- Contract tag fixed-unit-1 ------------------------------------------- */
 
 typedef int32_t sh2z_u30_t;                     /**< Q2.30; one is 2^30. */
-#define SH2Z_U30_ONE  INT32_C(0x40000000)
+/* Q2.30 one. Defined identically, behind the same guard, in
+ * unit30_experimental.h and trig12_experimental.h, so that the two headers
+ * can be included together in either order. */
+#ifndef SH2Z_U30_ONE
+#define SH2Z_U30_ONE INT32_C(0x40000000)
+#endif
 #define SH2Z_Q12_ONE  INT32_C(4096)
 
 /** A 3x3 basis of row vectors in the layout of a float[3][3] row-major basis:
