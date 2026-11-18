@@ -219,6 +219,15 @@ two-level table decoder with a hand-written SH-2 kernel (`DMULU.L` in place of v
 shifts). Host-exact tested against an independent oracle under ASan/UBSan and costed in the
 SH-2 instruction model (modelled, no console run). See [the vlc guide](saturn/VLC.md).
 
+[`sh2zam/vlc2_experimental.h`](saturn/include/sh2zam/vlc2_experimental.h) (contract tag `vlc-2`)
+decodes one symbol at a time with a table the caller picks per symbol, for context-modelled
+decoders such as a tile codec. The decode step is inline (hand-written SH-2 assembly on SH-2,
+with the bit reader kept in the caller's registers), tables are compact byte arrays in one
+arena, the reader starts at any byte offset, and stream bounds are checked once per stream.
+A builder and a table check for untrusted tables are included; vlc-1 is unchanged.
+Host-exact tested against an independent oracle and costed in the SH-2 instruction model
+(modelled, no console run). See [the vlc-2 guide](saturn/VLC2.md).
+
 ## 12-bit-angle trig and divider quotients
 
 [`sh2zam/trig12_experimental.h`](saturn/include/sh2zam/trig12_experimental.h) (contract tag `trig12-1`)
@@ -257,6 +266,33 @@ view at a Q20.12 eye, which does not overflow at the edge of an int16 world as a
 Host-exact tested against an independent oracle, within 0.05 px of the exact projection over
 15,000 synthetic poses, and costed in the SH-2 instruction model (modelled, no console run). See
 [View from a camera](saturn/VIEW_BATCH.md#view-from-a-camera-view-camera-1).
+
+Contract tag `view-rails-1` steps both edges ("rails") of a textured strip at shared
+boundaries in one call, `sh2z_view_edge_rails_center` (and `_divu`), with the centre view
+validated once per frame through a prepared `sh2z_view_rails_t` handle instead of once per
+rail. Each rail's points are exactly what `sh2z_view_edge_steps_center` writes (0 px error),
+and the call writes nothing when an argument breaks its rules. See
+[the rails guide](saturn/VIEW_RAILS.md).
+
+Contract tag `pose-1`, [`sh2zam/contracts/pose_1.h`](saturn/include/sh2zam/contracts/pose_1.h)
+(included by `view_experimental.h`), adds `sh2z_pose_from_f32`: a model's view, camera
+position in model space, Q1.14 basis and plane-culling data, built from model state stored as
+IEEE 754 binary32 floats without any floating-point arithmetic. It reads each float's bits and
+reproduces the binary32 operations involved exactly with integer instructions, so a renderer
+that keeps its model state as floats does not pay soft-float per model. See
+[the pose guide](saturn/POSE.md).
+
+## Block memo kernels
+
+[`sh2zam/memo_experimental.h`](saturn/include/sh2zam/memo_experimental.h) (contract tag `memo-1`)
+gives exact kernels for per-picture work on data that has mostly not changed: compare 32- or
+64-byte blocks with their shadows and copy and report only changed ones (singly or as a bit
+mask over many blocks), write a record's words to a slow 16-bit destination only when their
+key bits changed, copy 8-byte records up to an end marker, and diff two record tables into runs.
+Hand-written SH-2 kernels and portable C give the same results and the same destination
+writes, with no floating point, divider, libc or allocation. Host-exact tested against an
+independent oracle and costed in the SH-2 instruction model (modelled, no console run). See
+[the memo guide](saturn/MEMO.md).
 
 ## Git submodule
 
