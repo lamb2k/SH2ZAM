@@ -122,3 +122,33 @@ These still need coordinating when two lanes change them:
   suite adds a placement log to its report;
 - an existing guide or header section that a lane extends instead of adding its
   own.
+
+## Merge trains and releases
+
+Contracts that are ready land together in a merge train, as #25 and #30 did:
+
+1. One branch (for example `claude/merge-train-2`) merges each car's PR with
+   `--no-ff`, in a fixed order.
+2. One CI run on that branch produces every car's model capture.
+3. One commit records them: "Record the train-<n> captures from CI run …".
+4. The train merges to `main`, and every car's tag goes on the train's merge
+   commit.
+5. **Each train's tags get a GitHub release with notes, in the same landing.**
+   Create them in car order once the tags are pushed:
+
+   ```sh
+   gh release create <tag> --verify-tag \
+     --title "<tag>: <short description>" --notes-file <tag>.md --latest=false
+   ```
+
+   - `--verify-tag` stops if the tag is not on the remote, so a release never
+     creates or moves a tag.
+   - Pass `--latest` instead of `--latest=false` on the train's last car, so the
+     newest train is marked Latest.
+   - Notes say what the contract adds, its evidence tiers (HOST, MODELLED,
+     HARDWARE) and any targets not met. They link the guide at the tag, and
+     name the train and the other tags on the same commit. Write only what the
+     PRs and docs show.
+   - No binary assets; GitHub's source archives are enough.
+
+A contract that lands on its own follows steps 4 and 5 for its single tag.
