@@ -13,7 +13,7 @@ guide). **No console or emulator run was done.** Evidence by tier:
   controls (22,147,066 checks). On road strips the command count equals `view-merge-1`'s at
   0.5, 1 and 2 px.
 - **MODELLED:** the compiled planner matches the harness oracle on 806,730 runs of 12,000 strips
-  in the Yabause interpreter before timing ([results](benchmarks/merge-model/results.json)).
+  in the Yabause interpreter before timing ([results](benchmarks/merge-model/results.json), captured by [CI run 44206041141](https://github.com/lamb2k/SH2ZAM/actions/runs/44206041141)).
   38.7 modelled cycles per boundary at 1 px on 64-boundary road strips (65.5 at 8 boundaries),
   4.9 (3.8) times fewer than `view-merge-1`, with the same plans. Cycle numbers are modelled,
   not Saturn timings.

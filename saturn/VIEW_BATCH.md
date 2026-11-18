@@ -641,7 +641,9 @@ runs {1, 2, 4} on whole periods, a road renderer's end masks):
 The command count is identical to `view-merge-1` at every tolerance, because
 the plans are identical. Percentiles are upper edges of 1/1024 px bins.
 
-**MODELLED** (SH-2 model capture, `merge-model`):
+**MODELLED** (SH-2 model capture, [`merge-model`](benchmarks/merge-model/README.md),
+[results](benchmarks/merge-model/results.json), captured by
+[CI run 44206041141](https://github.com/lamb2k/SH2ZAM/actions/runs/44206041141)):
 - **Exactness.** 12,000 strips (road and adversarial, 2 to 200 boundaries),
   1,065,023 boundaries. All 806,730 runs (114,985 merged: 68,721 ×2,
   39,745 ×4, 4,931 ×8, 1,588 ×16) equal the harness oracle. 10,969 plans also
