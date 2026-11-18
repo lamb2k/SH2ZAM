@@ -112,7 +112,9 @@ table). 94,558,852 checks pass on GCC strict, Clang strict and GCC with ASan/UBS
 [`benchmarks/shade-fused-model`](benchmarks/shade-fused-model/README.md): the library
 compiled for `-m2 -mb -O2` (GCC 13.2 from the pinned Yaul image) in the pinned Yabause
 interpreter (flat RAM, no caches or wait states; not Saturn timing). The committed capture
-is [`results.json`](benchmarks/shade-fused-model/results.json). Every output of every
+is [`results.json`](benchmarks/shade-fused-model/results.json), from
+[CI run 44207683875](https://github.com/lamb2k/SH2ZAM/actions/runs/44207683875) (source
+commit `10fce21`), and equals a local run of the same source. Every output of every
 entry is checked against the oracle before timing, including adversarial tables, depths
 at and next to every threshold, `INT32_MIN`/`INT32_MAX`, and the argument rules of the
 assembly entry points.
