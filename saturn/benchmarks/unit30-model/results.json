@@ -1,0 +1,672 @@
+{
+ "schema": 1,
+ "kind": "Yabause isolated SH2 interpreter flat-RAM model, not Saturn timing",
+ "verified": {
+  "k1Elements": 51200,
+  "dotWithSRSSet": 102400,
+  "rsqrtMantissas": 51200,
+  "rsqrt64": 51200,
+  "normalized": 51200,
+  "normalizeRefusedZero": 2070,
+  "isqrt": 51200,
+  "bases": 25600,
+  "basesReturningMinus1": 2828,
+  "mantissaErrorLsb": [
+   -1.1576,
+   0.2066
+  ],
+  "rsqrt64MaxErrorLsb": 0.9482,
+  "normalizeMaxErrorLsb": 1.0,
+  "entries": "fast_mul, fast_q12, fast_dot, port_dot (also with SR.S set), fast_cross, fast_isqrt against tests/unit30_oracle.h; fast_q31, fast_rsqrt64, fast_norm (also in place), port_norm, fast_forward, fast_up bit for bit against the host build of the same source and within the oracle bounds"
+ },
+ "rows": {
+  "mul": {
+   "description": "one Q2.30 product of unit-vector components",
+   "n": 128,
+   "corpora": 16,
+   "entries": {
+    "fast_mul": {
+     "cyclesPerElement": 23.0,
+     "instructionsPerElement": 21.0,
+     "call1": {
+      "meanCycles": 50.0,
+      "medianCycles": 50.0,
+      "minCycles": 50,
+      "maxCycles": 50,
+      "meanInstructions": 45.0
+     },
+     "call128": {
+      "meanCycles": 2971.0,
+      "medianCycles": 2971.0,
+      "minCycles": 2971,
+      "maxCycles": 2971,
+      "meanInstructions": 2712.0
+     }
+    },
+    "fast_q12": {
+     "cyclesPerElement": 23.0,
+     "instructionsPerElement": 21.0,
+     "call1": {
+      "meanCycles": 50.0,
+      "medianCycles": 50.0,
+      "minCycles": 50,
+      "maxCycles": 50,
+      "meanInstructions": 45.0
+     },
+     "call128": {
+      "meanCycles": 2971.0,
+      "medianCycles": 2971.0,
+      "minCycles": 2971,
+      "maxCycles": 2971,
+      "meanInstructions": 2712.0
+     }
+    },
+    "float_mul": {
+     "cyclesPerElement": 255.33,
+     "instructionsPerElement": 221.93,
+     "call1": {
+      "meanCycles": 280.62,
+      "medianCycles": 277.5,
+      "minCycles": 277,
+      "maxCycles": 292,
+      "meanInstructions": 247.5
+     },
+     "call128": {
+      "meanCycles": 32707.44,
+      "medianCycles": 32702.0,
+      "minCycles": 32601,
+      "maxCycles": 32817,
+      "meanInstructions": 28432.0
+     }
+    },
+    "q16_mul": {
+     "cyclesPerElement": 33.49,
+     "instructionsPerElement": 28.5,
+     "call1": {
+      "meanCycles": 58.69,
+      "medianCycles": 60.0,
+      "minCycles": 57,
+      "maxCycles": 60,
+      "meanInstructions": 53.56
+     },
+     "call128": {
+      "meanCycles": 4311.88,
+      "medianCycles": 4315.0,
+      "minCycles": 4283,
+      "maxCycles": 4337,
+      "meanInstructions": 3672.88
+     }
+    }
+   },
+   "speedupOf_fast_mul": {
+    "fast_q12": 1.0,
+    "float_mul": 11.1,
+    "q16_mul": 1.46
+   }
+  },
+  "dot": {
+   "description": "dot product of two unit vectors",
+   "n": 128,
+   "corpora": 16,
+   "entries": {
+    "fast_dot": {
+     "cyclesPerElement": 37.0,
+     "instructionsPerElement": 30.0,
+     "call1": {
+      "meanCycles": 68.0,
+      "medianCycles": 68.0,
+      "minCycles": 68,
+      "maxCycles": 68,
+      "meanInstructions": 58.0
+     },
+     "call128": {
+      "meanCycles": 4767.0,
+      "medianCycles": 4767.0,
+      "minCycles": 4767,
+      "maxCycles": 4767,
+      "meanInstructions": 3868.0
+     }
+    },
+    "port_dot": {
+     "cyclesPerElement": 43.0,
+     "instructionsPerElement": 39.0,
+     "call1": {
+      "meanCycles": 77.0,
+      "medianCycles": 77.0,
+      "minCycles": 77,
+      "maxCycles": 77,
+      "meanInstructions": 70.0
+     },
+     "call128": {
+      "meanCycles": 5538.0,
+      "medianCycles": 5538.0,
+      "minCycles": 5538,
+      "maxCycles": 5538,
+      "meanInstructions": 5023.0
+     }
+    },
+    "float_dot": {
+     "cyclesPerElement": 1322.35,
+     "instructionsPerElement": 1151.9,
+     "call1": {
+      "meanCycles": 1350.38,
+      "medianCycles": 1352.5,
+      "minCycles": 1298,
+      "maxCycles": 1388,
+      "meanInstructions": 1178.19
+     },
+     "call128": {
+      "meanCycles": 169288.44,
+      "medianCycles": 169227.5,
+      "minCycles": 168779,
+      "maxCycles": 169982,
+      "meanInstructions": 147469.88
+     }
+    },
+    "q16_dot": {
+     "cyclesPerElement": 157.05,
+     "instructionsPerElement": 144.02,
+     "call1": {
+      "meanCycles": 183.5,
+      "medianCycles": 185.0,
+      "minCycles": 181,
+      "maxCycles": 185,
+      "meanInstructions": 170.25
+     },
+     "call128": {
+      "meanCycles": 20128.75,
+      "medianCycles": 20124.0,
+      "minCycles": 20102,
+      "maxCycles": 20150,
+      "meanInstructions": 18461.38
+     }
+    }
+   },
+   "speedupOf_fast_dot": {
+    "port_dot": 1.16,
+    "float_dot": 35.74,
+    "q16_dot": 4.24
+   }
+  },
+  "cross": {
+   "description": "cross product of two unit vectors",
+   "n": 128,
+   "corpora": 16,
+   "entries": {
+    "fast_cross": {
+     "cyclesPerElement": 89.0,
+     "instructionsPerElement": 82.0,
+     "call1": {
+      "meanCycles": 134.0,
+      "medianCycles": 134.0,
+      "minCycles": 134,
+      "maxCycles": 134,
+      "meanInstructions": 122.0
+     },
+     "call128": {
+      "meanCycles": 11437.0,
+      "medianCycles": 11437.0,
+      "minCycles": 11437,
+      "maxCycles": 11437,
+      "meanInstructions": 10536.0
+     }
+    },
+    "float_cross": {
+     "cyclesPerElement": 2381.21,
+     "instructionsPerElement": 2077.21,
+     "call1": {
+      "meanCycles": 2420.12,
+      "medianCycles": 2419.5,
+      "minCycles": 2343,
+      "maxCycles": 2514,
+      "meanInstructions": 2116.44
+     },
+     "call128": {
+      "meanCycles": 304834.06,
+      "medianCycles": 304881.0,
+      "minCycles": 304270,
+      "maxCycles": 305551,
+      "meanInstructions": 265922.62
+     }
+    },
+    "q16_cross": {
+     "cyclesPerElement": 178.5,
+     "instructionsPerElement": 154.98,
+     "call1": {
+      "meanCycles": 206.75,
+      "medianCycles": 206.5,
+      "minCycles": 205,
+      "maxCycles": 210,
+      "meanInstructions": 184.0
+     },
+     "call128": {
+      "meanCycles": 22876.44,
+      "medianCycles": 22879.0,
+      "minCycles": 22835,
+      "maxCycles": 22895,
+      "meanInstructions": 19865.88
+     }
+    }
+   },
+   "speedupOf_fast_cross": {
+    "float_cross": 26.76,
+    "q16_cross": 2.01
+   }
+  },
+  "rsqrt": {
+   "description": "1/sqrt of the squared length of a Q20.12 offset (50 .. 5000 units); fast_q31 is the mantissa kernel alone",
+   "n": 128,
+   "corpora": 16,
+   "entries": {
+    "fast_q31": {
+     "cyclesPerElement": 60.51,
+     "instructionsPerElement": 49.49,
+     "call1": {
+      "meanCycles": 82.5,
+      "medianCycles": 82.5,
+      "minCycles": 82,
+      "maxCycles": 83,
+      "meanInstructions": 71.5
+     },
+     "call128": {
+      "meanCycles": 7767.38,
+      "medianCycles": 7767.5,
+      "minCycles": 7759,
+      "maxCycles": 7778,
+      "meanInstructions": 6356.62
+     }
+    },
+    "fast_rsqrt64": {
+     "cyclesPerElement": 142.23,
+     "instructionsPerElement": 126.42,
+     "call1": {
+      "meanCycles": 167.56,
+      "medianCycles": 168.0,
+      "minCycles": 159,
+      "maxCycles": 176,
+      "meanInstructions": 151.38
+     },
+     "call128": {
+      "meanCycles": 18230.88,
+      "medianCycles": 18230.0,
+      "minCycles": 18066,
+      "maxCycles": 18323,
+      "meanInstructions": 16206.81
+     }
+    },
+    "float_rsqrt": {
+     "cyclesPerElement": 896.39,
+     "instructionsPerElement": 765.17,
+     "call1": {
+      "meanCycles": 924.75,
+      "medianCycles": 927.0,
+      "minCycles": 906,
+      "maxCycles": 933,
+      "meanInstructions": 792.19
+     },
+     "call128": {
+      "meanCycles": 114766.5,
+      "medianCycles": 114771.0,
+      "minCycles": 114624,
+      "maxCycles": 114930,
+      "meanInstructions": 97969.0
+     }
+    },
+    "q16_rsqrt": {
+     "cyclesPerElement": 639.42,
+     "instructionsPerElement": 585.74,
+     "call1": {
+      "meanCycles": 660.19,
+      "medianCycles": 662.0,
+      "minCycles": 648,
+      "maxCycles": 662,
+      "meanInstructions": 607.69
+     },
+     "call128": {
+      "meanCycles": 81866.69,
+      "medianCycles": 81877.0,
+      "minCycles": 81819,
+      "maxCycles": 81919,
+      "meanInstructions": 74996.44
+     }
+    }
+   },
+   "speedupOf_fast_q31": {
+    "fast_rsqrt64": 2.35,
+    "float_rsqrt": 14.81,
+    "q16_rsqrt": 10.57
+   }
+  },
+  "normalize_q12": {
+   "description": "unit vector of a Q20.12 offset of 50 .. 5000 units",
+   "n": 128,
+   "corpora": 16,
+   "entries": {
+    "fast_norm": {
+     "cyclesPerElement": 182.08,
+     "instructionsPerElement": 151.46,
+     "call1": {
+      "meanCycles": 206.38,
+      "medianCycles": 206.0,
+      "minCycles": 203,
+      "maxCycles": 211,
+      "meanInstructions": 177.25
+     },
+     "call128": {
+      "meanCycles": 23329.94,
+      "medianCycles": 23330.0,
+      "minCycles": 23271,
+      "maxCycles": 23378,
+      "meanInstructions": 19413.19
+     }
+    },
+    "port_norm": {
+     "cyclesPerElement": 207.04,
+     "instructionsPerElement": 175.35,
+     "call1": {
+      "meanCycles": 235.31,
+      "medianCycles": 235.0,
+      "minCycles": 219,
+      "maxCycles": 248,
+      "meanInstructions": 202.56
+     },
+     "call128": {
+      "meanCycles": 26529.5,
+      "medianCycles": 26517.5,
+      "minCycles": 26398,
+      "maxCycles": 26710,
+      "meanInstructions": 22472.0
+     }
+    },
+    "float_norm": {
+     "cyclesPerElement": 3112.94,
+     "instructionsPerElement": 2696.92,
+     "call1": {
+      "meanCycles": 3157.06,
+      "medianCycles": 3161.5,
+      "minCycles": 3088,
+      "maxCycles": 3208,
+      "meanInstructions": 2740.88
+     },
+     "call128": {
+      "meanCycles": 398500.44,
+      "medianCycles": 398498.5,
+      "minCycles": 397893,
+      "maxCycles": 398940,
+      "meanInstructions": 345249.69
+     }
+    },
+    "q16_norm": {
+     "cyclesPerElement": 1083.53,
+     "instructionsPerElement": 944.39,
+     "call1": {
+      "meanCycles": 1109.0,
+      "medianCycles": 1108.5,
+      "minCycles": 1104,
+      "maxCycles": 1115,
+      "meanInstructions": 971.75
+     },
+     "call128": {
+      "meanCycles": 138717.44,
+      "medianCycles": 138712.5,
+      "minCycles": 138555,
+      "maxCycles": 138902,
+      "meanInstructions": 120909.0
+     }
+    }
+   },
+   "speedupOf_fast_norm": {
+    "port_norm": 1.14,
+    "float_norm": 17.1,
+    "q16_norm": 5.95
+   }
+  },
+  "normalize_u30": {
+   "description": "renormalising a Q2.30 vector of length 1 +- 2^-12",
+   "n": 128,
+   "corpora": 16,
+   "entries": {
+    "fast_norm": {
+     "cyclesPerElement": 155.47,
+     "instructionsPerElement": 128.07,
+     "call1": {
+      "meanCycles": 180.81,
+      "medianCycles": 181.5,
+      "minCycles": 177,
+      "maxCycles": 183,
+      "meanInstructions": 152.75
+     },
+     "call128": {
+      "meanCycles": 19924.94,
+      "medianCycles": 19924.0,
+      "minCycles": 19887,
+      "maxCycles": 19975,
+      "meanInstructions": 16417.5
+     }
+    },
+    "port_norm": {
+     "cyclesPerElement": 179.89,
+     "instructionsPerElement": 150.73,
+     "call1": {
+      "meanCycles": 205.06,
+      "medianCycles": 205.0,
+      "minCycles": 194,
+      "maxCycles": 215,
+      "meanInstructions": 175.44
+     },
+     "call128": {
+      "meanCycles": 23050.69,
+      "medianCycles": 23030.0,
+      "minCycles": 22938,
+      "maxCycles": 23203,
+      "meanInstructions": 19317.94
+     }
+    },
+    "float_norm": {
+     "cyclesPerElement": 3111.98,
+     "instructionsPerElement": 2694.49,
+     "call1": {
+      "meanCycles": 3152.31,
+      "medianCycles": 3152.0,
+      "minCycles": 3089,
+      "maxCycles": 3203,
+      "meanInstructions": 2732.5
+     },
+     "call128": {
+      "meanCycles": 398373.94,
+      "medianCycles": 398290.0,
+      "minCycles": 397990,
+      "maxCycles": 399548,
+      "meanInstructions": 344932.62
+     }
+    },
+    "q16_norm": {
+     "cyclesPerElement": 1094.24,
+     "instructionsPerElement": 953.89,
+     "call1": {
+      "meanCycles": 1118.94,
+      "medianCycles": 1119.5,
+      "minCycles": 1112,
+      "maxCycles": 1126,
+      "meanInstructions": 977.69
+     },
+     "call128": {
+      "meanCycles": 140087.44,
+      "medianCycles": 140088.0,
+      "minCycles": 140028,
+      "maxCycles": 140138,
+      "meanInstructions": 122122.06
+     }
+    }
+   },
+   "speedupOf_fast_norm": {
+    "port_norm": 1.16,
+    "float_norm": 20.02,
+    "q16_norm": 7.04
+   }
+  },
+  "isqrt": {
+   "description": "length of a Q20.12 offset from its 64-bit sum of squares",
+   "n": 128,
+   "corpora": 16,
+   "entries": {
+    "fast_isqrt": {
+     "cyclesPerElement": 212.92,
+     "instructionsPerElement": 190.24,
+     "call1": {
+      "meanCycles": 231.69,
+      "medianCycles": 222.0,
+      "minCycles": 205,
+      "maxCycles": 272,
+      "meanInstructions": 208.69
+     },
+     "call128": {
+      "meanCycles": 27272.69,
+      "medianCycles": 27253.5,
+      "minCycles": 26871,
+      "maxCycles": 27533,
+      "meanInstructions": 24369.38
+     }
+    },
+    "float_sqrt": {
+     "cyclesPerElement": 407.36,
+     "instructionsPerElement": 363.63,
+     "call1": {
+      "meanCycles": 430.88,
+      "medianCycles": 429.0,
+      "minCycles": 420,
+      "maxCycles": 447,
+      "meanInstructions": 387.12
+     },
+     "call128": {
+      "meanCycles": 52165.69,
+      "medianCycles": 52174.5,
+      "minCycles": 51966,
+      "maxCycles": 52281,
+      "meanInstructions": 46568.38
+     }
+    }
+   },
+   "speedupOf_fast_isqrt": {
+    "float_sqrt": 1.91
+   }
+  },
+  "forward": {
+   "description": "orthonormalize around forward: x = Q20.12 target - eye, y = up near +Y",
+   "n": 32,
+   "corpora": 16,
+   "entries": {
+    "fast_forward": {
+     "cyclesPerElement": 519.18,
+     "instructionsPerElement": 445.07,
+     "call1": {
+      "meanCycles": 538.62,
+      "medianCycles": 537.0,
+      "minCycles": 531,
+      "maxCycles": 561,
+      "meanInstructions": 466.12
+     },
+     "call32": {
+      "meanCycles": 16633.19,
+      "medianCycles": 16642.0,
+      "minCycles": 16507,
+      "maxCycles": 16738,
+      "meanInstructions": 14263.31
+     }
+    },
+    "float_forward": {
+     "cyclesPerElement": 10947.79,
+     "instructionsPerElement": 9505.15,
+     "call1": {
+      "meanCycles": 10984.94,
+      "medianCycles": 10991.5,
+      "minCycles": 10898,
+      "maxCycles": 11029,
+      "meanInstructions": 9539.38
+     },
+     "call32": {
+      "meanCycles": 350366.5,
+      "medianCycles": 350401.5,
+      "minCycles": 349811,
+      "maxCycles": 350954,
+      "meanInstructions": 304199.12
+     }
+    },
+    "q16_forward": {
+     "cyclesPerElement": 2507.07,
+     "instructionsPerElement": 2183.35,
+     "call1": {
+      "meanCycles": 2534.81,
+      "medianCycles": 2533.0,
+      "minCycles": 2522,
+      "maxCycles": 2550,
+      "meanInstructions": 2212.5
+     },
+     "call32": {
+      "meanCycles": 80253.88,
+      "medianCycles": 80253.0,
+      "minCycles": 80177,
+      "maxCycles": 80323,
+      "meanInstructions": 69896.31
+     }
+    }
+   },
+   "speedupOf_fast_forward": {
+    "float_forward": 21.09,
+    "q16_forward": 4.83
+   }
+  },
+  "up": {
+   "description": "orthonormalize around up: y = up + 0.3 tilt, x = a unit forward",
+   "n": 32,
+   "corpora": 16,
+   "entries": {
+    "fast_up": {
+     "cyclesPerElement": 493.75,
+     "instructionsPerElement": 421.39,
+     "call1": {
+      "meanCycles": 516.12,
+      "medianCycles": 512.0,
+      "minCycles": 507,
+      "maxCycles": 540,
+      "meanInstructions": 443.94
+     },
+     "call32": {
+      "meanCycles": 15822.5,
+      "medianCycles": 15817.5,
+      "minCycles": 15743,
+      "maxCycles": 15946,
+      "meanInstructions": 13506.94
+     }
+    },
+    "float_up": {
+     "cyclesPerElement": 10969.49,
+     "instructionsPerElement": 9521.51,
+     "call1": {
+      "meanCycles": 10999.94,
+      "medianCycles": 10997.5,
+      "minCycles": 10946,
+      "maxCycles": 11062,
+      "meanInstructions": 9544.62
+     },
+     "call32": {
+      "meanCycles": 351054.06,
+      "medianCycles": 351056.5,
+      "minCycles": 350856,
+      "maxCycles": 351353,
+      "meanInstructions": 304711.5
+     }
+    }
+   },
+   "speedupOf_fast_up": {
+    "float_up": 22.22
+   }
+  }
+ },
+ "label": "MODELLED: executed SH-2 instructions in the Yabause interpreter; flat RAM, no caches or wait states; not Saturn hardware",
+ "sourceCommit": "3da9af1a93c6798265621111ef3542f9ac8071b1",
+ "elfSha256": "68e61b3429ab0b693b94ceb0a0fe24196027ded12d78111780d0784ceaf0b17c",
+ "toolchain": "Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)",
+ "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44224191560",
+ "yabauseCommit": "7e38821dbac265490f115e163c523a939acda759"
+}

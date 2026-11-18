@@ -202,6 +202,13 @@ fog variant and 5:5:5 colour in one hand-written SH-2 call with prepared fog and
 through magic-number multiplies with exhaustively checked domains. See
 [the fused shade guide](saturn/SHADE_FUSED.md).
 
+Contract tag `vehicle-kernels-1` adds per-draw kernels for an indexed mesh renderer:
+`sh2z_shade_screen_facing` (exact projected-quad facing), `sh2z_shade_light_normals_indexed`
+and `sh2z_view_batch_divu_indexed` (only the referenced normals and positions, byte-identical
+to the full batches) and `sh2z_shade_gouraud_approx` (each channel equal to shade-1's or one
+less, proven), all with hand-written SH-2 loops. See
+[the vehicle kernels guide](saturn/VEHICLE_KERNELS.md).
+
 ## Variable-length decoding
 
 [`sh2zam/vlc_experimental.h`](saturn/include/sh2zam/vlc_experimental.h) (contract tag `vlc-1`)
@@ -223,6 +230,33 @@ its generator, and a rounded Q16.16 tangent with saturating poles. The `trig12-1
 division unit, with start/finish forms that overlap the division with other work.
 Host-exact tested against an independent oracle under ASan/UBSan and costed in the SH-2
 instruction model (modelled, no console run). See [the trig12 guide](saturn/TRIG12.md).
+
+## Unit vectors and bases
+
+[`sh2zam/unit30_experimental.h`](saturn/include/sh2zam/unit30_experimental.h) (contract tag
+`fixed-unit-1`) keeps directions in Q2.30. It provides:
+- an inline rounded multiply, a single-rounding `MAC.L` dot product and a cross product,
+  all saturating;
+- a reciprocal square root from a seed table and two multiply-only Newton steps (within
+  2 LSB);
+- a normalisation of any `int32_t` scale in hand-written SH-2 assembly (within 2 LSB);
+- an exactly rounded 64-bit integer square root;
+- the forward-first and up-first cross-product orthonormalisations of a 3x3 basis.
+
+Host and SH-2 results are bit-identical. Host-tested against an independent oracle and
+costed in the SH-2 instruction model (modelled, no console run). See
+[the unit-vector guide](saturn/UNIT30.md).
+
+## View from a fixed-point camera
+
+`sh2z_view_from_camera30` in [`sh2zam/view_experimental.h`](saturn/include/sh2zam/view_experimental.h)
+(contract tag `view-camera-1`) builds a fractional-centre view for the view kernels from a Q2.30
+camera basis, a Q20.12 eye and a lens (field of view, scales, centre, depth, clip) in one integer
+pass, replacing a float look-at, frustum and float-to-fixed adapter. `sh2z_view_place_q12` places a
+view at a Q20.12 eye, which does not overflow at the edge of an int16 world as a Q16.16 eye does.
+Host-exact tested against an independent oracle, within 0.05 px of the exact projection over
+15,000 synthetic poses, and costed in the SH-2 instruction model (modelled, no console run). See
+[View from a camera](saturn/VIEW_BATCH.md#view-from-a-camera-view-camera-1).
 
 ## Git submodule
 

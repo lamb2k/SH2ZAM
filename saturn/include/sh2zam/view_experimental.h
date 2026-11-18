@@ -624,7 +624,135 @@ int sh2z_view_clip_guard_src_center_divu(sh2z_view_guard_vertex_t out[SH2Z_VIEW_
     const sh2z_view_center_t *v,const int16_t guard[4],
     const sh2z_view_guard_vertex_t *in,unsigned count,unsigned attrs,unsigned max_out);
 
+/* ---- Contract tag view-camera-1 ------------------------------------------ */
+
+/** sh2z_view_place with the eye in Q20.12 model units (4096 is one unit), so
+ *  an eye anywhere in an int16 world, and beyond it, is representable:
+ *      t[i] = -floor((r[i][0]*eye[0] + r[i][1]*eye[1] + r[i][2]*eye[2]) / 4096)
+ *  computed exactly in 64 bits. The same rules as sh2z_view_place: v must be
+ *  valid (its current t included); fails, leaving v unchanged, if v or eye_q12
+ *  is null, a t[i] does not fit int32, or the resulting view is invalid (the
+ *  row bound of sh2z_view_t). Whenever 16 * eye_q12[i] fits int32 for every i,
+ *  the result and the failures are exactly those of sh2z_view_place with the
+ *  eye 16 * eye_q12 (Q16.16), which overflows at 32768 units. For an
+ *  orthonormal Q1.14 rotation every eye with |eye| <= 74,000 units succeeds.
+ *  No floating point, divider or global state. */
+bool sh2z_view_place_q12(sh2z_view_t *v,const int32_t eye_q12[3]);
+
+/** Lens and screen of a perspective camera, for sh2z_view_from_camera30.
+ *
+ *  fov_q16     full horizontal field of view in degrees, Q16.16. The half
+ *              angle is rounded to a 4096-step turn, ties away from zero:
+ *                  h = floor((fov_q16 + 5760) / 11520)    (fov * 4096 / 720)
+ *              and 1 <= h <= 1023 is required, that is
+ *              5760 <= fov_q16 <= 11790719 (about 0.088 to 179.9 degrees).
+ *  scale_x16, scale_y16  pixels per unit of tangent, Q16.16, both > 0:
+ *              focal = scale * cot(h). For a viewport of half-size (sx, sy)
+ *              pixels whose frustum is fov_scale_x by fov_scale_y units wide
+ *              and high, scale_x = sx and scale_y = sy * fov_scale_x /
+ *              fov_scale_y (square pixels: scale_y = scale_x).
+ *  center_x16, center_y16  the pixel position of the view axis, Q16.16, any
+ *              int32 (fractional centres are kept, as in view-center-1). An
+ *              off-axis frustum is a shifted centre: for a frustum centre
+ *              (fx, fy) in fov-scale units, centre_x = translate_x -
+ *              2 * sx * fx / fov_scale_x and centre_y = translate_y +
+ *              2 * sy * fy / fov_scale_y.
+ *  near_q12, far_q12  depth planes in Q20.12 model units,
+ *              0 < near_q12 < far_q12 <= INT32_MAX / 4 (they become the
+ *              view's Q18.14 near_z = 4 * near_q12, far_z = 4 * far_q12).
+ *  clip        inclusive pixel rectangle {left, top, right, bottom},
+ *              left <= right, top <= bottom. */
+typedef struct {
+    int32_t fov_q16;
+    int32_t scale_x16,scale_y16;
+    int32_t center_x16,center_y16;
+    int32_t near_q12,far_q12;
+    int16_t clip[4];
+} sh2z_view_lens_t;
+
+/** Build a centre view from a camera basis, a Q20.12 eye and a lens, in one
+ *  integer pass (no floating point, divider, libc or global state; host and
+ *  SH-2 builds write identical bytes).
+ *
+ *  basis_u30   three rows of three, row-major (basis_u30[3 * i + j] is row i,
+ *              column j), in Q2.30 (2^30 is one), in view order: row 0 is the
+ *              screen's +x (right), row 1 its +y (up), row 2 the viewing
+ *              direction (+z, into the screen). Any values are accepted
+ *              that pass the rules below; a unit orthonormal basis always
+ *              does. (A camera basis {forward, up, side = up x forward}
+ *              gives the rows {-side, up, forward}.)
+ *  eye_q12     the camera position, Q20.12 model units.
+ *
+ *  Result, written to *out only on success:
+ *      r[i][j]    = round(basis_u30[3 * i + j] / 65536), ties away from zero
+ *                   (Q1.14); fails if a value exceeds 32767 (that is,
+ *                   basis_u30[k] >= 2^31 - 32768)
+ *      t          = exactly what sh2z_view_place_q12 computes from that r
+ *      focal_x    = floor((scale_x16 * C[h] + 2^19) / 2^20)   (Q16.16)
+ *      focal_y    = floor((scale_y16 * C[h] + 2^19) / 2^20)
+ *                   where C[h] = round(cot(pi * h / 2048) * 2^20), ties up,
+ *                   a 1,024-entry table (saturn/tools/view_camera_cot.py)
+ *      near_z     = 4 * near_q12,  far_z = 4 * far_q12
+ *      clip       = lens->clip
+ *      out->center_x16, center_y16 = the lens centre, and view.center_x,
+ *                   center_y their floors, as sh2z_view_center_init sets
+ *  Returns false, leaving *out unchanged, if any pointer is null, h is out
+ *  of range, a scale is not positive, a focal length is 0 or above
+ *  INT32_MAX, near, far or clip break the rules above, a rotation value
+ *  does not fit, or the eye is too far for the view (a t[i] does not fit
+ *  int32 or the row bound of sh2z_view_t fails; never for an orthonormal
+ *  basis and |eye| <= 74,000 units). No other failure exists. Padding bytes
+ *  of *out are not written.
+ *
+ *  Accuracy, for a unit orthonormal basis within J per element: a point at
+ *  depth z and distance k * z from the eye that projects X pixels from the
+ *  centre lands, before the final truncation, within
+ *      (|X| + f) * (3 * (2^-15 + J) * k + 2^-14 / z) + |X| * df / f
+ *  pixels of the exact projection (f the focal length, df its error, at
+ *  most scale * 2^-21 + 2^-17). Measured over 15,000 synthetic poses: at
+ *  most 0.03 px from exact and 0.05 px from a reference float pipeline
+ *  (look-at, frustum, float-to-fixed adapter); see VIEW_BATCH.md, "View
+ *  from a camera". */
+bool sh2z_view_from_camera30(sh2z_view_center_t *out,const int32_t basis_u30[9],
+    const int32_t eye_q12[3],const sh2z_view_lens_t *lens);
+
 #ifdef __cplusplus
 }
 #endif
 #endif
+
+/* ---- Contract tag vehicle-kernels-1 -------------------------------------- */
+/* Appended section with its own guard: projection of the referenced
+ * vertices of an indexed mesh only. */
+#ifndef SH2ZAM_VIEW_VEHICLE_KERNELS_1
+#define SH2ZAM_VIEW_VEHICLE_KERNELS_1
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** Indexed sh2z_view_batch: for k = 0 .. index_count-1, with i = index[k]
+ *  (i < count, not checked), out[i] is set to exactly the record
+ *  sh2z_view_batch(out, v, positions, in_stride, count) writes there. Other
+ *  records of out are not written. An index may repeat; the order of the
+ *  list does not matter.
+ *
+ *  Returns false, writing nothing, if v is invalid, index_count > 0 with a
+ *  null pointer, count == 0, positions or in_stride break the rules of
+ *  sh2z_view_batch, or out[0 .. count-1] overlaps the positions of count
+ *  records or the index list. index_count == 0 succeeds. The _divu form
+ *  gives the same bytes and uses this CPU's hardware divider on SH-2 (see
+ *  divu_experimental.h for the caller promise); portable builds compute
+ *  in C. */
+bool sh2z_view_batch_indexed(sh2z_view_vertex_t *out,const sh2z_view_t *v,
+    const void *positions,size_t in_stride,size_t count,const uint8_t *index,
+    size_t index_count);
+bool sh2z_view_batch_divu_indexed(sh2z_view_vertex_t *out,const sh2z_view_t *v,
+    const void *positions,size_t in_stride,size_t count,const uint8_t *index,
+    size_t index_count);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* SH2ZAM_VIEW_VEHICLE_KERNELS_1 */
