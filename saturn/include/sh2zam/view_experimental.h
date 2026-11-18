@@ -715,6 +715,79 @@ typedef struct {
  *  from a camera". */
 bool sh2z_view_from_camera30(sh2z_view_center_t *out,const int32_t basis_u30[9],
     const int32_t eye_q12[3],const sh2z_view_lens_t *lens);
+/* ---- Contract tag view-rails-1 ------------------------------------------- */
+
+#define SH2Z_VIEW_RAILS_MAX_COUNT 65536u
+
+/** A centre view validated once, for the rails functions below (112 bytes).
+ *  Fill it with sh2z_view_rails_prepare; every field is private to the
+ *  library. view is a copy of the prepared view, kernel holds the SH-2
+ *  kernel's camera words, check marks a prepared handle. */
+typedef struct {
+    sh2z_view_center_t view;
+    uint32_t kernel[10];
+    uint32_t check;
+} sh2z_view_rails_t;
+
+/** Validate *v once (the rules of sh2z_view_center_t) and fill *out. Fails,
+ *  leaving out unchanged, if out is null or v is null or invalid. The rails
+ *  functions read only *out; prepare again whenever the view changes. */
+bool sh2z_view_rails_prepare(sh2z_view_rails_t *out,const sh2z_view_center_t *v);
+
+/** Both rails of a textured strip quad in one call: the copied ends and
+ *  the stepped points of each rail at every boundary.
+ *
+ *  For each rail (out, from, to, low, high), that is (out_l, l_from, l_to,
+ *  l_low, l_high) and (out_r, r_from, r_to, r_low, r_high):
+ *      f = the number of leading entries with boundary[j] <= low;
+ *      e = count minus the number of trailing entries j >= f with
+ *          boundary[j] >= high;
+ *      out[j] = *from for j < f and out[j] = *to for j >= e (all 20 bytes);
+ *      out[f .. e-1], n = e - f entries, are stepped: with
+ *          first = boundary[f] - low,  den = high - low,
+ *          step  = boundary[f+1] - boundary[f]   (0 when n == 1),
+ *      they are exactly what
+ *          sh2z_view_edge_steps_center(out + f, &rails->view, from, to,
+ *                                      first, step, den, n)
+ *      writes: the same view-space points and the same sx, sy and outcode
+ *      bytes, with no rounding difference.
+ *  Differences are exact. A rail with n > 0 requires low < high,
+ *  den <= 65535 (the uint16 argument above), first < den and, when n >= 2,
+ *      0 < step < den,  first < last < den  and  last - first == (n-1)*step,
+ *  where last = boundary[e-1] - low: true for equally spaced boundaries.
+ *  Entries strictly between f+1 and e-1 are not read; a rail without
+ *  stepped entries has no further requirement.
+ *
+ *  This is the loop a strip renderer writes around two
+ *  sh2z_view_edge_steps_center calls, one per rail at shared boundaries,
+ *  folded into one call: the view is validated once by
+ *  sh2z_view_rails_prepare instead of per call, and each rail's setup divides
+ *  only by den, through one reciprocal, instead of twelve 64-bit divisions.
+ *  Boundaries need not be sorted; for a strictly increasing boundary[],
+ *  out[j] = *from where boundary[j] <= low, *to where boundary[j] >= high.
+ *
+ *  Returns false, writing nothing, if rails is null or not prepared, count
+ *  > 0 with a null pointer, count > SH2Z_VIEW_RAILS_MAX_COUNT, a rail fails
+ *  its requirement above, or out_l[0 .. count-1] and out_r[0 .. count-1]
+ *  overlap. count == 0 succeeds. boundary is read before anything is
+ *  written, so it may point into the outputs; the four ends must not overlap
+ *  out_l[0 .. count-1] or out_r[0 .. count-1] (not checked). The _divu form
+ *  writes the same bytes; on SH-2 it is hand-written assembly using this
+ *  CPU's hardware divider (see divu_experimental.h for the caller promise),
+ *  and it reads and writes no memory but its arguments, the handle and its
+ *  own stack, so calls may run on both CPUs with one handle. */
+bool sh2z_view_edge_rails_center(sh2z_view_vertex_t *out_l,sh2z_view_vertex_t *out_r,
+    const sh2z_view_rails_t *rails,
+    const sh2z_view_vertex_t *l_from,const sh2z_view_vertex_t *l_to,
+    const sh2z_view_vertex_t *r_from,const sh2z_view_vertex_t *r_to,
+    const int32_t *boundary,unsigned count,
+    int32_t l_low,int32_t l_high,int32_t r_low,int32_t r_high);
+bool sh2z_view_edge_rails_center_divu(sh2z_view_vertex_t *out_l,sh2z_view_vertex_t *out_r,
+    const sh2z_view_rails_t *rails,
+    const sh2z_view_vertex_t *l_from,const sh2z_view_vertex_t *l_to,
+    const sh2z_view_vertex_t *r_from,const sh2z_view_vertex_t *r_to,
+    const int32_t *boundary,unsigned count,
+    int32_t l_low,int32_t l_high,int32_t r_low,int32_t r_high);
 
 #ifdef __cplusplus
 }

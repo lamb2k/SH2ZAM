@@ -20,7 +20,13 @@
  * kept in r10 (x) or r11 (y), then moves a negative floor up by one (that
  * is the truncation). ADDC and SUBC need T clear: both sites are reached on
  * the main path straight after a CMP/HS that did not branch, the
- * stand-in-quotient stubs clear it, and so does the finish subroutine. */
+ * stand-in-quotient stubs clear it, and so does the finish subroutine.
+ *
+ * rails=1 (view-rails-1, sh2zam_view_rails.c) chains runs: r5 points at a
+ * run's 56-byte state, and when its count runs out the next run's count,
+ * output pointer and state are read from @(48,r5), @(52,r5) and r5 + 56.
+ * A zero count ends the call. The vertex still in the pipeline finishes in
+ * the next run's first iteration (or at the end), as within a run. */
 "    .macro SH2ZI_VD_PROLOGUE center=0\n"
 "    mov.l   r8,@-r15\n"
 "    mov.l   r9,@-r15\n"
@@ -50,7 +56,7 @@
 "    mov.l   r1,@-r15\n"           /* @r15 fx << 16 */
 "    .endif\n"
 "    .endm\n"
-"    .macro SH2ZI_VD_REST tag, trunc=0, center=0\n"
+"    .macro SH2ZI_VD_REST tag, trunc=0, center=0, rails=0\n"
 "    mov.l   @(20,r14),r8\n"       /* collect y quotient of prev */
 "    mov.l   @(44,r7),r1\n"
 "    cmp/ge  r1,r13\n"
@@ -193,6 +199,14 @@
 "    dt      r6\n"
 "    bf/s    .Lsh2zi_vd_loop\\tag\n"
 "    add     #20,r4\n"
+"    .if \\rails\n"
+".Lsh2zi_vd_next\\tag:\n"          /* run done: the next run's count, */
+"    mov.l   @(48,r5),r6\n"        /* output and state follow this one's */
+"    mov.l   @(52,r5),r4\n"
+"    tst     r6,r6\n"
+"    bf/s    .Lsh2zi_vd_loop\\tag\n"
+"    add     #56,r5\n"
+"    .endif\n"
 "    bra     .Lsh2zi_vd_done\\tag\n"
 "    nop\n"
 ".Lsh2zi_vd_near\\tag:\n"
@@ -207,7 +221,11 @@
 "    mov     r7,r2\n"
 "    add     #64,r2\n"
 "    dt      r6\n"
+"    .if \\rails\n"
+"    bt/s    .Lsh2zi_vd_next\\tag\n"
+"    .else\n"
 "    bt/s    .Lsh2zi_vd_done\\tag\n"
+"    .endif\n"
 "    add     #20,r4\n"
 "    bra     .Lsh2zi_vd_loop\\tag\n"
 "    nop\n"

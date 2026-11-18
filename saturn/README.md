@@ -51,4 +51,5 @@ One line per guide, sorted by guide file name; a kernel lane adds its own line
 - [Experimental Q2.30 unit vectors: inline multiply, dot and cross, reciprocal square root, normalisation, basis orthonormalisation](UNIT30.md); [unit30 instruction model](benchmarks/unit30-model/README.md)
 - [Experimental vehicle kernels: screen facing, indexed light and view batch, approximate Gouraud](VEHICLE_KERNELS.md); [Vehicle-kernel instruction model](benchmarks/vehicle-model/README.md)
 - [Experimental view batch: transform, project, clip codes, guard clip, texture-merge planners, final-coordinate truncation, source-order guard clip, fractional centre](VIEW_BATCH.md); [Merge-planner instruction model](benchmarks/merge-model/README.md)
+- [Experimental strip rails in one call: both rails of a strip quad, view prepared once](VIEW_RAILS.md); [View-rails instruction model](benchmarks/rails-model/README.md)
 - [Experimental variable-length decoding: bounded bit reader, length-limited canonical codes, SH-2 table decoder](VLC.md); [vlc instruction model](benchmarks/vlc-model/README.md)

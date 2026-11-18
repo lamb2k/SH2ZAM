@@ -21,6 +21,7 @@ planes per vertex in 64-bit arithmetic. Contract tag: `view-contract-1`.
 | Guard clip in a source clipper's vertex order (fan-mapped textures) | `view-guard-src-1` (see below): HOST and MODELLED; −10% to +6% modelled cycles against the `view-round-1` guard clip |
 | Bounded texture-merge planner (pixel or row tolerance) | Landed, `view-merge-1` (see below): HOST and MODELLED; 223 modelled cycles per boundary at 1 px |
 | Tier texture-merge planner (equal-height runs, no rows) | `view-merge-2` (see below): HOST and MODELLED; 38.7 modelled cycles per boundary at 1 px, 64 boundaries (65.5 at 8); same plans as `view-merge-1` |
+| Both rails of a strip quad in one call, view prepared once (`sh2z_view_edge_rails_center[_divu]`) | `view-rails-1` ([guide](VIEW_RAILS.md)): HOST and MODELLED; exact (every byte of `sh2z_view_edge_steps_center`); 941 modelled cycles per quad + 130.6 per point against 4,073 + 154.5 for the two-call loop |
 | Final-coordinate truncation (`_trunc` forms of every projecting path) | `view-round-1` (see below): HOST and MODELLED; +8.4 modelled cycles per batch vertex |
 | Console or emulator timing | Unrun; the [calibration image](benchmarks/yaul/calibration/README.md) times the batch on a console |
 
