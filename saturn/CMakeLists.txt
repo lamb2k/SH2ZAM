@@ -16,19 +16,11 @@ if(SH2Z_SANITIZE AND NOT CMAKE_CROSSCOMPILING)
   add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
   add_link_options(-fsanitize=address,undefined)
 endif()
-set(SH2Z_SOURCES src/sh2zam.c src/sh2zam_trig.c src/sh2zam_angles.c src/sh2zam_transform.c src/sh2zam_prepared.c src/sh2zam_reuse.c src/sh2zam_batch_sh2.c src/sh2zam_geometry.c src/sh2zam_rotation_batch.c src/sh2zam_spatial.c src/sh2zam_view.c src/sh2zam_view_round.c src/sh2zam_view_guard_src.c src/sh2zam_view_center.c src/sh2zam_view_guard_src_center.c src/sh2zam_view_merge_tier.c src/sh2zam_divu.c src/sh2zam_m68k.c src/sh2zam_box2.c src/sh2zam_cell16.c src/sh2zam_shade.c src/sh2zam_vlc.c)
-# shade-2: fused fade and colour (one line per lane source keeps merges small)
-list(APPEND SH2Z_SOURCES src/sh2zam_shade_fused.c)
-# trig12-1: 12-bit-angle sine table and tangent.
-list(APPEND SH2Z_SOURCES src/sh2zam_trig12.c)
-# fixed-unit-1: Q2.30 unit vectors
-list(APPEND SH2Z_SOURCES src/sh2zam_unit30.c)
-# vehicle-kernels-1: screen facing, indexed lighting, approximate Gouraud, indexed view batch
-list(APPEND SH2Z_SOURCES src/sh2zam_vehicle.c src/sh2zam_view_indexed.c)
-# view-camera-1: a view from a fixed-point camera
-list(APPEND SH2Z_SOURCES src/sh2zam_view_camera.c)
-# pose-1: model pose from binary32 state.
-list(APPEND SH2Z_SOURCES src/sh2zam_pose.c)
+# Library sources: every src/*.c, sorted, so a new kernel source needs no edit
+# here. The SH-2 cross build in sh2-cross.yml compiles the same set.
+file(GLOB SH2Z_SOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} CONFIGURE_DEPENDS
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c)
+list(SORT SH2Z_SOURCES)
 add_library(sh2zam STATIC ${SH2Z_SOURCES})
 add_library(SH2ZAM::sh2zam ALIAS sh2zam)
 target_include_directories(sh2zam PUBLIC
@@ -77,39 +69,23 @@ if(SH2Z_BUILD_TESTS AND NOT CMAKE_CROSSCOMPILING)
   add_executable(sh2zam_batch_native_tests tests/test_batch_native.c)
   target_link_libraries(sh2zam_batch_native_tests PRIVATE sh2zam)
   add_test(NAME native_batch_host_models COMMAND sh2zam_batch_native_tests)
-  foreach(family rotation_batch spatial view divu edges guard m68k box2 cell16 vlc merge merge_tier round guard_src shade center center_equiv guard_src_center unit30 vehicle camera)
-    add_executable(sh2zam_${family}_tests tests/test_${family}.c)
-    target_link_libraries(sh2zam_${family}_tests PRIVATE sh2zam m)
-    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-      target_compile_options(sh2zam_${family}_tests PRIVATE -Wall -Wextra -Wconversion -Wshadow)
-      if(SH2Z_STRICT)
-        target_compile_options(sh2zam_${family}_tests PRIVATE -Werror -Wpedantic)
-      endif()
+  # Kernel test families: every tests/test_<family>.c except the legacy suites
+  # above and below builds sh2zam_<family>_tests and registers <family>_exact,
+  # in sorted order, so a new family needs no edit here.
+  set(SH2Z_LEGACY_TESTS sh2zam foundation batch prepared reuse batch_native
+    scalar_fast transform_fast trig_fast)
+  file(GLOB SH2Z_TEST_SOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/tests CONFIGURE_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_*.c)
+  list(SORT SH2Z_TEST_SOURCES)
+  set(SH2Z_TEST_FAMILIES)
+  foreach(test_source IN LISTS SH2Z_TEST_SOURCES)
+    get_filename_component(family ${test_source} NAME_WE)
+    string(SUBSTRING ${family} 5 -1 family)
+    if(NOT family IN_LIST SH2Z_LEGACY_TESTS)
+      list(APPEND SH2Z_TEST_FAMILIES ${family})
     endif()
-    add_test(NAME ${family}_exact COMMAND sh2zam_${family}_tests)
   endforeach()
-  # shade-2 tests, registered on their own lines
-  add_executable(sh2zam_shade_fused_tests tests/test_shade_fused.c)
-  target_link_libraries(sh2zam_shade_fused_tests PRIVATE sh2zam m)
-  if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(sh2zam_shade_fused_tests PRIVATE -Wall -Wextra -Wconversion -Wshadow)
-    if(SH2Z_STRICT)
-      target_compile_options(sh2zam_shade_fused_tests PRIVATE -Werror -Wpedantic)
-    endif()
-  endif()
-  add_test(NAME shade_fused_exact COMMAND sh2zam_shade_fused_tests)
-  foreach(family trig12 divq)  # trig12-1
-    add_executable(sh2zam_${family}_tests tests/test_${family}.c)
-    target_link_libraries(sh2zam_${family}_tests PRIVATE sh2zam m)
-    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-      target_compile_options(sh2zam_${family}_tests PRIVATE -Wall -Wextra -Wconversion -Wshadow)
-      if(SH2Z_STRICT)
-        target_compile_options(sh2zam_${family}_tests PRIVATE -Werror -Wpedantic)
-      endif()
-    endif()
-    add_test(NAME ${family}_exact COMMAND sh2zam_${family}_tests)
-  endforeach()
-  foreach(family pose)  # pose-1
+  foreach(family IN LISTS SH2Z_TEST_FAMILIES)
     add_executable(sh2zam_${family}_tests tests/test_${family}.c)
     target_link_libraries(sh2zam_${family}_tests PRIVATE sh2zam m)
     if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")

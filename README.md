@@ -258,18 +258,6 @@ Host-exact tested against an independent oracle, within 0.05 px of the exact pro
 15,000 synthetic poses, and costed in the SH-2 instruction model (modelled, no console run). See
 [View from a camera](saturn/VIEW_BATCH.md#view-from-a-camera-view-camera-1).
 
-## Model pose from binary32 state
-
-`sh2z_pose_from_f32` in [`sh2zam/view_experimental.h`](saturn/include/sh2zam/view_experimental.h)
-(contract tag `pose-1`) builds a model's view, model-space camera position, Q1.14 basis and
-plane-culling data from float model state (basis, scales, position, camera) with no
-floating-point arithmetic: each float is decoded with integer instructions and the binary32
-difference, product and reciprocal are emulated exactly, so every output equals the float
-procedure to 0 LSB. Hand-written SH-2 path (`MAC.L`, `DMULU.L` shifts, `DIV1`), portable C
-elsewhere. Host-exact tested against an independent binary32 oracle under ASan/UBSan and
-costed in the SH-2 instruction model (modelled, no console run). See
-[the pose guide](saturn/POSE.md).
-
 ## Git submodule
 
 ```sh
