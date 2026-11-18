@@ -1,0 +1,846 @@
+{
+ "schema": 1,
+ "kind": "Yabause isolated SH2 interpreter flat-RAM model, not Saturn timing",
+ "verified": {
+  "builds": 6960,
+  "buildRefusals": 5297,
+  "streams": 7011,
+  "oddStartStreams": 3536,
+  "symbolsPerDecoder": 2772366,
+  "randomByteStreams": 1327,
+  "formatTables": 6000,
+  "formatTablesAccepted": 2535,
+  "mixedTableStreams": 376,
+  "tileDecodes": 1536,
+  "entries": "v2_build tables and codes, v2_check, the inline-assembly and portable decoders at every w (symbols, reader state, bit position) against tests/vlc2_oracle.h; every tile variant against the generator; no stream read at or past sh2z_vlc2_reach and no read past a checked table"
+ },
+ "tiles": {
+  "shape": {
+   "description": "about 16 row, 4 dictionary and 50 pair symbols per tile",
+   "tiles": 128,
+   "symbolsPerTile": 68.48,
+   "rowSymbolsPerTile": 16.0,
+   "dictionarySymbolsPerTile": 3.8,
+   "pairSymbolsPerTile": 48.69,
+   "escapesPerTile": 13.98,
+   "bitsPerTile": 305.4,
+   "arenaBytes": 17472,
+   "hotBytes": 8224,
+   "variants": {
+    "v2": {
+     "description": "sh2z_vlc2_decode (inline SH-2 assembly), tiles at even offsets",
+     "perTile": {
+      "meanCycles": 3080.73,
+      "medianCycles": 3060.0,
+      "minCycles": 2190,
+      "maxCycles": 3946,
+      "meanInstructions": 2710.48
+     },
+     "cyclesPerSymbol": 44.98,
+     "speedupOverVlc1": 3.08,
+     "placedPerTile": {
+      "best": {
+       "warm": 3971.7,
+       "cold": 4823.1
+      },
+      "typical": {
+       "warm": 4233.1,
+       "cold": 5533.3
+      },
+      "worst": {
+       "warm": 12855.3,
+       "cold": 22265.2
+      },
+      "codeLow": {
+       "warm": 4218.6,
+       "cold": 7371.1
+      },
+      "cartTables": {
+       "warm": 8824.5,
+       "cold": 12724.0
+      },
+      "outVdp1": {
+       "warm": 9235.5,
+       "cold": 10236.0
+      },
+      "outVdp2": {
+       "warm": 8606.0,
+       "cold": 9599.0
+      }
+     }
+    },
+    "v2Packed": {
+     "description": "sh2z_vlc2_decode, byte-packed tiles (odd and even offsets)",
+     "perTile": {
+      "meanCycles": 3078.06,
+      "medianCycles": 3054.5,
+      "minCycles": 2179,
+      "maxCycles": 3946,
+      "meanInstructions": 2708.32
+     },
+     "cyclesPerSymbol": 44.95,
+     "speedupOverVlc1": 3.08,
+     "placedPerTile": {
+      "best": {
+       "warm": 3961.5,
+       "cold": 4824.3
+      },
+      "typical": {
+       "warm": 4218.0,
+       "cold": 5538.1
+      },
+      "worst": {
+       "warm": 12789.5,
+       "cold": 22297.3
+      },
+      "codeLow": {
+       "warm": 4193.5,
+       "cold": 7397.2
+      },
+      "cartTables": {
+       "warm": 8793.0,
+       "cold": 12721.8
+      },
+      "outVdp1": {
+       "warm": 9228.6,
+       "cold": 10234.9
+      },
+      "outVdp2": {
+       "warm": 8599.9,
+       "cold": 9598.2
+      }
+     }
+    },
+    "v2Portable": {
+     "description": "sh2z_vlc2_decode_portable compiled for SH-2",
+     "perTile": {
+      "meanCycles": 4731.8,
+      "medianCycles": 4656.5,
+      "minCycles": 3263,
+      "maxCycles": 6155,
+      "meanInstructions": 4083.83
+     },
+     "cyclesPerSymbol": 69.09,
+     "speedupOverVlc1": 2.0,
+     "placedPerTile": {
+      "best": {
+       "warm": 5711.8,
+       "cold": 6607.9
+      },
+      "typical": {
+       "warm": 5976.6,
+       "cold": 7273.1
+      },
+      "worst": {
+       "warm": 15443.0,
+       "cold": 25303.9
+      },
+      "codeLow": {
+       "warm": 6310.2,
+       "cold": 10502.3
+      },
+      "cartTables": {
+       "warm": 10750.3,
+       "cold": 14081.3
+      },
+      "outVdp1": {
+       "warm": 11054.9,
+       "cold": 12003.6
+      },
+      "outVdp2": {
+       "warm": 10410.8,
+       "cold": 11359.1
+      }
+     }
+    },
+    "marker": {
+     "description": "the same caller with a marker-bit reader variant (bridge only)",
+     "perTile": {
+      "meanCycles": 3365.26,
+      "medianCycles": 3326.5,
+      "minCycles": 2369,
+      "maxCycles": 4336,
+      "meanInstructions": 2963.28
+     },
+     "cyclesPerSymbol": 49.14,
+     "speedupOverVlc1": 2.82,
+     "placedPerTile": {
+      "best": {
+       "warm": 4366.1,
+       "cold": 5263.5
+      },
+      "typical": {
+       "warm": 4621.8,
+       "cold": 5971.5
+      },
+      "worst": {
+       "warm": 14397.2,
+       "cold": 24306.0
+      },
+      "codeLow": {
+       "warm": 4770.4,
+       "cold": 8326.0
+      },
+      "cartTables": {
+       "warm": 9728.9,
+       "cold": 13632.1
+      },
+      "outVdp1": {
+       "warm": 9622.1,
+       "cold": 10661.5
+      },
+      "outVdp2": {
+       "warm": 8991.3,
+       "cold": 10024.4
+      }
+     }
+    },
+    "vlc1": {
+     "description": "one vlc-1 sh2z_vlc8_decode call per symbol, vlc-1 tables",
+     "perTile": {
+      "meanCycles": 9477.58,
+      "medianCycles": 9330.5,
+      "minCycles": 6315,
+      "maxCycles": 12749,
+      "meanInstructions": 8683.43
+     },
+     "cyclesPerSymbol": 138.39,
+     "speedupOverVlc1": 1.0,
+     "placedPerTile": {
+      "best": {
+       "warm": 12866.0,
+       "cold": 13714.8
+      },
+      "typical": {
+       "warm": 13178.4,
+       "cold": 14368.0
+      },
+      "worst": {
+       "warm": 24280.5,
+       "cold": 32910.1
+      },
+      "codeLow": {
+       "warm": 13321.6,
+       "cold": 16021.2
+      },
+      "cartTables": {
+       "warm": 18987.9,
+       "cold": 22791.6
+      },
+      "outVdp1": {
+       "warm": 19766.1,
+       "cold": 20763.3
+      },
+      "outVdp2": {
+       "warm": 18877.6,
+       "cold": 19874.6
+      }
+     }
+    },
+    "glue": {
+     "description": "the same caller with the symbols read from a list: the caller's own cost, no decoding",
+     "perTile": {
+      "meanCycles": 1437.77,
+      "medianCycles": 1429.5,
+      "minCycles": 1174,
+      "maxCycles": 1733,
+      "meanInstructions": 1356.0
+     },
+     "cyclesPerSymbol": 20.99,
+     "placedPerTile": {
+      "best": {
+       "warm": 1459.1,
+       "cold": 1986.9
+      },
+      "typical": {
+       "warm": 1465.5,
+       "cold": 2676.9
+      },
+      "worst": {
+       "warm": 1541.0,
+       "cold": 7038.3
+      },
+      "codeLow": {
+       "warm": 1466.3,
+       "cold": 2917.9
+      },
+      "cartTables": {
+       "warm": 1501.1,
+       "cold": 4276.6
+      },
+      "outVdp1": {
+       "warm": 6420.1,
+       "cold": 7238.7
+      },
+      "outVdp2": {
+       "warm": 5779.8,
+       "cold": 6593.5
+      }
+     }
+    }
+   },
+   "decodeCyclesPerTile": {
+    "v2": 1643.0,
+    "v2Packed": 1640.3,
+    "v2Portable": 3294.0,
+    "marker": 1927.5,
+    "vlc1": 8039.8
+   },
+   "decodeCyclesPerSymbol": {
+    "v2": 23.99,
+    "v2Packed": 23.95,
+    "v2Portable": 48.1,
+    "marker": 28.15,
+    "vlc1": 117.4
+   }
+  },
+  "dense": {
+   "description": "about 16 row, 4 dictionary and 85 pair symbols per tile (about 105 symbols)",
+   "tiles": 128,
+   "symbolsPerTile": 104.52,
+   "rowSymbolsPerTile": 16.0,
+   "dictionarySymbolsPerTile": 4.17,
+   "pairSymbolsPerTile": 84.34,
+   "escapesPerTile": 23.13,
+   "bitsPerTile": 458.2,
+   "arenaBytes": 17476,
+   "hotBytes": 8224,
+   "variants": {
+    "v2": {
+     "description": "sh2z_vlc2_decode (inline SH-2 assembly), tiles at even offsets",
+     "perTile": {
+      "meanCycles": 4355.54,
+      "medianCycles": 4349.5,
+      "minCycles": 3220,
+      "maxCycles": 5354,
+      "meanInstructions": 3863.08
+     },
+     "cyclesPerSymbol": 41.67,
+     "speedupOverVlc1": 3.27,
+     "placedPerTile": {
+      "best": {
+       "warm": 5723.3,
+       "cold": 6633.5
+      },
+      "typical": {
+       "warm": 6124.5,
+       "cold": 7446.6
+      },
+      "worst": {
+       "warm": 19508.9,
+       "cold": 29597.8
+      },
+      "codeLow": {
+       "warm": 6141.3,
+       "cold": 9261.1
+      },
+      "cartTables": {
+       "warm": 13229.3,
+       "cold": 17597.3
+      },
+      "outVdp1": {
+       "warm": 13573.2,
+       "cold": 14614.7
+      },
+      "outVdp2": {
+       "warm": 12654.7,
+       "cold": 13692.1
+      }
+     }
+    },
+    "v2Packed": {
+     "description": "sh2z_vlc2_decode, byte-packed tiles (odd and even offsets)",
+     "perTile": {
+      "meanCycles": 4352.53,
+      "medianCycles": 4349.0,
+      "minCycles": 3209,
+      "maxCycles": 5354,
+      "meanInstructions": 3860.61
+     },
+     "cyclesPerSymbol": 41.64,
+     "speedupOverVlc1": 3.27,
+     "placedPerTile": {
+      "best": {
+       "warm": 5722.7,
+       "cold": 6638.1
+      },
+      "typical": {
+       "warm": 6117.2,
+       "cold": 7456.4
+      },
+      "worst": {
+       "warm": 19554.1,
+       "cold": 29674.6
+      },
+      "codeLow": {
+       "warm": 6143.4,
+       "cold": 9301.8
+      },
+      "cartTables": {
+       "warm": 13248.4,
+       "cold": 17612.2
+      },
+      "outVdp1": {
+       "warm": 13582.6,
+       "cold": 14623.5
+      },
+      "outVdp2": {
+       "warm": 12663.3,
+       "cold": 13700.6
+      }
+     }
+    },
+    "v2Portable": {
+     "description": "sh2z_vlc2_decode_portable compiled for SH-2",
+     "perTile": {
+      "meanCycles": 6836.33,
+      "medianCycles": 6856.0,
+      "minCycles": 5000,
+      "maxCycles": 8344,
+      "meanInstructions": 5932.47
+     },
+     "cyclesPerSymbol": 65.41,
+     "speedupOverVlc1": 2.08,
+     "placedPerTile": {
+      "best": {
+       "warm": 8332.4,
+       "cold": 9276.4
+      },
+      "typical": {
+       "warm": 8730.3,
+       "cold": 10036.4
+      },
+      "worst": {
+       "warm": 23364.8,
+       "cold": 33775.8
+      },
+      "codeLow": {
+       "warm": 9252.3,
+       "cold": 13411.1
+      },
+      "cartTables": {
+       "warm": 16120.5,
+       "cold": 19833.8
+      },
+      "outVdp1": {
+       "warm": 16294.4,
+       "cold": 17288.2
+      },
+      "outVdp2": {
+       "warm": 15362.2,
+       "cold": 16356.0
+      }
+     }
+    },
+    "marker": {
+     "description": "the same caller with a marker-bit reader variant (bridge only)",
+     "perTile": {
+      "meanCycles": 4789.2,
+      "medianCycles": 4794.0,
+      "minCycles": 3525,
+      "maxCycles": 5897,
+      "meanInstructions": 4246.52
+     },
+     "cyclesPerSymbol": 45.82,
+     "speedupOverVlc1": 2.97,
+     "placedPerTile": {
+      "best": {
+       "warm": 6346.1,
+       "cold": 7279.8
+      },
+      "typical": {
+       "warm": 6741.0,
+       "cold": 8099.5
+      },
+      "worst": {
+       "warm": 22094.5,
+       "cold": 32416.5
+      },
+      "codeLow": {
+       "warm": 7090.7,
+       "cold": 10531.4
+      },
+      "cartTables": {
+       "warm": 14677.7,
+       "cold": 18944.0
+      },
+      "outVdp1": {
+       "warm": 14182.7,
+       "cold": 15247.1
+      },
+      "outVdp2": {
+       "warm": 13263.3,
+       "cold": 14324.9
+      }
+     }
+    },
+    "vlc1": {
+     "description": "one vlc-1 sh2z_vlc8_decode call per symbol, vlc-1 tables",
+     "perTile": {
+      "meanCycles": 14234.43,
+      "medianCycles": 14341.0,
+      "minCycles": 10222,
+      "maxCycles": 17502,
+      "meanInstructions": 13036.28
+     },
+     "cyclesPerSymbol": 136.19,
+     "speedupOverVlc1": 1.0,
+     "placedPerTile": {
+      "best": {
+       "warm": 19370.9,
+       "cold": 20239.2
+      },
+      "typical": {
+       "warm": 19826.9,
+       "cold": 20991.2
+      },
+      "worst": {
+       "warm": 36560.4,
+       "cold": 45507.0
+      },
+      "codeLow": {
+       "warm": 20087.5,
+       "cold": 22630.6
+      },
+      "cartTables": {
+       "warm": 28564.1,
+       "cold": 32682.9
+      },
+      "outVdp1": {
+       "warm": 30213.6,
+       "cold": 31239.0
+      },
+      "outVdp2": {
+       "warm": 28858.5,
+       "cold": 29884.0
+      }
+     }
+    },
+    "glue": {
+     "description": "the same caller with the symbols read from a list: the caller's own cost, no decoding",
+     "perTile": {
+      "meanCycles": 1852.45,
+      "medianCycles": 1860.5,
+      "minCycles": 1496,
+      "maxCycles": 2161,
+      "meanInstructions": 1795.41
+     },
+     "cyclesPerSymbol": 17.72,
+     "placedPerTile": {
+      "best": {
+       "warm": 1874.0,
+       "cold": 2498.5
+      },
+      "typical": {
+       "warm": 1881.2,
+       "cold": 3335.7
+      },
+      "worst": {
+       "warm": 1958.1,
+       "cold": 8515.3
+      },
+      "codeLow": {
+       "warm": 1881.2,
+       "cold": 3429.5
+      },
+      "cartTables": {
+       "warm": 1917.4,
+       "cold": 5364.3
+      },
+      "outVdp1": {
+       "warm": 9418.5,
+       "cold": 10434.5
+      },
+      "outVdp2": {
+       "warm": 8490.1,
+       "cold": 9501.2
+      }
+     }
+    }
+   },
+   "decodeCyclesPerTile": {
+    "v2": 2503.1,
+    "v2Packed": 2500.1,
+    "v2Portable": 4983.9,
+    "marker": 2936.8,
+    "vlc1": 12382.0
+   },
+   "decodeCyclesPerSymbol": {
+    "v2": 23.95,
+    "v2Packed": 23.92,
+    "v2Portable": 47.68,
+    "marker": 28.1,
+    "vlc1": 118.47
+   }
+  }
+ },
+ "loops": {
+  "pairLike": {
+   "description": "256 symbols, Zipf s = 1.3, w = 6",
+   "w": 6,
+   "lmax": 12,
+   "symbols": 4096,
+   "corpora": 8,
+   "meanBitsPerSymbol": 4.837,
+   "escapeFraction": 0.2711,
+   "decoders": {
+    "v2": {
+     "cyclesPerSymbol": 29.19,
+     "instructionsPerSymbol": 24.83,
+     "call1": {
+      "meanCycles": 57.0,
+      "medianCycles": 57.0,
+      "minCycles": 57,
+      "maxCycles": 57,
+      "meanInstructions": 54.0
+     },
+     "call4096": {
+      "meanCycles": 119585.88,
+      "medianCycles": 119311.5,
+      "minCycles": 118167,
+      "maxCycles": 120962,
+      "meanInstructions": 101746.0
+     }
+    },
+    "v2Portable": {
+     "cyclesPerSymbol": 50.17,
+     "instructionsPerSymbol": 41.95,
+     "call1": {
+      "meanCycles": 98.88,
+      "medianCycles": 98.5,
+      "minCycles": 97,
+      "maxCycles": 101,
+      "meanInstructions": 89.38
+     },
+     "call4096": {
+      "meanCycles": 205562.0,
+      "medianCycles": 205161.5,
+      "minCycles": 203989,
+      "maxCycles": 207292,
+      "meanInstructions": 171888.38
+     }
+    },
+    "marker": {
+     "cyclesPerSymbol": 32.22,
+     "instructionsPerSymbol": 27.57,
+     "call1": {
+      "meanCycles": 65.0,
+      "medianCycles": 65.0,
+      "minCycles": 65,
+      "maxCycles": 65,
+      "meanInstructions": 61.0
+     },
+     "call4096": {
+      "meanCycles": 132021.0,
+      "medianCycles": 131686.0,
+      "minCycles": 130522,
+      "maxCycles": 133557,
+      "meanInstructions": 112942.12
+     }
+    },
+    "vlc1Batch": {
+     "cyclesPerSymbol": 33.18,
+     "instructionsPerSymbol": 27.87,
+     "call1": {
+      "meanCycles": 162.0,
+      "medianCycles": 162.0,
+      "minCycles": 162,
+      "maxCycles": 162,
+      "meanInstructions": 148.0
+     },
+     "call4096": {
+      "meanCycles": 136040.12,
+      "medianCycles": 135698.0,
+      "minCycles": 134530,
+      "maxCycles": 137605,
+      "meanInstructions": 114267.12
+     }
+    },
+    "vlc1PerSymbol": {
+     "cyclesPerSymbol": 116.18,
+     "instructionsPerSymbol": 105.87,
+     "call1": {
+      "meanCycles": 188.0,
+      "medianCycles": 188.0,
+      "minCycles": 188,
+      "maxCycles": 188,
+      "meanInstructions": 172.0
+     },
+     "call4096": {
+      "meanCycles": 475951.12,
+      "medianCycles": 475609.0,
+      "minCycles": 474441,
+      "maxCycles": 477516,
+      "meanInstructions": 433701.12
+     }
+    }
+   }
+  },
+  "geometric16": {
+   "description": "16 symbols, each half as frequent as the last, w = 6",
+   "w": 6,
+   "lmax": 12,
+   "symbols": 4096,
+   "corpora": 8,
+   "meanBitsPerSymbol": 2.002,
+   "escapeFraction": 0.0153,
+   "decoders": {
+    "v2": {
+     "cyclesPerSymbol": 19.82,
+     "instructionsPerSymbol": 16.74,
+     "call1": {
+      "meanCycles": 57.0,
+      "medianCycles": 57.0,
+      "minCycles": 57,
+      "maxCycles": 57,
+      "meanInstructions": 54.0
+     },
+     "call4096": {
+      "meanCycles": 81215.12,
+      "medianCycles": 81186.0,
+      "minCycles": 80986,
+      "maxCycles": 81557,
+      "meanInstructions": 68614.0
+     }
+    },
+    "v2Portable": {
+     "cyclesPerSymbol": 38.01,
+     "instructionsPerSymbol": 31.34,
+     "call1": {
+      "meanCycles": 97.5,
+      "medianCycles": 97.0,
+      "minCycles": 97,
+      "maxCycles": 101,
+      "meanInstructions": 88.38
+     },
+     "call4096": {
+      "meanCycles": 155747.25,
+      "medianCycles": 155642.0,
+      "minCycles": 155325,
+      "maxCycles": 156305,
+      "meanInstructions": 128436.5
+     }
+    },
+    "marker": {
+     "cyclesPerSymbol": 21.18,
+     "instructionsPerSymbol": 17.98,
+     "call1": {
+      "meanCycles": 65.0,
+      "medianCycles": 65.0,
+      "minCycles": 65,
+      "maxCycles": 65,
+      "meanInstructions": 61.0
+     },
+     "call4096": {
+      "meanCycles": 86790.62,
+      "medianCycles": 86726.5,
+      "minCycles": 86502,
+      "maxCycles": 87223,
+      "meanInstructions": 73676.5
+     }
+    },
+    "vlc1Batch": {
+     "cyclesPerSymbol": 21.66,
+     "instructionsPerSymbol": 18.1,
+     "call1": {
+      "meanCycles": 162.0,
+      "medianCycles": 162.0,
+      "minCycles": 162,
+      "maxCycles": 162,
+      "meanInstructions": 148.0
+     },
+     "call4096": {
+      "meanCycles": 88874.88,
+      "medianCycles": 88805.5,
+      "minCycles": 88567,
+      "maxCycles": 89335,
+      "meanInstructions": 74275.5
+     }
+    },
+    "vlc1PerSymbol": {
+     "cyclesPerSymbol": 104.66,
+     "instructionsPerSymbol": 96.1,
+     "call1": {
+      "meanCycles": 188.0,
+      "medianCycles": 188.0,
+      "minCycles": 188,
+      "maxCycles": 188,
+      "meanInstructions": 172.0
+     },
+     "call4096": {
+      "meanCycles": 428785.88,
+      "medianCycles": 428716.5,
+      "minCycles": 428478,
+      "maxCycles": 429246,
+      "meanInstructions": 393709.5
+     }
+    }
+   }
+  }
+ },
+ "label": "MODELLED: executed SH-2 instructions in the Yabause interpreter; flat RAM, no caches or wait states; not Saturn hardware",
+ "sourceCommit": "769d1a4e63bfb71820d6247f1c2602d1a170f9ba",
+ "elfSha256": "d04deb11673f7e7072a231ef3aa6f8f4009cc4c5486b42e50d67449465fb76e1",
+ "toolchain": "Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)",
+ "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44247175665",
+ "yabauseCommit": "7e38821dbac265490f115e163c523a939acda759",
+ "targetCyclesPerTile": {
+  "cpuOnly": 3396,
+  "tablesHighWram": 4960,
+  "tablesCartridge": 9590
+ },
+ "placement": {
+  "placements": {
+   "best": {
+    "code": "hwram",
+    "tables": "hwram",
+    "input": "hwram",
+    "output": "hwram",
+    "stack": "hwram"
+   },
+   "typical": {
+    "code": "hwram",
+    "tables": "hwram",
+    "input": "lwram",
+    "output": "lwram",
+    "stack": "hwram"
+   },
+   "worst": {
+    "code": "cart10",
+    "tables": "cart10",
+    "input": "cart10",
+    "output": "lwram",
+    "stack": "hwram"
+   },
+   "codeLow": {
+    "code": "lwram",
+    "tables": "hwram",
+    "input": "hwram",
+    "output": "hwram",
+    "stack": "hwram"
+   },
+   "cartTables": {
+    "code": "hwram",
+    "tables": "cart6",
+    "input": "lwram",
+    "output": "lwram",
+    "stack": "hwram"
+   },
+   "outVdp1": {
+    "code": "hwram",
+    "tables": "hwram",
+    "input": "lwram",
+    "output": "vdp1",
+    "stack": "hwram"
+   },
+   "outVdp2": {
+    "code": "hwram",
+    "tables": "hwram",
+    "input": "lwram",
+    "output": "vdp2",
+    "stack": "hwram"
+   }
+  },
+  "note": "placed cycles = CPU-only cycles + stalls of the SH7604 cache and region model (placement_model.h); warm: the cache carries over from the previous tile of the same run, cold: empty cache per tile; region costs from hardware notes, not measured by this project"
+ }
+}

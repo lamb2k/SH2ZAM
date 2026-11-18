@@ -29,7 +29,7 @@ results and destination writes. **No console or emulator run was done.** Evidenc
   11 of 11 planted bugs in the SH-2 kernels stop the harness. Cycles are CPU-only and placed
   through `model-placement-1`
   ([results](../benchmarks/memo-model/results.json), captured by
-  [CI run 44231934774](https://github.com/lamb2k/SH2ZAM/actions/runs/44231934774)):
+  [CI run 44247175665](https://github.com/lamb2k/SH2ZAM/actions/runs/44247175665)):
 
   | Shape | Today (the port's own model) | Placed (cold) | CPU-only |
   | --- | ---: | ---: | ---: |

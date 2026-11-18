@@ -149,7 +149,8 @@ copied only below `low` (2,048), `to` only above `high` (4,144), the centre
 fraction ignored (19,436) and the step rounded away from zero (220).
 
 **MODELLED** (`benchmarks/rails-model`, Yabause SH-2 interpreter, flat RAM;
-not Saturn timing). The model first checks every record of the assembly
+not Saturn timing; [results](benchmarks/rails-model/results.json) captured by
+[CI run 44247175665](https://github.com/lamb2k/SH2ZAM/actions/runs/44247175665) on `769d1a4`). The model first checks every record of the assembly
 entry, the C path and the loop against the oracle (128,000 calls, 25,158
 rejected, 837,840 stepped points; the loop on 64,000 road strips) and the
 argument rules through pointer tables (38 cases), then times them:

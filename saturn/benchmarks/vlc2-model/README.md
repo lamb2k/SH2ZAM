@@ -64,8 +64,10 @@ SH2Z_CC=sh2eb-elf-gcc SH2Z_OBJDUMP=sh2eb-elf-objdump SH2Z_NM=sh2eb-elf-nm \
 YABAUSE_SOURCE=/path/to/pinned/yabause bash saturn/benchmarks/vlc2-model/ci.sh model
 ```
 
-The capture is `build/sh2-model/vlc2-results.json` in the `sh2-compile-evidence` artifact of
-each CI run, with the source commit, the ELF SHA-256, the toolchain and the Yabause commit.
+[`results.json`](results.json) is the committed capture, from
+[CI run 44247175665](https://github.com/lamb2k/SH2ZAM/actions/runs/44247175665) on `769d1a4`: the
+`build/sh2-model/vlc2-results.json` of its `sh2-compile-evidence` artifact, with the source commit,
+the ELF SHA-256, the toolchain and the Yabause commit. Every CI run uploads a fresh capture there.
 
 ## Not covered
 

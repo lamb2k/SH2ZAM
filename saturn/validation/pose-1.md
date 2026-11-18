@@ -22,7 +22,8 @@ floating-point arithmetic. It equals the header's binary32 reference procedure f
   control match the oracle on all 37 fields of 20,000 cases (13,075 accepted, each also run
   with the allowed aliasing), and the internal difference, reciprocal and basis-value routines
   on 320,000 values each, in the Yabause interpreter before timing
-  ([results](../benchmarks/pose-model/results.json)). Modelled cycles per call: 1,440 with one
+  ([results](../benchmarks/pose-model/results.json), captured by
+  [CI run 44247175665](https://github.com/lamb2k/SH2ZAM/actions/runs/44247175665)). Modelled cycles per call: 1,440 with one
   scale on all three axes and 1,574 with three scales, against 23,853 and 23,879 for the
   binary32 procedure in soft-float (16.6× and 15.2×). Cycle numbers are modelled, not Saturn
   timings.

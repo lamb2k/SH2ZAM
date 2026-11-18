@@ -1,0 +1,93 @@
+{
+ "schema": 1,
+ "kind": "Yabause isolated SH2 interpreter flat-RAM model, not Saturn timing",
+ "verified": {
+  "calls": 128000,
+  "rejected": 25158,
+  "steppedPoints": 837840,
+  "nearPoints": 386652,
+  "copiedEnds": 2605252,
+  "loopCompared": 64000,
+  "dividerDivisions": 2482336,
+  "entries": "rails_divu, rails_portable (every call) and loop_divu (road strips) against tests/rails_oracle.h, every record byte; rejected calls return 0 and write nothing"
+ },
+ "argumentRules": {
+  "cases": 38,
+  "checks": "each of 8 null pointers, unprepared handle, count 0 and maximum + 1, overlapping and wrapping outputs (nothing written); adjacent outputs and boundary inside out_l (every record against the oracle); rails_divu_ptrs and rails_portable_ptrs"
+ },
+ "perCallAndPoint": {
+  "camera": "road: focal 200 px, 320 x 224 clip, centre (160, 112 + 1/65536)",
+  "pointsPerRail": "0 .. 63",
+  "repeats": 8,
+  "fit": "cycles per quad = perQuad + perPoint * stepped points (both rails), least squares",
+  "separateSpans": {
+   "railsDivu": {
+    "perQuad": 941.4,
+    "perRail": 470.7,
+    "perPoint": 130.61
+   },
+   "railsPortable": {
+    "perQuad": 1559.4,
+    "perRail": 779.7,
+    "perPoint": 675.87
+   },
+   "loopDivu": {
+    "perQuad": 4073.3,
+    "perRail": 2036.7,
+    "perPoint": 154.53
+   }
+  },
+  "sharedSpan": {
+   "railsDivu": {
+    "perQuad": 866.5,
+    "perRail": 433.2,
+    "perPoint": 130.26
+   },
+   "railsPortable": {
+    "perQuad": 1438.7,
+    "perRail": 719.3,
+    "perPoint": 674.67
+   },
+   "loopDivu": {
+    "perQuad": 4083.6,
+    "perRail": 2041.8,
+    "perPoint": 154.31
+   }
+  }
+ },
+ "roadStrips": {
+  "quads": 4000,
+  "meanBoundaries": 5.282,
+  "maxBoundaries": 65,
+  "meanPointsPerRail": 2.093,
+  "railsWithPoints": 5155,
+  "meanCyclesPerQuad": {
+   "railsDivu": 1272.6,
+   "railsPortable": 3793.4,
+   "loopDivu": 3535.7
+  },
+  "speedupOverLoop": {
+   "railsDivu": 2.78,
+   "railsPortable": 0.93
+  }
+ },
+ "label": "MODELLED: executed SH-2 instructions in the Yabause interpreter; flat RAM, no caches or wait states; not Saturn hardware",
+ "sourceCommit": "769d1a4e63bfb71820d6247f1c2602d1a170f9ba",
+ "elfSha256": "998d1448662899cddadf135dd44fbd69aa3af8f2fa276f59a2d340c337e82f8d",
+ "toolchain": "Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)",
+ "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44247175665",
+ "yabauseCommit": "7e38821dbac265490f115e163c523a939acda759",
+ "frameEstimateMs": {
+  "basis": "103 rail calls (51.5 quads) per frame at separateSpans perQuad and perPoint; 28.6364 MHz",
+  "mean408Points": {
+   "railsDivu": 3.55,
+   "railsPortable": 12.43,
+   "loopDivu": 9.53
+  },
+  "p99_809Points": {
+   "railsDivu": 5.38,
+   "railsPortable": 21.9,
+   "loopDivu": 11.69
+  }
+ }
+}

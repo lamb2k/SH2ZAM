@@ -20,7 +20,9 @@ emulator run was done.** Evidence by tier:
 - **MODELLED:**
   - Verification before timing: in the Yabause interpreter, the assembly entry, the C path and
     the loop it replaces match the oracle on 128,000 calls (25,158 rejected) and 837,840 stepped
-    points, plus 38 argument-rule cases ([model](../benchmarks/rails-model/README.md)).
+    points, plus 38 argument-rule cases ([model](../benchmarks/rails-model/README.md),
+    [results](../benchmarks/rails-model/results.json), captured by
+    [CI run 44247175665](https://github.com/lamb2k/SH2ZAM/actions/runs/44247175665)).
   - Cost: 941 modelled cycles per quad (both rails) plus 130.6 per stepped point, against 4,073
     plus 154.5 for the loop. On road strips that is 1,273 cycles per quad against 3,536.
   - At a road renderer's edge load (103 rail calls, 408 points per frame) that is 3.55 ms per

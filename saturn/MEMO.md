@@ -194,8 +194,9 @@ Its region costs are cited hardware notes, not this project's measurements:
 
 The tables come from the committed capture
 [`benchmarks/memo-model/results.json`](benchmarks/memo-model/results.json):
-[SH-2 cross compile run 44231934774](https://github.com/lamb2k/SH2ZAM/actions/runs/44231934774),
-source commit `d401348`. It is identical to a local run with the same pinned Yaul GCC
+[SH-2 cross compile run 44247175665](https://github.com/lamb2k/SH2ZAM/actions/runs/44247175665),
+source commit `769d1a4`. Apart from its provenance it equals the first capture,
+[run 44231934774](https://github.com/lamb2k/SH2ZAM/actions/runs/44231934774) on `d401348`, which is identical to a local run with the same pinned Yaul GCC
 (the same ELF SHA-256).
 
 <!-- tables -->

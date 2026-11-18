@@ -128,7 +128,7 @@ MODEL_PLACEMENT_LOG=$PWD/memo-placement.jsonl bash saturn/benchmarks/memo-model/
 ```
 
 [`results.json`](results.json) is the committed capture, from
-[CI run 44231934774](https://github.com/lamb2k/SH2ZAM/actions/runs/44231934774) on `d401348`. It
+[CI run 44247175665](https://github.com/lamb2k/SH2ZAM/actions/runs/44247175665) on `769d1a4`. It
 records the source commit, the ELF SHA-256, the toolchain, the Yabause commit and the placement
 model's regions. Every CI run
 uploads a fresh capture in the `sh2-compile-evidence` artifact.
