@@ -225,6 +225,121 @@ bool sh2z_shade_fade_offset(uint16_t *out,size_t out_stride,const uint8_t *fade,
 bool sh2z_shade_fade_mix(uint16_t *out,size_t out_stride,const uint8_t *fade,
     size_t fade_stride,size_t count,const uint8_t near_rgb[3],const uint8_t far_rgb[3]);
 
+/* ---- Contract tag shade-2 ------------------------------------------------- */
+
+/* A fused fade lookup and 5:5:5 colour per vertex batch, with the per-frame
+ * work moved into two prepared handles. Everything above is unchanged by this
+ * tag. Scalar divides by constants for the same arithmetic are in
+ * cdiv_experimental.h. */
+
+/* ---- Prepared fade lookup ---- */
+
+#define SH2Z_SHADE_FOGP_BUCKETS 4096
+
+/** A threshold fog prepared for constant-time lookups (5,132 bytes). Built by
+ *  sh2z_shade_fogp_prepare; callers may read but should not write it.
+ *  fade(z) is shade-1's: max { i : depth[i] <= max(z, 0) }. shift is the
+ *  smallest value >= 1 with min(depth[255], 2^31 - 1) >> shift below
+ *  SH2Z_SHADE_FOGP_BUCKETS, scale = 2^(32 - shift), and
+ *  bucket[b] = max { i : depth[i] <= b << shift } (as uint32) for
+ *  b <= SH2Z_SHADE_FOGP_BUCKETS, so a depth in bucket b has its fade in
+ *  bucket[b] .. bucket[b + 1]; equal bounds need no search. */
+typedef struct {
+    uint32_t scale;
+    uint8_t shift;
+    uint8_t reserved[3];
+    uint32_t depth[256];
+    uint8_t bucket[SH2Z_SHADE_FOGP_BUCKETS+4];
+} sh2z_shade_fogp_t;
+
+/** Prepare *out from a shade-1 table. Only fog->depth is read, so the table
+ *  may come from sh2z_shade_fog_build, sh2z_shade_fog_from_depth or the
+ *  caller. Once per fog change. Returns false, leaving *out unchanged, if a
+ *  pointer is null, *out overlaps *fog, depth[0] != 0 or depth decreases. */
+bool sh2z_shade_fogp_prepare(sh2z_shade_fogp_t *out,const sh2z_shade_fog_t *fog);
+
+/* ---- Prepared colour ramp ---- */
+
+#define SH2Z_SHADE_RAMP_OFFSET 1u
+#define SH2Z_SHADE_RAMP_MIX    2u
+
+/** The per-frame colour rule of sh2z_shade_fog_gouraud (532 bytes). Built by
+ *  sh2z_shade_ramp_offset or sh2z_shade_ramp_mix; callers may read but should
+ *  not write it.
+ *
+ *  Both forms choose a variant v from the mean fade of the batch:
+ *      v = [sum >= threshold[0] * count] + [sum >= threshold[1] * count]
+ *  with sum the sum of the batch's fades (floor(sum / count) >= t exactly when
+ *  sum >= t * count), so a threshold of 256 never selects.
+ *
+ *  OFFSET form: a texture pre-blended toward a fog colour base at fade level
+ *  level[v], corrected per vertex toward the live fog colour, relative to the
+ *  texture's mean colour m (all three in the same units):
+ *      slope[k] = live[k] - m[k],  bias[k] = level[v] * (base[k] - m[k])
+ *      x        = fade * slope[k] - bias[k]
+ *      c[k]     = clamp(16 + trunc(x / 255) + e, 0, 31)
+ *                 with e = 1 if x is a negative multiple of 255, else e = 0.
+ *  That is sh2z_shade_fade_offset's channel for this slope and bias, except
+ *  that a negative multiple of 255 is one higher before the clamp: at most
+ *  1 LSB per channel, and the only difference. The ramp stores 257 * live,
+ *  257 * base, level and threshold.
+ *
+ *  MIX form: mix[f] is sh2z_shade_fade_mix's word for fade f (exact); mean is
+ *  ignored and level is zero. */
+typedef struct {
+    uint8_t form;
+    uint8_t level[3];
+    uint16_t threshold[2];
+    int16_t live[3],base[3];
+    uint16_t mix[256];
+} sh2z_shade_ramp_t;
+
+/** OFFSET ramp. Every live[k] and base[k] <= 127 (with m[k] <= 127 this keeps
+ *  shade-1's |slope| <= 127 and |bias| <= 32767). threshold may be null
+ *  (variant always 0); otherwise threshold[0] <= threshold[1] <= 256.
+ *  Returns false, leaving *out unchanged, if out, live, base or level is null
+ *  or a value is out of range. */
+bool sh2z_shade_ramp_offset(sh2z_shade_ramp_t *out,const uint8_t live[3],const uint8_t base[3],
+    const uint8_t level[3],const uint16_t threshold[2]);
+
+/** MIX ramp: mix[f] = sh2z_shade_fade_mix's word for (near_rgb, far_rgb) and
+ *  fade f, for all 256 fades (once per colour change). threshold as above.
+ *  Returns false, leaving *out unchanged, on a null pointer other than
+ *  threshold or a threshold out of range. */
+bool sh2z_shade_ramp_mix(sh2z_shade_ramp_t *out,const uint8_t near_rgb[3],const uint8_t far_rgb[3],
+    const uint16_t threshold[2]);
+
+/* ---- Fused fade and colour per batch ---- */
+
+/** For count vertices with depth z_i, the int32 at (const char *)z + i * z_stride
+ *  (for example &v[0].z of view vertices, stride sizeof(v[0])):
+ *      fade_i = fade(z_i)                                (exact, as shade-1)
+ *      v      = the ramp's variant for these fades
+ *      out[i] = 0x8000 | c[0] | c[1] << 5 | c[2] << 10   (the ramp's form)
+ *  with m = mean for the OFFSET form (mean[k] <= 127); the MIX form ignores
+ *  mean, which may be null. Returns v (0, 1 or 2). count == 0 returns 0 and
+ *  writes nothing.
+ *
+ *  Returns -1, writing nothing, if count > 0 and out, z, fog or ramp is null,
+ *  ramp->form is not a form, the OFFSET form has a null mean or a
+ *  mean[k] > 127, count > 65535, out is odd, z is not 4-byte aligned,
+ *  or z_stride is not a multiple of 4 or exceeds 65532. Not checked, to keep
+ *  the per-call cost small at about four vertices a call: out[0 .. count-1]
+ *  must not overlap the depths, *fog, *ramp or mean, and fog and ramp must
+ *  come from their prepare functions. */
+int sh2z_shade_fog_gouraud(uint16_t *out,const void *z,size_t z_stride,size_t count,
+    const sh2z_shade_fogp_t *fog,const sh2z_shade_ramp_t *ramp,const uint8_t mean[3]);
+
+/** sh2z_shade_fog_gouraud with z_i the int32 at (const char *)refs[i] + z_offset:
+ *  the corners of a piece given as pointers to their vertex records (for
+ *  example an array of const sh2z_view_vertex_t * cast to const void *const *,
+ *  z_offset offsetof(sh2z_view_vertex_t, z)), with no gather. Same results,
+ *  returns and checks, with refs in place of z and z_offset in place of
+ *  z_stride. Also not checked: every refs[i] is non-null and
+ *  refs[i] + z_offset is 4-byte aligned. */
+int sh2z_shade_fog_gouraud_refs(uint16_t *out,const void *const *refs,size_t z_offset,size_t count,
+    const sh2z_shade_fogp_t *fog,const sh2z_shade_ramp_t *ramp,const uint8_t mean[3]);
+
 #ifdef __cplusplus
 }
 #endif
