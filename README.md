@@ -224,6 +224,22 @@ division unit, with start/finish forms that overlap the division with other work
 Host-exact tested against an independent oracle under ASan/UBSan and costed in the SH-2
 instruction model (modelled, no console run). See [the trig12 guide](saturn/TRIG12.md).
 
+## Unit vectors and bases
+
+[`sh2zam/unit30_experimental.h`](saturn/include/sh2zam/unit30_experimental.h) (contract tag
+`fixed-unit-1`) keeps directions in Q2.30. It provides:
+- an inline rounded multiply, a single-rounding `MAC.L` dot product and a cross product,
+  all saturating;
+- a reciprocal square root from a seed table and two multiply-only Newton steps (within
+  2 LSB);
+- a normalisation of any `int32_t` scale in hand-written SH-2 assembly (within 2 LSB);
+- an exactly rounded 64-bit integer square root;
+- the forward-first and up-first cross-product orthonormalisations of a 3x3 basis.
+
+Host and SH-2 results are bit-identical. Host-tested against an independent oracle and
+costed in the SH-2 instruction model (modelled, no console run). See
+[the unit-vector guide](saturn/UNIT30.md).
+
 ## Git submodule
 
 ```sh
