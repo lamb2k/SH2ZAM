@@ -1,6 +1,6 @@
 # Validation record — 2026-11-15 (integer kernels)
 
-Branch `cps2-kernels-20261115` adds `sh2zam/m68k.h`, `sh2zam/box2.h` and `sh2zam/cell16.h`
+An earlier contributor branch adds `sh2zam/m68k.h`, `sh2zam/box2.h` and `sh2zam/cell16.h`
 ([guide](../INTEGER_KERNELS.md)). **No console run was done.** Evidence by tier:
 
 - **Host-exact:** `m68k_exact`, `box2_exact`, `cell16_exact` pass under GCC and Clang Release and
