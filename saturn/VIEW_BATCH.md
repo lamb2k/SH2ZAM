@@ -1765,8 +1765,8 @@ fraction ignored (19,436) and the step rounded away from zero (220).
 
 **MODELLED** (`benchmarks/rails-model`, Yabause SH-2 interpreter, flat RAM;
 not Saturn timing). The model first checks every record of the assembly
-entry, the C path and the loop against the oracle (128,000 calls, 25,150
-rejected, 837,716 stepped points; the loop on 63,998 road strips) and the
+entry, the C path and the loop against the oracle (128,000 calls, 25,158
+rejected, 837,840 stepped points; the loop on 64,000 road strips) and the
 argument rules through pointer tables (38 cases), then times them:
 
 | Entry (road camera) | Cycles per quad (one call, both rails) | Per stepped point |
@@ -1774,7 +1774,7 @@ argument rules through pointer tables (38 cases), then times them:
 | `sh2z_view_edge_rails_center_divu`, separate spans | 941 (471 per rail) | 130.6 |
 | `sh2z_view_edge_rails_center_divu`, shared span | 867 (433 per rail) | 130.3 |
 | The loop with `sh2z_view_edge_steps_center_divu` | 4,073 (2,037 per rail) | 154.5 |
-| `sh2z_view_edge_rails_center` (C path) | 1,404 | 672.1 |
+| `sh2z_view_edge_rails_center` (C path) | 1,559 | 675.9 |
 
 On 4,000 road strips the call takes 1,273 cycles per quad against the
 loop's 3,536 (2.78 times faster). At a road renderer's measured edge load
