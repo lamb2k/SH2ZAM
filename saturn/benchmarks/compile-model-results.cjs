@@ -1,5 +1,10 @@
-/* Validate isolated SH-2 interpreter evidence. MIT; SH2ZAM Contributors.
- * These are guest instruction-model cycles, never physical-console timings. */
+/*! \file
+ *  \brief Validate isolated SH-2 interpreter evidence.
+ *  These are guest instruction-model cycles, never physical-console timings.
+ *
+ *  \author 2026 SH2ZAM Contributors
+ *  \copyright GPL-2.0-or-later
+ */
 const fs=require('node:fs'),path=require('node:path');
 const KERNEL_SET='float-plain-fixed-safe-prepared-fused-sh2-model-v2';
 const LEGACY_KERNEL_SET='float-safe-prepared-fused-sh2-model-v1';

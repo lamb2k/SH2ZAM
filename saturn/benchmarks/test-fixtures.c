@@ -1,4 +1,9 @@
-/* Correctness only: host execution is not Saturn performance evidence. MIT. */
+/*! \file
+ *  \brief Correctness only: host execution is not Saturn performance evidence.
+ *
+ *  \author 2026 SH2ZAM Contributors
+ *  \copyright GPL-2.0-or-later
+ */
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>

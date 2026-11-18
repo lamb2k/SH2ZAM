@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (c) 2026 SH2ZAM Contributors.
 """Report the actual SH-2 batch code; instruction counts are not cycle timings."""
 from pathlib import Path
 import json

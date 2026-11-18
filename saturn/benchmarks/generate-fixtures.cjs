@@ -1,4 +1,9 @@
-/* Generate exact browser Q16 vertex inputs and loop poses. MIT. */
+/*! \file
+ *  \brief Generate exact browser Q16 vertex inputs and loop poses.
+ *
+ *  \author 2026 SH2ZAM Contributors
+ *  \copyright GPL-2.0-or-later
+ */
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const {makeMesh}=require('../../exhibits/meshes.js');
 const cases=[];
