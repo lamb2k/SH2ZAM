@@ -125,6 +125,44 @@ jobs:
             if [ -s sh2-trig12-undefined.txt ]; then exit 1; fi
             grep -q "div1" sh2-trig12-disassembly.txt
             "$CC" -m2 -mb -nostdlib -nostartfiles -Wl,-T,saturn/benchmarks/integer-model/model.ld -Wl,-e,0               -o build/sh2/trig12-model.elf build/sh2/trig12-bridge.o build/sh2/libsh2zam.a -lgcc
+            # unit30 bridge (fixed-unit-1) for the executed-instruction model. The library
+            # object must need nothing undefined (no memcpy/memset, no libgcc helper) and
+            # must contain the hand-written normalisation; the inline MAC.L dot product
+            # is instantiated in the bridge.
+            "$CC" -m2 -mb -O2 -ffreestanding -std=c11 -Wall -Wextra -Werror -DSH2Z_REQUIRE_SH2=1 \
+              -Isaturn/include -c saturn/benchmarks/unit30-model/bridge.c -o build/sh2/unit30-bridge.o
+            "$OBJDUMP" -dr build/sh2/sh2zam_unit30.o > sh2-unit30-disassembly.txt
+            "$OBJDUMP" -dr build/sh2/unit30-bridge.o > sh2-unit30-bridge-disassembly.txt
+            "$NM" -u build/sh2/sh2zam_unit30.o | tee sh2-unit30-undefined.txt
+            if [ -s sh2-unit30-undefined.txt ]; then exit 1; fi
+            grep -q "<_sh2z_vec3_normalize_u30>:" sh2-unit30-disassembly.txt
+            grep -q "dmuls.l" sh2-unit30-disassembly.txt
+            grep -q "mac.l" sh2-unit30-bridge-disassembly.txt
+            "$CC" -m2 -mb -nostdlib -nostartfiles -Wl,-T,saturn/benchmarks/integer-model/model.ld -Wl,-e,0 \
+              -o build/sh2/unit30-model.elf build/sh2/unit30-bridge.o build/sh2/libsh2zam.a -lgcc
+            # Vehicle kernels (vehicle-kernels-1) for the executed-instruction model. The library
+            # objects must not need memcpy/memset and must contain the hand-written SH-2 loops.
+            "$CC" -m2 -mb -O2 -ffreestanding -std=c11 -Wall -Wextra -Werror -DSH2Z_REQUIRE_SH2=1 \
+              -Isaturn/include -c saturn/benchmarks/vehicle-model/bridge.c -o build/sh2/vehicle-bridge.o
+            "$OBJDUMP" -dr build/sh2/sh2zam_vehicle.o build/sh2/sh2zam_view_indexed.o > sh2-vehicle-disassembly.txt
+            "$NM" -u build/sh2/sh2zam_vehicle.o build/sh2/sh2zam_view_indexed.o | tee sh2-vehicle-undefined.txt
+            if grep -qE "memcpy|memset|memmove" sh2-vehicle-undefined.txt; then exit 1; fi
+            grep -q "<_sh2zi_facing_pos>:" sh2-vehicle-disassembly.txt
+            grep -q "<_sh2zi_light_run_sat>:" sh2-vehicle-disassembly.txt
+            grep -q "<_sh2zi_gouraud_run>:" sh2-vehicle-disassembly.txt
+            grep -q "<_sh2zi_view_divu_indexed>:" sh2-vehicle-disassembly.txt
+            "$CC" -m2 -mb -nostdlib -nostartfiles -Wl,-T,saturn/benchmarks/integer-model/model.ld -Wl,-e,0 \
+              -o build/sh2/vehicle-model.elf build/sh2/vehicle-bridge.o build/sh2/libsh2zam.a -lgcc
+            # View-from-camera bridge (view-camera-1) for the executed-instruction model. The
+            # library object must need nothing from libgcc or libc (no 64-bit shift helpers).
+            "$CC" -m2 -mb -O2 -ffreestanding -std=c11 -Wall -Wextra -Werror -DSH2Z_REQUIRE_SH2=1 \
+              -Isaturn/include -c saturn/benchmarks/camera-model/bridge.c -o build/sh2/camera-bridge.o
+            "$OBJDUMP" -dr build/sh2/sh2zam_view_camera.o > sh2-camera-disassembly.txt
+            "$NM" -u build/sh2/sh2zam_view_camera.o | tee sh2-camera-undefined.txt
+            if [ -s sh2-camera-undefined.txt ]; then exit 1; fi
+            grep -q "dmuls.l" sh2-camera-disassembly.txt
+            "$CC" -m2 -mb -nostdlib -nostartfiles -Wl,-T,saturn/benchmarks/integer-model/model.ld -Wl,-e,0 \
+              -o build/sh2/camera-model.elf build/sh2/camera-bridge.o build/sh2/libsh2zam.a -lgcc
             # pose bridge (pose-1) for the executed-instruction model. The library object
             # must need no symbol at all (no memcpy/memset, no soft-float or libgcc
             # helper) and must contain the hand-written SH-2 pose.
@@ -220,6 +258,15 @@ jobs:
           bash saturn/benchmarks/vlc-model/run.sh \
             build/sh2/vlc-model.elf \
             build/sh2-model/vlc-results.json
+      - name: Verify and cost the unit-vector kernels in the SH-2 instruction model
+        env:
+          MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          MODEL_TOOLCHAIN: Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)
+          MODEL_SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          bash saturn/benchmarks/unit30-model/run.sh \
+            build/sh2/unit30-model.elf \
+            build/sh2-model/unit30-results.json
       - name: Verify and cost the tier merge planner in the SH-2 instruction model
         env:
           MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -258,6 +305,24 @@ jobs:
           MODEL_SOURCE_COMMIT: ${{ github.sha }}
         run: |
           bash saturn/benchmarks/trig12-model/run.sh             build/sh2/trig12-model.elf             build/sh2-model/trig12-results.json
+      - name: Verify and cost the vehicle kernels in the SH-2 instruction model
+        env:
+          MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          MODEL_TOOLCHAIN: Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)
+          MODEL_SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          bash saturn/benchmarks/vehicle-model/run.sh \
+            build/sh2/vehicle-model.elf \
+            build/sh2-model/vehicle-results.json
+      - name: Verify and cost the view-from-camera build in the SH-2 instruction model
+        env:
+          MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          MODEL_TOOLCHAIN: Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)
+          MODEL_SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          bash saturn/benchmarks/camera-model/run.sh \
+            build/sh2/camera-model.elf \
+            build/sh2-model/camera-results.json
       - name: Verify and cost the pose from binary32 state in the SH-2 instruction model
         env:
           MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -315,5 +380,11 @@ jobs:
             build/sh2-model/placement-tables.md
             build/sh2-model/trig12-results.json
             build/sh2-model/trig12-raw.json
+            build/sh2-model/unit30-results.json
+            build/sh2-model/unit30-raw.json
+            build/sh2-model/vehicle-results.json
+            build/sh2-model/vehicle-raw.json
+            build/sh2-model/camera-results.json
+            build/sh2-model/camera-raw.json
             build/sh2-model/pose-results.json
             build/sh2-model/pose-raw.json

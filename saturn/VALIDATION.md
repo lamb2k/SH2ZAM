@@ -28,6 +28,82 @@ floating-point arithmetic. It equals the header's binary32 reference procedure f
   timings.
 - **Not done:** console or emulator execution, cache and memory timing, a whole frame.
 
+# Validation record — 2026-11-17 (view from a camera, view-camera-1)
+
+`sh2zam/view_experimental.h` adds `sh2z_view_from_camera30` and `sh2z_view_place_q12`
+([guide](VIEW_BATCH.md#view-from-a-camera-view-camera-1)). **No console or emulator run was done.**
+Evidence by tier:
+
+- **HOST:** `camera_exact` passes under GCC and Clang Release with `SH2Z_STRICT=ON` and under
+  ASan/UBSan, against the independent oracle `tests/camera_oracle.h`: every table entry, every
+  field of view, 600,000 random calls, boundary sets, 300,000 placements and 8 negative controls
+  (4,074,767 checks). Against a binary32 reference pipeline over 15,000 synthetic poses (1.37
+  million projected points), every point is within its stated bound and within 0.05 px of the
+  exact projection; integer pixels differ from the float pipeline by at most one.
+- **MODELLED:** the compiled SH-2 object code matches the oracle on 23,075 calls of each
+  function, and the float chain compiled for SH-2 matches the host bit for bit
+  ([results](benchmarks/camera-model/results.json), captured by [CI run 44224191560](https://github.com/lamb2k/SH2ZAM/actions/runs/44224191560)). 691 modelled cycles per view against
+  87,395 for the soft-float chain. Cycle numbers are modelled, not Saturn timings.
+- **Not done:** console or emulator execution, cache and memory timing, a port's own float
+  library.
+
+# Validation record — 2026-11-17 (vehicle kernels, vehicle-kernels-1)
+
+`sh2z_shade_screen_facing`, `sh2z_shade_light_normals_indexed` and `sh2z_shade_gouraud_approx`
+in `sh2zam/shade_experimental.h`, and `sh2z_view_batch_indexed` / `_divu_indexed` in
+`sh2zam/view_experimental.h` ([guide](VEHICLE_KERNELS.md)), each with a hand-written SH-2
+path. Facing, indexed light and indexed view are exact; every approximate Gouraud channel
+equals shade-1's or is one less (proven exhaustively; 94.5443% equal over the whole domain).
+**No console or emulator run was done.** Evidence by tier:
+
+- **HOST:** `vehicle` passes under GCC and Clang Release with `SH2Z_STRICT=ON` and under
+  ASan/UBSan, against the independent oracles `tests/vehicle_oracle.h` and
+  `tests/shade_oracle.h`: the Gouraud bound proven over every case, 1,618,022 indexed normals,
+  3,976,307 faces, 295,190 indexed vertices, and 9 negative controls (75,743,762 checks).
+- **MODELLED:** the compiled SH-2 code matches the oracles on 30,555 view vertices, 251,325
+  faces, 130,563 normals and 1,293,261 Gouraud pairs in the Yabause interpreter before timing
+  ([results](benchmarks/vehicle-model/results.json), captured by [CI run 44224191560](https://github.com/lamb2k/SH2ZAM/actions/runs/44224191560)). Modelled cycles per element,
+  kernel / today: facing 53.0 / 228.7, indexed light 72.7 / 101 (all normals), approximate
+  Gouraud 91.4 / 134.2, indexed view 146.5 / 142.4 (all positions). Cycle numbers are
+  modelled, not Saturn timings.
+- **Not done:** console or emulator execution, cache and memory timing, a whole frame.
+
+# Validation record — 2026-11-17 (Q2.30 unit vectors, fixed-unit-1)
+
+`sh2zam/unit30_experimental.h` ([guide](UNIT30.md)) adds:
+- inline Q2.30 multiply, `MAC.L` dot and cross products, all rounded once and saturating;
+- a seeded multiply-only reciprocal square root;
+- a normalisation of any `int32_t` scale, in hand-written SH-2 assembly;
+- an exactly rounded 64-bit square root;
+- the two cross-product orthonormalisations of a 3x3 basis.
+
+Host and SH-2 give the same bits. **No console or emulator run was done.** Evidence by tier:
+
+- **HOST:** `unit30` passes under GCC and Clang Release with `SH2Z_STRICT=ON` and under
+  ASan/UBSan. It is checked against an independent oracle (128-bit integers, float64):
+  - the K1 operations are exact on 3.2M pairs, and 977,938 saturations are all counted;
+  - the reciprocal-square-root mantissa is in [-1.2004, +0.2243] LSB over all 3.2e9 inputs
+    (exhaustive run);
+  - `rsqrt64` is within 1.36 LSB and normalisation within 1.03 LSB (bound 2);
+  - `isqrt` is exact on 1.45M values;
+  - 808,004 bases are within 3 + 1.5/|cross| LSB of a float64 run of the same algorithm,
+    against up to 316 LSB for binary32 when the rows are well apart;
+  - 9 negative controls are all caught (21,452,989 checks).
+- **MODELLED:** in the Yabause interpreter, before timing, every output is checked against
+  the oracle or equals the host build bit for bit:
+  - the assembly normalisation equals its portable C on SH-2;
+  - the `MAC.L` dot product is also checked with SR.S set on entry.
+
+  ([results](benchmarks/unit30-model/results.json), captured by [CI run 44224191560](https://github.com/lamb2k/SH2ZAM/actions/runs/44224191560).)
+
+  Modelled cycles per element: multiply 23, dot 37, cross 89, normalisation 155-182. A
+  basis orthonormalisation costs 494-519, against 10,948 for the same algorithm on
+  binary32 soft-float and 2,507 for SH2ZAM Q16.16. Cycle numbers are modelled, not Saturn
+  timings. The plan's cycle targets for dot, cross, normalisation, `isqrt` and the
+  orthonormalisation (250-300) are not met; the guide lists why.
+- **Not done:** console or emulator execution, cache and memory timing, a whole camera or
+  body update.
+
 # Validation record — 2026-11-17 (12-bit-angle trig and divider quotients, trig12-1)
 
 `sh2zam/trig12_experimental.h` and the `trig12-1` section of `sh2zam/divu_experimental.h`

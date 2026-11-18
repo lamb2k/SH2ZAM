@@ -19,6 +19,7 @@ planes per vertex in 64-bit arithmetic. Contract tag: `view-contract-1`.
 | Final-coordinate truncation (`_trunc` forms of every projecting path) | `view-round-1` (see below): HOST and MODELLED; +8.4 modelled cycles per batch vertex |
 | Guard clip in a source clipper's vertex order (fan-mapped textures) | `view-guard-src-1` (see below): HOST and MODELLED; −10% to +6% modelled cycles against the `view-round-1` guard clip |
 | Fractional (Q16) centre (`_center` forms of every `_trunc` path and of the source-order guard clip) | `view-center-1` (see below): HOST and MODELLED; +4.3 modelled cycles per batch vertex over `_trunc`, +6 to +9 per source-order clip (divider) |
+| View from a Q2.30 camera basis, Q20.12 eye and lens; `sh2z_view_place` for a Q20.12 eye | `view-camera-1` (see below): HOST and MODELLED; 691 modelled cycles per view, within 0.05 px of exact |
 | Console or emulator timing | Unrun; the [calibration image](benchmarks/yaul/calibration/README.md) times the batch on a console |
 
 `sh2z_view_batch` is the definition of correct and never touches the hardware
@@ -1384,3 +1385,236 @@ console or emulator run.
   whole pixels, and the planes come from the Q16 centre. Use
   `view.clip` of the centre view when the rectangle is the clip rectangle.
 - **What exactness covers.** The pixel rule only, as for `view-round-1`.
+
+## View from a camera (`view-camera-1`)
+
+A renderer that keeps its camera in fixed point can build the view for
+these kernels without floating point. `sh2z_view_from_camera30` builds a
+`view-center-1` centre view from a camera basis in Q2.30, an eye in Q20.12
+and a lens. It replaces the usual per-frame float chain in one integer
+pass: a look-at matrix, a frustum, their product and packing, a
+float-to-fixed adapter, and `sh2z_view_place` with a Q16.16 eye.
+`sh2z_view_place_q12` is `sh2z_view_place` with a Q20.12 eye.
+
+```c
+bool sh2z_view_place_q12(sh2z_view_t *v, const int32_t eye_q12[3]);
+
+typedef struct {
+    int32_t fov_q16;                /* full horizontal fov, degrees, Q16.16 */
+    int32_t scale_x16, scale_y16;   /* pixels per unit of tangent, Q16.16 */
+    int32_t center_x16, center_y16; /* view axis on screen, Q16.16 pixels */
+    int32_t near_q12, far_q12;      /* Q20.12 model units */
+    int16_t clip[4];                /* inclusive pixel rectangle */
+} sh2z_view_lens_t;
+
+bool sh2z_view_from_camera30(sh2z_view_center_t *out, const int32_t basis_u30[9],
+    const int32_t eye_q12[3], const sh2z_view_lens_t *lens);
+```
+
+### Why a Q20.12 eye
+
+`sh2z_view_place` takes the eye in Q16.16 model units, so it overflows at
+32,768 units. A world whose geometry fills the int16 range has no headroom
+there: an eye computed as `eye * 65536` from a float is undefined at the
+edge of the world. In Q20.12 the eye can be 16 times further out. The
+translation is still computed exactly in 64 bits from the quantized
+rotation:
+
+    t[i] = -floor((r[i][0]*eye[0] + r[i][1]*eye[1] + r[i][2]*eye[2]) / 4096)
+
+That is the same value `sh2z_view_place` computes from `16 * eye` wherever
+`16 * eye` fits. The host test checks that equality on 66,156 random views.
+The only limit left is the view's own row bound
+(`32768 * sum|r| + |t| <= INT32_MAX`). For an orthonormal rotation, it
+holds for every eye within 74,000 units of the origin. The corner of the
+int16 cube is 56,755 units away.
+
+### Contract
+
+- **Basis.** Three rows of three, row-major, Q2.30. Row 0 is screen +x
+  (right), row 1 screen +y (up), row 2 the viewing direction. A camera that
+  keeps {forward, up, side = up x forward} passes {-side, up, forward}.
+  `r = round(basis / 65536)`, ties away from zero, to Q1.14. A value at or
+  above `2^31 - 32768` would round to 32768, so the call fails.
+- **Field of view.** The half angle is rounded to a 4096-step turn, ties
+  away from zero, the way a float frustum built from a 4096-entry sine table
+  rounds it: `h = floor((fov_q16 + 5760) / 11520)`. `1 <= h <= 1023` is
+  required.
+- **Focal length.** `focal = floor((scale * C[h] + 2^19) / 2^20)`, Q16.16.
+  `C[h] = round(cot(pi h / 2048) * 2^20)` is a 1,024-entry, 4 KB table,
+  generated exactly by `saturn/tools/view_camera_cot.py`. There is no
+  division. An off-axis frustum, or a vertical extent different from the
+  horizontal one, goes into `scale_y` and the centre. For a viewport of
+  half-size `(sx, sy)` and a frustum of `fov_scale_x` by `fov_scale_y`
+  units whose centre is `(fx, fy)`:
+
+      scale_x  = sx                         centre_x = translate_x - 2 sx fx / fov_scale_x
+      scale_y  = sy fov_scale_x / fov_scale_y   centre_y = translate_y + 2 sy fy / fov_scale_y
+
+- **Centre, depth, clip.** The centre is kept as given, any int32 (as in
+  `view-center-1`). `near_z = 4 * near_q12` and `far_z = 4 * far_q12`, with
+  `0 < near < far <= INT32_MAX / 4`. The clip rectangle is inclusive.
+- **Failure.** On failure the call returns false and leaves `*out`
+  unchanged. It fails on:
+  - a null pointer;
+  - `h` out of range;
+  - a scale that is not positive;
+  - a focal length of 0 or above `INT32_MAX`;
+  - a bad depth or clip;
+  - a rotation value that does not fit;
+  - an eye too far for the view (`t` does not fit int32, or the row bound
+    fails).
+
+  There is no other failure. The result is a valid centre view: the
+  `_center` batch, projection, clips and edge steps accept it.
+
+No floating point, divider, libc or global state is used. Host and SH-2
+builds write identical bytes.
+
+### Accuracy (HOST)
+
+**Analytic bound.** Take a unit orthonormal basis given to within `J` per
+element (Q2.30 rounding plus caller error). Then each rotation element is
+within `2^-15 + J` of the true basis. The translation adds less than
+`2^-14` units. The focal length is within `scale * 2^-21 + 2^-17` pixels.
+
+For a point at depth `z`, distance `k z` from the eye, projecting `X` pixels
+from the centre, the continuous projection (before the final truncation)
+is within
+
+    (|X| + f) (3 (2^-15 + J) k + 2^-14 / z) + |X| df / f
+
+of the exact one. `tests/test_camera.c` checks this bound for every point
+it projects, with `J = 8.5 * 2^-30`. The largest error measured was 0.512
+of the bound.
+
+**Measured against the float pipeline.** `tests/camera_float_ref.h` writes
+out the float chain in binary32, every operation in source order:
+- a 4096-entry sine table from a Taylor series;
+- an orthonormalised camera basis;
+- a look-at matrix and an off-axis frustum;
+- a float-to-fixed adapter (Q2.30 rotation, Q16.16 focal and centre);
+- `sh2z_view_place` with `eye * 65536` truncated.
+
+15,000 synthetic poses were run:
+- eye anywhere in the world or outside it, a random forward and up;
+- field of view 40 to 110 degrees;
+- frustum centre up to ±80 pixels, fractional;
+- near/far 16/8192 or 512/16384;
+- 160 x 120 viewport;
+- half the poses with ±8 LSB of basis error.
+
+Each pose has up to 96 int16 points spread over the screen plus a margin of
+about 16 to 21 pixels, at log-uniform depth. The tables give the continuous
+projected error, the larger of x and y, in pixels, as p50 / p99 / max.
+
+| Eye | Points | This view vs exact | Float pipeline vs exact | This view vs float |
+| --- | ---: | --- | --- | --- |
+| near origin, \|e\| <= 2,048 | 288,000 | 0.0051 / 0.0155 / 0.0278 | 0.0051 / 0.0155 / 0.0278 | 0.00002 / 0.00008 / 0.0129 |
+| world, \|e\| <= 32,767 | 574,140 | 0.0052 / 0.0152 / 0.0302 | 0.0053 / 0.0165 / 0.0392 | 0.0002 / 0.0144 / 0.0415 |
+| world edge, 30,000..32,767 | 274,124 | 0.0052 / 0.0155 / 0.0275 | 0.0055 / 0.0189 / 0.0466 | 0.0006 / 0.0173 / 0.0494 |
+| outside, one axis 32,768..42,000 | 235,182 | 0.0051 / 0.0148 / 0.0276 | fails (Q16.16 eye overflows) | — |
+
+| Eye | Integer pixels differing from the float pipeline | This view vs truncated exact point | Float pipeline vs truncated exact point |
+| --- | --- | --- | --- |
+| near origin | 12 of 288,000, by 1 | 2,359 | 2,359 |
+| world | 1,007 of 574,140, by 1 | 4,691 | 4,850 |
+| world edge | 888 of 274,124, by 1 | 2,255 | 2,489 |
+| outside | — | 1,870 of 235,182 | — |
+
+The integer columns use the `view-center-1` rule.
+
+The test asserts:
+- at most 0.05 px from exact;
+- at most 0.06 px from the float pipeline;
+- integer pixels differ from the float pipeline by at most 1;
+- no failure inside 74,000 units;
+- the float pipeline fails on every pose beyond 32,767.
+
+Toward the edge of the world this view is closer to exact than the float
+pipeline. A binary32 eye there has 1/512-unit steps, and its look-at
+translation rounds.
+
+**Matrix elements against the float pipeline.**
+- Rotation: within 1 LSB (Q1.14), and within 0.5 LSB of exact plus the basis
+  error.
+- Focal length: within 10 LSB (Q16.16, 1.5e-4 px). It is within 7.6e-5 px
+  of `160 cot(h)`.
+- Centre: within 2 LSB (Q16.16).
+- Translation: differs by up to 63,147 LSB (3.9 units) at the world edge.
+  This is not an error. A 1-LSB rotation difference times a 32,767-unit eye
+  moves `t` by up to 2 units per element, and the rotation moves every point
+  by the same amount. The projections above include both.
+
+### Implementation and evidence
+
+`src/sh2zam_view_camera.c` is portable C on both host and SH-2. It is a
+separate object, so no existing object changes. Each row is branch-free:
+- three roundings;
+- a 64-bit dot product, as `DMULS.L`;
+- a floor and fit test on the two halves;
+- the row bound, computed in 32 bits with the carry.
+
+A single failure word is tested once. There are no 64-bit shifts or libgcc
+calls (`nm -u` is empty).
+
+- **HOST.** `camera_exact` passes under GCC and Clang with `SH2Z_STRICT=ON`
+  and under ASan/UBSan, with 4,074,767 checks:
+  - every table entry, re-derived from `cosl`/`sinl`;
+  - every field of view from 5,000 to 11,791,000 (Q16.16);
+  - 600,000 random calls mixing valid and invalid inputs against the
+    independent oracle `tests/camera_oracle.h` (128-bit integers, no shared
+    code or table);
+  - row-bound, `t = -2^31`, focal-overflow, rounding-tie, centre, depth and
+    clip boundaries;
+  - 300,000 `sh2z_view_place_q12` calls;
+  - the accuracy study above.
+
+  Eight negative controls (mutated oracles) are each detected: floor
+  rounding, truncated `t`, truncated half angle, truncated focal, the next
+  table entry, truncated centre floor, a strict row bound, and Q16-scaled
+  depth.
+- **MODELLED.** [`benchmarks/camera-model`](benchmarks/camera-model/README.md)
+  ([results](benchmarks/camera-model/results.json), captured by
+  [CI run 44224191560](https://github.com/lamb2k/SH2ZAM/actions/runs/44224191560)
+  on `3da9af1`) runs the SH-2 object code in the Yabause interpreter and checks it before
+  timing:
+  - `sh2z_view_from_camera30` and `sh2z_view_place_q12` on 23,075 calls
+    each (every field, or untouched output on failure), against the oracle;
+  - the float chain compiled for SH-2 with GCC soft-float, against the same
+    chain on the host, bit for bit (1,016 poses).
+
+  Over 64 world poses, mean modelled cycles per call:
+
+| Entry | Cycles | Instructions |
+| --- | ---: | ---: |
+| `sh2z_view_from_camera30` | 691 | 655 |
+| `sh2z_view_place_q12` | 411 | 394 |
+| float chain: frustum, look-at, product, packing, adapter, centre view (soft-float) | 87,395 | 75,645 |
+| float-to-fixed adapter and centre view only | 25,762 | 22,431 |
+
+The float chain is 126 times the cost. Its soft-float is libgcc's, not any
+particular port's float library, so treat the ratio as indicative.
+
+The planned cost was 250 to 350 cycles, and 691 is above it. The work is
+mostly the exact contract:
+- 9 roundings;
+- three 64-bit dot products;
+- the per-row validity bound with `sum|r|`.
+
+A hand-scheduled SH-2 version of the rows is estimated at about 400 cycles.
+That saves about 10 µs per frame for one call, so it was not written. No
+console or emulator run.
+
+### Caller guidance
+
+- **Keep the eye in Q20.12** and pass it as is. Do not convert to Q16.16.
+- **Basis order.** Pass rows {right, up, forward}. For a basis {x forward,
+  y up, z = y × x}, that is {-z, y, x}. A basis from a fixed-point
+  orthonormalisation within a few LSB of Q2.30 is far inside the bound.
+- **Lens from a frustum.** Use the formulas above. For a 160 x 120 viewport
+  of a 320 x 240 frustum, `scale_x = scale_y = 160`. The centre is then
+  `(translate_x - fx, translate_y + fy)`, plus any line crop of the target
+  screen, kept fractional.
+- **Depth fog or perspective constants** that a frustum matrix also
+  provides depend only on near and far. Compute them once per change.
