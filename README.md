@@ -202,6 +202,13 @@ fog variant and 5:5:5 colour in one hand-written SH-2 call with prepared fog and
 through magic-number multiplies with exhaustively checked domains. See
 [the fused shade guide](saturn/SHADE_FUSED.md).
 
+Contract tag `vehicle-kernels-1` adds per-draw kernels for an indexed mesh renderer:
+`sh2z_shade_screen_facing` (exact projected-quad facing), `sh2z_shade_light_normals_indexed`
+and `sh2z_view_batch_divu_indexed` (only the referenced normals and positions, byte-identical
+to the full batches) and `sh2z_shade_gouraud_approx` (each channel equal to shade-1's or one
+less, proven), all with hand-written SH-2 loops. See
+[the vehicle kernels guide](saturn/VEHICLE_KERNELS.md).
+
 ## Variable-length decoding
 
 [`sh2zam/vlc_experimental.h`](saturn/include/sh2zam/vlc_experimental.h) (contract tag `vlc-1`)

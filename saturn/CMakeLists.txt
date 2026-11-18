@@ -23,6 +23,8 @@ list(APPEND SH2Z_SOURCES src/sh2zam_shade_fused.c)
 list(APPEND SH2Z_SOURCES src/sh2zam_trig12.c)
 # fixed-unit-1: Q2.30 unit vectors
 list(APPEND SH2Z_SOURCES src/sh2zam_unit30.c)
+# vehicle-kernels-1: screen facing, indexed lighting, approximate Gouraud, indexed view batch
+list(APPEND SH2Z_SOURCES src/sh2zam_vehicle.c src/sh2zam_view_indexed.c)
 add_library(sh2zam STATIC ${SH2Z_SOURCES})
 add_library(SH2ZAM::sh2zam ALIAS sh2zam)
 target_include_directories(sh2zam PUBLIC
@@ -71,7 +73,7 @@ if(SH2Z_BUILD_TESTS AND NOT CMAKE_CROSSCOMPILING)
   add_executable(sh2zam_batch_native_tests tests/test_batch_native.c)
   target_link_libraries(sh2zam_batch_native_tests PRIVATE sh2zam)
   add_test(NAME native_batch_host_models COMMAND sh2zam_batch_native_tests)
-  foreach(family rotation_batch spatial view divu edges guard m68k box2 cell16 vlc merge merge_tier round guard_src shade center center_equiv guard_src_center unit30)
+  foreach(family rotation_batch spatial view divu edges guard m68k box2 cell16 vlc merge merge_tier round guard_src shade center center_equiv guard_src_center unit30 vehicle)
     add_executable(sh2zam_${family}_tests tests/test_${family}.c)
     target_link_libraries(sh2zam_${family}_tests PRIVATE sh2zam m)
     if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")

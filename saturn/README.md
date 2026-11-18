@@ -29,6 +29,8 @@ The maintained overview, build commands, API scope and upstream credits are in t
 - [trig12 instruction model](benchmarks/trig12-model/README.md)
 - [Experimental Q2.30 unit vectors: inline multiply, dot and cross, reciprocal square root, normalisation, basis orthonormalisation](UNIT30.md)
 - [unit30 instruction model](benchmarks/unit30-model/README.md)
+- [Experimental vehicle kernels: screen facing, indexed light and view batch, approximate Gouraud](VEHICLE_KERNELS.md)
+- [Vehicle-kernel instruction model](benchmarks/vehicle-model/README.md)
 - [Remaining work](PORTING_PLAN.md)
 
 Both `cmake -S .` from the repository root and `cmake -S saturn` build the Saturn library. Batch transforms now select a specialized exact kernel when the matrix proves direct accumulation safe, with a general fallback for the remaining matrices. Full SH4ZAM API parity and physical-console performance qualification remain incomplete.
