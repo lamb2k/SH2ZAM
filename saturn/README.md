@@ -43,6 +43,7 @@ The workload suite uses `3374d77` as its prior baseline; the historical
 One line per guide, sorted by guide file name; a kernel lane adds its own line
 (its guide, then its instruction model).
 
+- [IMA ADPCM decoding: exact, table-driven, in runs](ADPCM.md); [ADPCM instruction model](benchmarks/adpcm-model/README.md)
 - [Experimental explicit SH-2 divider](DIVU.md)
 - [Integer kernels: 68000 arithmetic, 2D box overlap, 16x16 cell placement](INTEGER_KERNELS.md); [Integer-kernel instruction model](benchmarks/integer-model/README.md)
 - [Experimental model pose from binary32 state, with no floating-point arithmetic](POSE.md); [pose instruction model](benchmarks/pose-model/README.md)
