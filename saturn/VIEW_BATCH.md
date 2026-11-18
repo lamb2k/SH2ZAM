@@ -14,6 +14,7 @@ planes per vertex in 64-bit arithmetic. Contract tag: `view-contract-1`.
 | Header, numeric definition, portable C (`sh2z_view_batch`) | Landed, `view-contract-1` |
 | SH-2 path with the hardware divider (`sh2z_view_batch_divu`) | Landed, `view-sh2-1` |
 | SH-2 model timing (MODELLED tier) | 134.7 cycles per vertex at 512 vertices |
+| Model pose from binary32 model state (`sh2z_pose_from_f32`) | `pose-1` (see [POSE.md](POSE.md)): HOST and MODELLED; 0 LSB from the binary32 procedure, 1,440 modelled cycles per pose (one scale) |
 | View from a Q2.30 camera basis, Q20.12 eye and lens; `sh2z_view_place` for a Q20.12 eye | `view-camera-1` (see below): HOST and MODELLED; 691 modelled cycles per view, within 0.05 px of exact |
 | Fractional (Q16) centre (`_center` forms of every `_trunc` path and of the source-order guard clip) | `view-center-1` (see below): HOST and MODELLED; +4.3 modelled cycles per batch vertex over `_trunc`, +6 to +9 per source-order clip (divider) |
 | View-space projection, edge stepper, near clip | Landed, `view-edges-1` (see below) |

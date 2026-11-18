@@ -837,3 +837,4 @@ bool sh2z_view_batch_divu_indexed(sh2z_view_vertex_t *out,const sh2z_view_t *v,
  * #include "../view_experimental.h". List it below: one #include per line,
  * sorted by file name. The sections above stay as they are, and every
  * existing include keeps working. See saturn/CONTRIBUTING-KERNELS.md. */
+#include "contracts/pose_1.h"
