@@ -7,19 +7,21 @@ planes per vertex in 64-bit arithmetic. Contract tag: `view-contract-1`.
 
 ## Status
 
+<!-- One row per contract. After the first three rows, rows are sorted by contract tag; the console row stays last. -->
+
 | Part | State |
 | --- | --- |
 | Header, numeric definition, portable C (`sh2z_view_batch`) | Landed, `view-contract-1` |
 | SH-2 path with the hardware divider (`sh2z_view_batch_divu`) | Landed, `view-sh2-1` |
 | SH-2 model timing (MODELLED tier) | 134.7 cycles per vertex at 512 vertices |
+| View from a Q2.30 camera basis, Q20.12 eye and lens; `sh2z_view_place` for a Q20.12 eye | `view-camera-1` (see below): HOST and MODELLED; 691 modelled cycles per view, within 0.05 px of exact |
+| Fractional (Q16) centre (`_center` forms of every `_trunc` path and of the source-order guard clip) | `view-center-1` (see below): HOST and MODELLED; +4.3 modelled cycles per batch vertex over `_trunc`, +6 to +9 per source-order clip (divider) |
 | View-space projection, edge stepper, near clip | Landed, `view-edges-1` (see below) |
 | Guard-band polygon clip (near, far, sides; attributes) | Landed, `view-guard-1` (see below) |
+| Guard clip in a source clipper's vertex order (fan-mapped textures) | `view-guard-src-1` (see below): HOST and MODELLED; −10% to +6% modelled cycles against the `view-round-1` guard clip |
 | Bounded texture-merge planner (pixel or row tolerance) | Landed, `view-merge-1` (see below): HOST and MODELLED; 223 modelled cycles per boundary at 1 px |
 | Tier texture-merge planner (equal-height runs, no rows) | `view-merge-2` (see below): HOST and MODELLED; 38.7 modelled cycles per boundary at 1 px, 64 boundaries (65.5 at 8); same plans as `view-merge-1` |
 | Final-coordinate truncation (`_trunc` forms of every projecting path) | `view-round-1` (see below): HOST and MODELLED; +8.4 modelled cycles per batch vertex |
-| Guard clip in a source clipper's vertex order (fan-mapped textures) | `view-guard-src-1` (see below): HOST and MODELLED; −10% to +6% modelled cycles against the `view-round-1` guard clip |
-| Fractional (Q16) centre (`_center` forms of every `_trunc` path and of the source-order guard clip) | `view-center-1` (see below): HOST and MODELLED; +4.3 modelled cycles per batch vertex over `_trunc`, +6 to +9 per source-order clip (divider) |
-| View from a Q2.30 camera basis, Q20.12 eye and lens; `sh2z_view_place` for a Q20.12 eye | `view-camera-1` (see below): HOST and MODELLED; 691 modelled cycles per view, within 0.05 px of exact |
 | Console or emulator timing | Unrun; the [calibration image](benchmarks/yaul/calibration/README.md) times the batch on a console |
 
 `sh2z_view_batch` is the definition of correct and never touches the hardware

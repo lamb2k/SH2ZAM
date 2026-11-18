@@ -756,3 +756,11 @@ bool sh2z_view_batch_divu_indexed(sh2z_view_vertex_t *out,const sh2z_view_t *v,
 #endif
 
 #endif /* SH2ZAM_VIEW_VEHICLE_KERNELS_1 */
+
+/* ---- Per-contract headers -------------------------------------------------
+ * A new view contract goes in its own header, sh2zam/contracts/<tag>.h
+ * (the tag with '_' for '-', e.g. contracts/view_example_1.h), with its own
+ * include guard and extern "C" block, starting with
+ * #include "../view_experimental.h". List it below: one #include per line,
+ * sorted by file name. The sections above stay as they are, and every
+ * existing include keeps working. See saturn/CONTRIBUTING-KERNELS.md. */
