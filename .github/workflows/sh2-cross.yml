@@ -93,6 +93,16 @@ jobs:
             grep -q "dmulu.l" sh2-vlc-disassembly.txt
             "$CC" -m2 -mb -nostdlib -nostartfiles -Wl,-T,saturn/benchmarks/integer-model/model.ld -Wl,-e,0 \
               -o build/sh2/vlc-model.elf build/sh2/vlc-bridge.o build/sh2/libsh2zam.a -lgcc
+            # Tier merge planner (view-merge-2) for the executed-instruction model. The library
+            # object must not need memcpy/memset and must contain the hand-written SH-2 kernel.
+            "$CC" -m2 -mb -O2 -ffreestanding -std=c11 -Wall -Wextra -Werror -DSH2Z_REQUIRE_SH2=1 \
+              -Isaturn/include -c saturn/benchmarks/merge-model/bridge.c -o build/sh2/merge-bridge.o
+            "$OBJDUMP" -dr build/sh2/sh2zam_view_merge_tier.o > sh2-merge-tier-disassembly.txt
+            "$NM" -u build/sh2/sh2zam_view_merge_tier.o | tee sh2-merge-tier-undefined.txt
+            if grep -qE "memcpy|memset|memmove" sh2-merge-tier-undefined.txt; then exit 1; fi
+            grep -q "<_sh2zi_merge_tier24>:" sh2-merge-tier-disassembly.txt
+            "$CC" -m2 -mb -nostdlib -nostartfiles -Wl,-T,saturn/benchmarks/integer-model/model.ld -Wl,-e,0 \
+              -o build/sh2/merge-model.elf build/sh2/merge-bridge.o build/sh2/libsh2zam.a -lgcc
             # view-rails bridge (view-rails-1) for the executed-instruction model. The
             # library object must not need memcpy/memset and must contain the hand-written
             # SH-2 entry and its stepping loop.
@@ -184,6 +194,15 @@ jobs:
           bash saturn/benchmarks/vlc-model/run.sh \
             build/sh2/vlc-model.elf \
             build/sh2-model/vlc-results.json
+      - name: Verify and cost the tier merge planner in the SH-2 instruction model
+        env:
+          MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          MODEL_TOOLCHAIN: Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)
+          MODEL_SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          bash saturn/benchmarks/merge-model/run.sh \
+            build/sh2/merge-model.elf \
+            build/sh2-model/merge-results.json
       - name: Verify and cost the view-rails kernels in the SH-2 instruction model
         env:
           MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -229,5 +248,7 @@ jobs:
             build/sh2-model/shade-raw.json
             build/sh2-model/vlc-results.json
             build/sh2-model/vlc-raw.json
+            build/sh2-model/merge-results.json
+            build/sh2-model/merge-raw.json
             build/sh2-model/rails-results.json
             build/sh2-model/rails-raw.json
