@@ -37,6 +37,6 @@ Then on the host (`ADPCM_VERIFY` sets the verification count, default 2,000,000)
 bash saturn/benchmarks/adpcm-model/ci.sh model
 ```
 
-[`results.json`](results.json) is a local capture (Yaul image GCC 13.2.0, 400,704 values
-verified). CI writes a fresh `build/sh2-model/adpcm-results.json` and uploads it with the
+[`results.json`](results.json) is the capture from
+[CI run 44311978373](https://github.com/lamb2k/SH2ZAM/actions/runs/44311978373) (2,001,036 values verified). CI writes a fresh `build/sh2-model/adpcm-results.json` and uploads it with the
 other model outputs.

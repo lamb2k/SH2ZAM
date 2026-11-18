@@ -46,13 +46,13 @@ AddressSanitizer and UndefinedBehaviorSanitizer, `-Werror -Wconversion -Wpedanti
 **MODELLED** ([`benchmarks/adpcm-model`](benchmarks/adpcm-model/README.md)): the compiled
 SH-2 code runs in the pinned Yabause interpreter (flat RAM, no caches or wait states; not
 Saturn or 32X timing). All three entry points are verified against the reference first
-(400,704 values), then timed over 256 streams per size:
+(2,001,036 values, [CI run 44311978373](https://github.com/lamb2k/SH2ZAM/actions/runs/44311978373)), then timed over 256 streams per size:
 
 | Decoder | 1 nibble | 32 nibbles | 512 nibbles |
 |---|---:|---:|---:|
-| Per-nibble step function on a voice record | 128.3 | 85.9 | 84.6 |
-| Plain C loop, bitwise rule inline | 92.6 | 61.6 | 60.2 |
-| **`sh2z_ima_decode`** | 102.2 | **33.7** | **31.6** |
+| Per-nibble step function on a voice record | 128.4 | 85.9 | 84.6 |
+| Plain C loop, bitwise rule inline | 92.8 | 61.6 | 60.2 |
+| **`sh2z_ima_decode`** | 102.3 | **33.7** | **31.6** |
 
 Cycles per nibble. From 32 nibbles up, the library is 45% to 48% faster than the plain
 loop and 61% to 63% faster than the per-nibble function. For single nibbles the call setup

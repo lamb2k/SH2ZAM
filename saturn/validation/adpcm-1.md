@@ -14,16 +14,17 @@ reference decoder `sh2z_ima_ref_decode` in its own file. Evidence by tier:
   432,040 checks at `SH2Z_ADPCM_ITERS=200000` under GCC with ASan/UBSan and
   `-Werror -Wconversion -Wpedantic`.
 - **MODELLED:** the compiled SH-2 code of all three bridge entry points matches the
-  reference on 400,704 values in the Yabause interpreter before any timing
+  reference on 2,001,036 values in the Yabause interpreter before any timing
   ([model](../benchmarks/adpcm-model/README.md),
-  [results](../benchmarks/adpcm-model/results.json), local capture). Cycles per nibble,
+  [results](../benchmarks/adpcm-model/results.json), captured by
+  [CI run 44311978373](https://github.com/lamb2k/SH2ZAM/actions/runs/44311978373)). Cycles per nibble,
   CPU-only flat RAM:
 
   | Decoder | 1 nibble | 32 nibbles | 512 nibbles |
   | --- | ---: | ---: | ---: |
-  | Per-nibble step function on a voice record | 128.3 | 85.9 | 84.6 |
-  | Plain C loop, bitwise rule inline | 92.6 | 61.6 | 60.2 |
-  | `sh2z_ima_decode` | 102.2 | 33.7 | 31.6 |
+  | Per-nibble step function on a voice record | 128.4 | 85.9 | 84.6 |
+  | Plain C loop, bitwise rule inline | 92.8 | 61.6 | 60.2 |
+  | `sh2z_ima_decode` | 102.3 | 33.7 | 31.6 |
 
 - **EMULATOR:** the Altered Beast 32X port decodes its speech with this kernel. On ares,
   level 1, frames 1800 to 3600, the slave CPU's decode work fell from 16,721 to 11,273

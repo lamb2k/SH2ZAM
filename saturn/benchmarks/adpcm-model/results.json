@@ -1,64 +1,64 @@
 {
  "schema": 1,
  "kind": "Yabause isolated SH2 interpreter flat-RAM model, not Saturn or 32X timing",
- "verified": 400704,
+ "verified": 2001036,
  "cost": {
   "n1": {
    "fast_decode": {
-    "meanCycles": 102.2,
-    "cyclesPerNibble": 102.23,
+    "meanCycles": 102.3,
+    "cyclesPerNibble": 102.3,
     "meanInstructions": 91.9
    },
    "plain_decode": {
-    "meanCycles": 92.6,
-    "cyclesPerNibble": 92.58,
-    "meanInstructions": 84.1
+    "meanCycles": 92.8,
+    "cyclesPerNibble": 92.8,
+    "meanInstructions": 84.2
    },
    "step_decode": {
-    "meanCycles": 128.3,
-    "cyclesPerNibble": 128.27,
-    "meanInstructions": 116.6
+    "meanCycles": 128.4,
+    "cyclesPerNibble": 128.39,
+    "meanInstructions": 116.7
    }
   },
   "n32": {
    "fast_decode": {
-    "meanCycles": 1077.4,
-    "cyclesPerNibble": 33.67,
-    "meanInstructions": 977.4
+    "meanCycles": 1077.0,
+    "cyclesPerNibble": 33.66,
+    "meanInstructions": 977.8
    },
    "plain_decode": {
-    "meanCycles": 1969.6,
-    "cyclesPerNibble": 61.55,
-    "meanInstructions": 1726.0
+    "meanCycles": 1971.0,
+    "cyclesPerNibble": 61.59,
+    "meanInstructions": 1727.1
    },
    "step_decode": {
-    "meanCycles": 2747.9,
-    "cyclesPerNibble": 85.87,
-    "meanInstructions": 2431.2
+    "meanCycles": 2747.3,
+    "cyclesPerNibble": 85.85,
+    "meanInstructions": 2430.9
    }
   },
   "n512": {
    "fast_decode": {
-    "meanCycles": 16173.8,
-    "cyclesPerNibble": 31.59,
-    "meanInstructions": 14495.3
+    "meanCycles": 16179.2,
+    "cyclesPerNibble": 31.6,
+    "meanInstructions": 14495.4
    },
    "plain_decode": {
-    "meanCycles": 30824.1,
+    "meanCycles": 30820.9,
     "cyclesPerNibble": 60.2,
-    "meanInstructions": 27114.5
+    "meanInstructions": 27110.0
    },
    "step_decode": {
-    "meanCycles": 43308.7,
+    "meanCycles": 43308.9,
     "cyclesPerNibble": 84.59,
-    "meanInstructions": 38444.4
+    "meanInstructions": 38442.2
    }
   }
  },
  "label": "MODELLED: executed SH-2 instructions in the Yabause interpreter; flat RAM, no caches or wait states; not Saturn hardware",
- "sourceCommit": "4c28e97cff167d842316a80d6473f48c301b6a67",
+ "sourceCommit": "bdeb02cb6490977727d5e9e89db8f2c687232b57",
  "elfSha256": "c746a3cb390cb106825d635b768629b33b176edbb7500c6a85ef7053cafdd823",
- "toolchain": "sh2eb-elf-gcc 13.2.0 (local Yaul image)",
- "evidenceUrl": "",
+ "toolchain": "Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)",
+ "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44311978373",
  "yabauseCommit": "7e38821dbac265490f115e163c523a939acda759"
 }
