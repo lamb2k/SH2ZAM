@@ -270,9 +270,10 @@ per tile. Whether the contributor's tile is closer to shape or to dense, and how
 caller code compares, needs a measurement of its decoder with this step. The cartridge
 figures stay high for any decoder whose hot tables (8.2 KB here) exceed the 4 KB cache.
 
-The numbers above come from a local run with the pinned Yaul GCC 13.2 image and the pinned
-Yabause. Every CI run's `sh2-compile-evidence` artifact has `vlc2-results.json` with the
-source commit, the ELF SHA-256 and the toolchain.
+The numbers above are from the capture `vlc2-results.json` in the `sh2-compile-evidence` artifact of
+[CI run 44243332134](https://github.com/lamb2k/SH2ZAM/actions/runs/44243332134), source `254b725`,
+pinned Yaul GCC 13.2, ELF SHA-256 `d04deb11...`. A local run with the same toolchain gave identical
+values. Every CI run uploads a fresh capture there.
 
 ## Not included
 

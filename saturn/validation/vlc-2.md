@@ -19,7 +19,8 @@ a reader that starts at any byte offset and is bounded once per stream. vlc-1 is
   SH-2-compiled C path (2,772,366 symbols each, every window, odd starts, random bytes,
   tables switched every symbol) and 1,536 synthetic tile decodes match the oracle and the
   generator in the Yabause interpreter, with any read past the stream bound or a table
-  trapped ([model](../benchmarks/vlc2-model/README.md)). On a generic context-modelled 4 bpp
+  trapped ([model](../benchmarks/vlc2-model/README.md), captured by
+  [CI run 44243332134](https://github.com/lamb2k/SH2ZAM/actions/runs/44243332134)). On a generic context-modelled 4 bpp
   tile workload the decoder averages 24.0 modelled cycles per symbol (13 for a first-level
   code). Tiles of 68.5 symbols take 3,081 cycles CPU only, 3,972 placed in high WRAM and
   8,825 with the tables in the cartridge. That is 3.1 times faster than one vlc-1 call per
