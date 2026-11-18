@@ -247,6 +247,17 @@ Host and SH-2 results are bit-identical. Host-tested against an independent orac
 costed in the SH-2 instruction model (modelled, no console run). See
 [the unit-vector guide](saturn/UNIT30.md).
 
+## View from a fixed-point camera
+
+`sh2z_view_from_camera30` in [`sh2zam/view_experimental.h`](saturn/include/sh2zam/view_experimental.h)
+(contract tag `view-camera-1`) builds a fractional-centre view for the view kernels from a Q2.30
+camera basis, a Q20.12 eye and a lens (field of view, scales, centre, depth, clip) in one integer
+pass, replacing a float look-at, frustum and float-to-fixed adapter. `sh2z_view_place_q12` places a
+view at a Q20.12 eye, which does not overflow at the edge of an int16 world as a Q16.16 eye does.
+Host-exact tested against an independent oracle, within 0.05 px of the exact projection over
+15,000 synthetic poses, and costed in the SH-2 instruction model (modelled, no console run). See
+[View from a camera](saturn/VIEW_BATCH.md#view-from-a-camera-view-camera-1).
+
 ## Git submodule
 
 ```sh
