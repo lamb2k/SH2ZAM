@@ -78,6 +78,17 @@ if(SH2Z_BUILD_TESTS AND NOT CMAKE_CROSSCOMPILING)
     endif()
     add_test(NAME ${family}_exact COMMAND sh2zam_${family}_tests)
   endforeach()
+  foreach(family trig12 divq)  # trig12-1
+    add_executable(sh2zam_${family}_tests tests/test_${family}.c)
+    target_link_libraries(sh2zam_${family}_tests PRIVATE sh2zam m)
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+      target_compile_options(sh2zam_${family}_tests PRIVATE -Wall -Wextra -Wconversion -Wshadow)
+      if(SH2Z_STRICT)
+        target_compile_options(sh2zam_${family}_tests PRIVATE -Werror -Wpedantic)
+      endif()
+    endif()
+    add_test(NAME ${family}_exact COMMAND sh2zam_${family}_tests)
+  endforeach()
   add_library(sh2zam_workload_prior STATIC
     benchmarks/workload-model/prior_sh2zam.c
     benchmarks/workload-model/prior_sh2zam_trig.c
