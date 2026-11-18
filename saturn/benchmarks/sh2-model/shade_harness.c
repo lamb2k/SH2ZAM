@@ -307,6 +307,27 @@ static uint64_t verify_frame(uint64_t iterations) {
 }
 
 /* ---- cost ---- */
+/* Placement model (MODEL_PLACEMENT_LOG): per entry, the buffers it writes are
+ * output (working arrays included) and the small per-frame tables it reads
+ * are tables; everything else it reads (normals, pairs, planes, depths,
+ * fades, mesh topology, parameters) is input. */
+static const struct place_decl place_light[]={{"_lut",PC_TABLES},{"_light",PC_TABLES},{"_lit",PC_OUTPUT},{NULL,0}};
+static const struct place_decl place_gouraud[]={{"_bases",PC_TABLES},{"_lit",PC_TABLES},{"_fog_rgb",PC_TABLES},{"_gouraud",PC_OUTPUT},{"_saturated",PC_OUTPUT},{NULL,0}};
+static const struct place_decl place_cull[]={{"_kept",PC_OUTPUT},{"_kept_count",PC_OUTPUT},{NULL,0}};
+static const struct place_decl place_fog_build[]={{"_fog_table",PC_OUTPUT},{"_plain_depth",PC_OUTPUT},{NULL,0}};
+static const struct place_decl place_fog[]={{"_fog_table",PC_TABLES},{"_fades",PC_OUTPUT},{NULL,0}};
+static const struct place_decl place_fade[]={{"_fade_slope",PC_TABLES},{"_fade_bias",PC_TABLES},{"_near_rgb",PC_TABLES},{"_far_rgb",PC_TABLES},{"_colours",PC_OUTPUT},{NULL,0}};
+static const struct place_decl place_frame[]={{"_lut",PC_TABLES},{"_light",PC_TABLES},{"_bases",PC_TABLES},{"_fog_rgb",PC_TABLES},
+ {"_frame_out",PC_OUTPUT},{"_saturated",PC_OUTPUT},{"_kept_count",PC_OUTPUT},{"_lit",PC_OUTPUT},{"_kept",PC_OUTPUT},{"_frame_pairs",PC_OUTPUT},{"_unique_gouraud",PC_OUTPUT},{NULL,0}};
+static const struct place_decl *shade_place_decl(const char *entry) {
+ if(strstr(entry,"frame"))return place_frame;
+ if(strstr(entry,"light"))return place_light;
+ if(strstr(entry,"gouraud"))return place_gouraud;
+ if(strstr(entry,"cull"))return place_cull;
+ if(strstr(entry,"fog_build"))return place_fog_build;
+ if(strstr(entry,"fog"))return place_fog;
+ return place_fade;
+}
 enum {CORPORA=64};
 static unsigned cyc[4][CORPORA];static uint64_t ins[4];
 static void row(const char *name,const char *unit_name,unsigned elements,const char *const *entries,unsigned ne,
@@ -317,7 +338,8 @@ static void row(const char *name,const char *unit_name,unsigned elements,const c
  uint64_t kept_total=0,unique_total=0;
  for(unsigned c=0;c<CORPORA;c++){setup(elements,c);
   const u32 third=a3==UINT32_MAX?h_unique_n:a3;
-  for(unsigned e=0;e<ne;e++){struct cost r=call(entries[e],a1,a2,third,0);if(r.result!=1)bad(entries[e],c);cyc[e][c]=r.cycles;ins[e]+=r.instructions;}
+  for(unsigned e=0;e<ne;e++){{char label[80];snprintf(label,sizeof label,"shade.%s.%s",name,entries[e]);place_tag(label,shade_place_decl(entries[e]));}
+   struct cost r=call(entries[e],a1,a2,third,0);if(r.result!=1)bad(entries[e],c);cyc[e][c]=r.cycles;ins[e]+=r.instructions;}
   kept_total+=get32("kept_count",0);unique_total+=h_unique_n;}
  if(!*first)putchar(',');*first=false;
  printf("\"%s\":{\"%s\":%u,\"corpora\":%u",name,unit_name,elements,(unsigned)CORPORA);
@@ -345,7 +367,7 @@ static void setup_frame(unsigned n,unsigned c){(void)n;(void)c;rand_frame(true);
 int main(int argc,char**argv) {
  if(argc<3){fprintf(stderr,"usage: shade_harness model.elf verify-scale\n");return 2;}
  const uint64_t scale=strtoull(argv[2],0,10);
- load_elf_symbols(argv[1]);load_elf(argv[1]);
+ load_elf_symbols(argv[1]);load_elf(argv[1]);place_init(argv[1]);
  cpu.model=SHMT_SH2;cpu.MappedMemoryReadByte=rb;cpu.MappedMemoryReadWord=rw;cpu.MappedMemoryReadLong=rl;cpu.MappedMemoryWriteByte=wb;cpu.MappedMemoryWriteWord=ww;cpu.MappedMemoryWriteLong=wl;
  for(unsigned i=0;i<65536;i++)cpu.opcodes[i]=decode(SHMT_SH2,(u16)i);for(unsigned i=0;i<256;i++)cpu.fetchlist[i]=fetch;
  uint64_t tables=0;

@@ -364,6 +364,7 @@ static void center_capture_src(void) {
    outs[row]+=(uint64_t)wc;
    for(int k=0;k<4;k++) {
     divu_reset();
+    if(k>=2){char label[80];snprintf(label,sizeof label,"view.srcGuard.%s.%s",names[row],k==2?"centerPortable":"centerDivu");place_tag(label,view_place_decl);}
     const struct cost cs=invoke(fn[k],0,0,0,0);
     cyc[row][k][t]=cs.cycles;
     if(k&1)divisions[row][k>>1]+=divu_divisions;
@@ -574,7 +575,9 @@ static int capture_center(void) {
     guard_store(&c,g,q,4,2);center_store(&cc);}
    for(int k=0;k<4;k++) {
     const char *fn=k<2?trunc_fn[row][k]:center_fn[row][k-2];
+    static const char *const place_rows[7]={"batch","project","edgeSteps","clipNear","guardInside","guardSide","guardNearSide"};
     divu_reset();
+    if(k>=2){char label[80];snprintf(label,sizeof label,"view.center.%s.%s",place_rows[row],k==2?"centerPortable":"centerDivu");place_tag(label,view_place_decl);}
     const struct cost cs=invoke(fn,arg,0,0,0);
     if(row==0&&cs.result!=1)fail("Center timing batch",t);
     if(row==3&&cs.result!=4)fail("Center timing clip shape",t);
