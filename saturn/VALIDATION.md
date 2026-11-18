@@ -1,3 +1,58 @@
+# Validation record — 2026-11-17 (Q2.30 unit vectors, fixed-unit-1)
+
+`sh2zam/unit30_experimental.h` ([guide](UNIT30.md)) adds:
+- inline Q2.30 multiply, `MAC.L` dot and cross products, all rounded once and saturating;
+- a seeded multiply-only reciprocal square root;
+- a normalisation of any `int32_t` scale, in hand-written SH-2 assembly;
+- an exactly rounded 64-bit square root;
+- the two cross-product orthonormalisations of a 3x3 basis.
+
+Host and SH-2 give the same bits. **No console or emulator run was done.** Evidence by tier:
+
+- **HOST:** `unit30` passes under GCC and Clang Release with `SH2Z_STRICT=ON` and under
+  ASan/UBSan. It is checked against an independent oracle (128-bit integers, float64):
+  - the K1 operations are exact on 3.2M pairs, and 977,938 saturations are all counted;
+  - the reciprocal-square-root mantissa is in [-1.2004, +0.2243] LSB over all 3.2e9 inputs
+    (exhaustive run);
+  - `rsqrt64` is within 1.36 LSB and normalisation within 1.03 LSB (bound 2);
+  - `isqrt` is exact on 1.45M values;
+  - 808,004 bases are within 3 + 1.5/|cross| LSB of a float64 run of the same algorithm,
+    against up to 316 LSB for binary32 when the rows are well apart;
+  - 9 negative controls are all caught (21,452,989 checks).
+- **MODELLED:** in the Yabause interpreter, before timing, every output is checked against
+  the oracle or equals the host build bit for bit:
+  - the assembly normalisation equals its portable C on SH-2;
+  - the `MAC.L` dot product is also checked with SR.S set on entry.
+
+  Modelled cycles per element: multiply 23, dot 37, cross 89, normalisation 155-182. A
+  basis orthonormalisation costs 494-519, against 10,948 for the same algorithm on
+  binary32 soft-float and 2,507 for SH2ZAM Q16.16. Cycle numbers are modelled, not Saturn
+  timings. The plan's cycle targets for dot, cross, normalisation, `isqrt` and the
+  orthonormalisation (250-300) are not met; the guide lists why.
+- **Not done:** console or emulator execution, cache and memory timing, a whole camera or
+  body update.
+
+# Validation record — 2026-11-17 (tier texture-merge planner, view-merge-2)
+
+`sh2z_view_merge_tier` in `sh2zam/view_experimental.h` ([guide](VIEW_BATCH.md#tier-texture-merge-planner-view-merge-2))
+plans texture merges for strips whose permitted runs have equal-height repetitions, without rows
+or multiplication, with a hand-written SH-2 kernel for runs of 2 and 4. Every texel of a merged
+quad stays within `tol_q8 / 256` px of the one-quad-per-repetition reference (proof in the
+guide). **No console or emulator run was done.** Evidence by tier:
+
+- **HOST:** `merge_tier` passes under GCC and Clang Release with `SH2Z_STRICT=ON` and under
+  ASan/UBSan, against an independent 128-bit oracle: 140,000 road, stepped-quad and adversarial
+  strips, 6,387,501 runs (839,811 merged) equal, 130,022 plans equal `sh2z_view_merge_runs` in
+  pixel mode, drift never above the tolerance on 113,284,539 texel samples, and 7 negative
+  controls (22,147,066 checks). On road strips the command count equals `view-merge-1`'s at
+  0.5, 1 and 2 px.
+- **MODELLED:** the compiled planner matches the harness oracle on 806,730 runs of 12,000 strips
+  in the Yabause interpreter before timing ([results](benchmarks/merge-model/results.json), captured by [CI run 44206041141](https://github.com/lamb2k/SH2ZAM/actions/runs/44206041141)).
+  38.7 modelled cycles per boundary at 1 px on 64-boundary road strips (65.5 at 8 boundaries),
+  4.9 (3.8) times fewer than `view-merge-1`, with the same plans. Cycle numbers are modelled,
+  not Saturn timings.
+- **Not done:** console or emulator execution, cache and memory timing, a whole frame.
+
 # Validation record — 2026-11-17 (variable-length decoding, vlc-1)
 
 `sh2zam/vlc_experimental.h` ([guide](VLC.md)) adds a bounded bit reader, a length-limited
