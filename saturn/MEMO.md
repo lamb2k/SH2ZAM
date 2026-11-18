@@ -192,6 +192,12 @@ Its region costs are cited hardware notes, not this project's measurements:
 - VDP1 VRAM: 45 a write;
 - VDP2: 40 a write.
 
+The tables come from the committed capture
+[`benchmarks/memo-model/results.json`](benchmarks/memo-model/results.json):
+[SH-2 cross compile run 44231934774](https://github.com/lamb2k/SH2ZAM/actions/runs/44231934774),
+source commit `d401348`. It is identical to a local run with the same pinned Yaul GCC
+(the same ELF SHA-256).
+
 <!-- tables -->
 **A. Block compare-and-copy**, cycles per group (slope from 1 to 90 groups), and whole calls at 75 and 90 groups. Placed = `best` (all in high work RAM), warm / cold.
 
