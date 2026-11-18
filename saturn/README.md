@@ -46,6 +46,7 @@ One line per guide, sorted by guide file name; a kernel lane adds its own line
 - [Experimental explicit SH-2 divider](DIVU.md)
 - [Integer kernels: 68000 arithmetic, 2D box overlap, 16x16 cell placement](INTEGER_KERNELS.md); [Integer-kernel instruction model](benchmarks/integer-model/README.md)
 - [Experimental model pose from binary32 state, with no floating-point arithmetic](POSE.md); [pose instruction model](benchmarks/pose-model/README.md)
+- [Experimental block memo kernels: block compare-and-copy, keyed write-through, copy until a marker, run diff](MEMO.md); [memo instruction model](benchmarks/memo-model/README.md)
 - [Experimental shading kernels: per-normal light, Gouraud packing, face culling, depth fog](SHADE.md); [Shading-kernel instruction model](benchmarks/shade-model/README.md)
 - [Experimental fused fade and colour per piece, prepared fog, divides by constants](SHADE_FUSED.md); [Fused shade instruction model](benchmarks/shade-fused-model/README.md)
 - [Experimental 12-bit-angle sin/cos/tan and inline divider quotients](TRIG12.md); [trig12 instruction model](benchmarks/trig12-model/README.md)

@@ -9,6 +9,7 @@ and scope.
 - [fixed-unit-1](validation/fixed-unit-1.md): 2026-11-17 (Q2.30 unit vectors, fixed-unit-1)
 - [foundation-2026-11-13](validation/foundation-2026-11-13.md): 2026-11-13
 - [integer-kernels-1](validation/integer-kernels-1.md): 2026-11-15 (integer kernels)
+- [memo-1](validation/memo-1.md): 2026-11-17 (block memo kernels, memo-1)
 - [pose-1](validation/pose-1.md): 2026-11-17 (model pose from binary32 state, pose-1)
 - [trig12-1](validation/trig12-1.md): 2026-11-17 (12-bit-angle trig and divider quotients, trig12-1)
 - [vehicle-kernels-1](validation/vehicle-kernels-1.md): 2026-11-17 (vehicle kernels, vehicle-kernels-1)
