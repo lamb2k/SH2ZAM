@@ -318,6 +318,14 @@ cmake --build build-sh2 --parallel
 
 The library does not replace Yaul, SGL, Jo Engine or a renderer. SDK/runtime compatibility outside the documented Yaul build must be checked separately. See [hardware integration](saturn/HARDWARE.md).
 
+# Releases
+
+Every tag has a [GitHub release](https://github.com/lamb2k/SH2ZAM/releases) with notes: what it adds, its evidence tiers, and the merge train it came in with.
+
+- **Kernel tags** such as `view-rails-1` or `vlc-2` are SH2ZAM contracts. Each release links the contract's guide at that tag.
+- **`v0.5` to `v0.9.1`** are upstream SH4ZAM releases, kept with the Git history.
+- Downloads are GitHub's source archives; there are no binary assets.
+
 # Examples
 
 | Example | Description |
