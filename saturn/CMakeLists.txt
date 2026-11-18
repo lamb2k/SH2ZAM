@@ -27,6 +27,8 @@ list(APPEND SH2Z_SOURCES src/sh2zam_unit30.c)
 list(APPEND SH2Z_SOURCES src/sh2zam_vehicle.c src/sh2zam_view_indexed.c)
 # view-camera-1: a view from a fixed-point camera
 list(APPEND SH2Z_SOURCES src/sh2zam_view_camera.c)
+# memo-1: block memo kernels.
+list(APPEND SH2Z_SOURCES src/sh2zam_memo.c)
 add_library(sh2zam STATIC ${SH2Z_SOURCES})
 add_library(SH2ZAM::sh2zam ALIAS sh2zam)
 target_include_directories(sh2zam PUBLIC
@@ -97,6 +99,17 @@ if(SH2Z_BUILD_TESTS AND NOT CMAKE_CROSSCOMPILING)
   endif()
   add_test(NAME shade_fused_exact COMMAND sh2zam_shade_fused_tests)
   foreach(family trig12 divq)  # trig12-1
+    add_executable(sh2zam_${family}_tests tests/test_${family}.c)
+    target_link_libraries(sh2zam_${family}_tests PRIVATE sh2zam m)
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+      target_compile_options(sh2zam_${family}_tests PRIVATE -Wall -Wextra -Wconversion -Wshadow)
+      if(SH2Z_STRICT)
+        target_compile_options(sh2zam_${family}_tests PRIVATE -Werror -Wpedantic)
+      endif()
+    endif()
+    add_test(NAME ${family}_exact COMMAND sh2zam_${family}_tests)
+  endforeach()
+  foreach(family memo)  # memo-1
     add_executable(sh2zam_${family}_tests tests/test_${family}.c)
     target_link_libraries(sh2zam_${family}_tests PRIVATE sh2zam m)
     if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")

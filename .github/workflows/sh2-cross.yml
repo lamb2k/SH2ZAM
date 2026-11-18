@@ -163,6 +163,19 @@ jobs:
             grep -q "dmuls.l" sh2-camera-disassembly.txt
             "$CC" -m2 -mb -nostdlib -nostartfiles -Wl,-T,saturn/benchmarks/integer-model/model.ld -Wl,-e,0 \
               -o build/sh2/camera-model.elf build/sh2/camera-bridge.o build/sh2/libsh2zam.a -lgcc
+            # Block memo bridge (memo-1) for the executed-instruction model. The library
+            # object must need no external symbol and must contain the hand-written kernels.
+            "$CC" -m2 -mb -O2 -ffreestanding -std=c11 -Wall -Wextra -Werror -DSH2Z_REQUIRE_SH2=1 \
+              -Isaturn/include -c saturn/benchmarks/memo-model/bridge.c -o build/sh2/memo-bridge.o
+            "$OBJDUMP" -dr build/sh2/sh2zam_memo.o > sh2-memo-disassembly.txt
+            "$NM" -u build/sh2/sh2zam_memo.o | tee sh2-memo-undefined.txt
+            if [ -s sh2-memo-undefined.txt ]; then exit 1; fi
+            grep -q "<_sh2z_memo_sync16w_batch>:" sh2-memo-disassembly.txt
+            grep -q "<_sh2z_memo_put4>:" sh2-memo-disassembly.txt
+            grep -q "<_sh2z_memo_copy8_until>:" sh2-memo-disassembly.txt
+            grep -q "<_sh2z_memo_diff8_runs>:" sh2-memo-disassembly.txt
+            "$CC" -m2 -mb -nostdlib -nostartfiles -Wl,-T,saturn/benchmarks/integer-model/model.ld -Wl,-e,0 \
+              -o build/sh2/memo-model.elf build/sh2/memo-bridge.o build/sh2/libsh2zam.a -lgcc
             make -C saturn/examples/yaul-smoke
             make -C saturn/benchmarks/yaul
             "$CC" -m2 -mb -O2 -ffreestanding -std=c11 -fno-fast-math -ffp-contract=off -fno-lto -DSH2Z_REQUIRE_SH2=1 -DSH2Z_EXHIBIT_CAPACITY=4096 -Isaturn/include -c exhibits/bridge.c -o build/sh2/benchmark-bridge.o
@@ -310,6 +323,16 @@ jobs:
           bash saturn/benchmarks/camera-model/run.sh \
             build/sh2/camera-model.elf \
             build/sh2-model/camera-results.json
+      - name: Verify and cost the block memo kernels in the SH-2 instruction model
+        env:
+          MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          MODEL_TOOLCHAIN: Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)
+          MODEL_SOURCE_COMMIT: ${{ github.sha }}
+          MODEL_PLACEMENT_LOG: ${{ github.workspace }}/build/sh2-model/memo-placement.jsonl
+        run: |
+          bash saturn/benchmarks/memo-model/run.sh \
+            build/sh2/memo-model.elf \
+            build/sh2-model/memo-results.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -364,3 +387,6 @@ jobs:
             build/sh2-model/vehicle-raw.json
             build/sh2-model/camera-results.json
             build/sh2-model/camera-raw.json
+            build/sh2-model/memo-results.json
+            build/sh2-model/memo-raw.json
+            build/sh2-model/memo-placement.jsonl

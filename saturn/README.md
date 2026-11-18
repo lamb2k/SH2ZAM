@@ -31,6 +31,8 @@ The maintained overview, build commands, API scope and upstream credits are in t
 - [unit30 instruction model](benchmarks/unit30-model/README.md)
 - [Experimental vehicle kernels: screen facing, indexed light and view batch, approximate Gouraud](VEHICLE_KERNELS.md)
 - [Vehicle-kernel instruction model](benchmarks/vehicle-model/README.md)
+- [Experimental block memo kernels: block compare-and-copy, keyed write-through, copy until a marker, run diff](MEMO.md)
+- [memo instruction model](benchmarks/memo-model/README.md)
 - [Remaining work](PORTING_PLAN.md)
 
 Both `cmake -S .` from the repository root and `cmake -S saturn` build the Saturn library. Batch transforms now select a specialized exact kernel when the matrix proves direct accumulation safe, with a general fallback for the remaining matrices. Full SH4ZAM API parity and physical-console performance qualification remain incomplete.
