@@ -101,8 +101,22 @@ static void run_state(uint32_t *st,const sh2z_view_vertex_t *from,const sh2z_vie
 static SH2ZI_ALWAYS_INLINE int32_t as_int32(uint32_t a) {
     return a<=(uint32_t)INT32_MAX?(int32_t)a:(int32_t)(a-UINT32_C(0x80000000))-INT32_MAX-1;
 }
+/* Field by field: a struct assignment this size is a libgcc block copy
+ * (___movmem) on SH-2, and the library calls no copy helper. */
+static void copy_view(sh2z_view_center_t *d,const sh2z_view_center_t *s) {
+    for(unsigned i=0;i<3;++i) {
+        for(unsigned j=0;j<3;++j)d->view.r[i][j]=s->view.r[i][j];
+        d->view.t[i]=s->view.t[i];
+    }
+    d->view.focal_x=s->view.focal_x;d->view.focal_y=s->view.focal_y;
+    d->view.center_x=s->view.center_x;d->view.center_y=s->view.center_y;
+    d->view.near_z=s->view.near_z;d->view.far_z=s->view.far_z;
+    for(unsigned i=0;i<4;++i)d->view.clip[i]=s->view.clip[i];
+    d->center_x16=s->center_x16;d->center_y16=s->center_y16;
+}
 static void run_portable(sh2z_view_vertex_t *out,const sh2z_view_center_t *v,uint32_t *st,unsigned n) {
-    const sh2z_view_center_t c=*v;
+    sh2z_view_center_t c;
+    copy_view(&c,v);
     for(unsigned k=0;k<n;++k) {
         out[k]=project_point(&c,as_int32(st[3]),as_int32(st[4]),as_int32(st[5]));
         for(unsigned a=0;a<3;++a) {
@@ -733,7 +747,7 @@ bool sh2z_view_rails_prepare(sh2z_view_rails_t *out,const sh2z_view_center_t *v)
     (void)fill_block;
 #endif
     if(!out || !center_valid(v))return false;
-    out->view=*v;
+    copy_view(&out->view,v);
     for(unsigned i=0;i<10u;++i)out->kernel[i]=0;
 #if SH2Z_DIVU_NATIVE
     /* Big-endian words at block offsets 16, 20, 24, 28 (centre floor and
