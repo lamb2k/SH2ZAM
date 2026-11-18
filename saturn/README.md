@@ -55,3 +55,4 @@ One line per guide, sorted by guide file name; a kernel lane adds its own line
 - [Experimental view batch: transform, project, clip codes, guard clip, texture-merge planners, final-coordinate truncation, source-order guard clip, fractional centre](VIEW_BATCH.md); [Merge-planner instruction model](benchmarks/merge-model/README.md)
 - [Experimental strip rails in one call: both rails of a strip quad, view prepared once](VIEW_RAILS.md); [View-rails instruction model](benchmarks/rails-model/README.md)
 - [Experimental variable-length decoding: bounded bit reader, length-limited canonical codes, SH-2 table decoder](VLC.md); [vlc instruction model](benchmarks/vlc-model/README.md)
+- [Experimental per-symbol variable-length decoding: register-resident reader, per-symbol tables, packed table arena](VLC2.md); [vlc-2 instruction model](benchmarks/vlc2-model/README.md)
