@@ -87,8 +87,12 @@ static bool po_pose(sh2z_pose_t *out,const sh2z_view_t *base,const int32_t rotat
             const unsigned a=reverse?2u-j:j;
             if(rotation[i][j]< -1100000000 || rotation[i][j]>1100000000 ||
                !po_fixed(mbasis[a][i],1073741824.0f,1.00001f,&basis[i][j]))return false;
-            if(mutation==PO_EXACT_PRODUCT)model[i][j]=(int32_t)((double)mbasis[a][i]*(double)mscale[a]*65536.0);
-            else if(!po_fixed(mbasis[a][i]*mscale[a],65536.0f,1.00001f,&model[i][j]))return false;
+            if(mutation==PO_EXACT_PRODUCT) {
+                /* scale[a] may not be range-checked yet; a bad scale fails the pose anyway */
+                const double p=(double)mbasis[a][i]*(double)mscale[a]*65536.0;
+                if(!(p> -2147483648.0 && p<2147483648.0))return false;
+                model[i][j]=(int32_t)p;
+            } else if(!po_fixed(mbasis[a][i]*mscale[a],65536.0f,1.00001f,&model[i][j]))return false;
             next.basis[i][j]=(int16_t)(mutation==PO_FLOOR_BASIS?po_floor_div(basis[i][j],65536):po_rounded(basis[i][j],65536));
         }
     }
