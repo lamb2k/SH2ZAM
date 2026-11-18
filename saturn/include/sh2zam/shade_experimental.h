@@ -345,3 +345,96 @@ int sh2z_shade_fog_gouraud_refs(uint16_t *out,const void *const *refs,size_t z_o
 #endif
 
 #endif
+
+/* ---- Contract tag vehicle-kernels-1 -------------------------------------- */
+/* Appended section with its own guard: per-draw kernels for an indexed mesh
+ * renderer (screen-space quad facing, lighting of referenced normals only,
+ * and an approximate Gouraud packing with a proven error bound). */
+#ifndef SH2ZAM_SHADE_VEHICLE_KERNELS_1
+#define SH2ZAM_SHADE_VEHICLE_KERNELS_1
+
+#include "view_experimental.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* ---- Screen-space facing of projected quads ---- */
+
+/** Largest |sx| or |sy| for which a quad is tested (see below). */
+#define SH2Z_SHADE_FACING_LIMIT 1023
+
+/** Compact a list of quads to the ones that may face the viewer.
+ *
+ *  For i = 0 .. count-1, face id = faces[i] has corners
+ *  c[j] = corners[id][j] (j = 0..3, vertex indices) and V[j] = vertices[c[j]].
+ *  With x[j] = V[j].sx and y[j] = V[j].sy:
+ *      all    = V[0].outcode & V[1].outcode & V[2].outcode & V[3].outcode
+ *      simple = no V[j].outcode has SH2Z_OUT_NEAR or SH2Z_OUT_FAR, and every
+ *               |x[j]|, |y[j]| <= SH2Z_SHADE_FACING_LIMIT
+ *      area   = (x1-x0)(y2-y0) - (y1-y0)(x2-x0)
+ *             + (x2-x0)(y3-y0) - (y2-y0)(x3-x0)
+ *               (twice the signed area of triangles 0-1-2 plus 0-2-3)
+ *      dropped when all != 0, or when simple and sign * area <= 0
+ *  The other ids are written in order to kept[0 .. *kept_count - 1]. kept may
+ *  be the same array as faces (compaction in place); no other overlap is
+ *  allowed. A triangle stored as a quad with a repeated corner works as is.
+ *  A face that is not simple is kept unless all != 0: its corners need a
+ *  clip, which may not preserve the orientation.
+ *
+ *  sign is +1 or -1: the sign of area for faces that face the viewer
+ *  (with y down, counter-clockwise front faces have negative area).
+ *  view is the view the vertices were projected with: only its clip
+ *  rectangle is read, to skip the coordinate limit test for quads whose
+ *  outcodes are all zero, so each vertex's LEFT, RIGHT, TOP and BOTTOM bits
+ *  must be those of its sx, sy against view->clip (as every sh2z_view
+ *  projection writes them). Corner indices and face ids are not
+ *  bounds-checked: the caller promises every referenced record exists.
+ *
+ *  Returns false, writing nothing and setting *kept_count (if not null) to
+ *  0, if kept_count is null, count > 0 with another null pointer,
+ *  sign is not +1 or -1, or kept partly overlaps faces. count == 0
+ *  succeeds. */
+bool sh2z_shade_screen_facing(uint16_t *kept,size_t *kept_count,const uint16_t *faces,
+    size_t count,const uint8_t (*corners)[4],const sh2z_view_vertex_t *vertices,
+    const sh2z_view_t *view,int32_t sign);
+
+/* ---- Lighting of referenced normals only ---- */
+
+/** For k = 0 .. index_count-1, with i = index[k] (i < count, not checked):
+ *  the four bytes at out + i * out_stride are set exactly as
+ *  sh2z_shade_light_normals(out, out_stride, normals, normal_stride, count,
+ *  light, reflection_lut) sets them; other output bytes are not written.
+ *  An index may repeat. Argument rules are those of sh2z_shade_light_normals
+ *  for count normals, and the output bytes may also not overlap the index
+ *  list. index_count == 0 succeeds. */
+bool sh2z_shade_light_normals_indexed(uint8_t *out,size_t out_stride,const int8_t *normals,
+    size_t normal_stride,size_t count,const uint8_t *index,size_t index_count,
+    const sh2z_shade_light_t *light,const uint8_t reflection_lut[256]);
+
+/* ---- Approximate Gouraud packing ---- */
+
+/** sh2z_shade_gouraud with plain >> 8 in place of the (x + (x >> 8)) >> 8
+ *  rounding. With b, l, f and t = 255 - l[3] as there, for each pair:
+ *      m[k]   = (b[k]*l[k] + 128) >> 8
+ *      lit[k] = (m[k]*t + f[k]*(255 - t) + 128) >> 8
+ *      v[k]   = 16 + (lit[k] >> 3) - (b[k] >> 4)
+ *      out[i] = sum over k of min(v[k], 31) << 5k               (bit 15 clear)
+ *  (v[k] >= 1 always). *saturated (if not null) receives the number of
+ *  channels with v[k] > 31. Same arguments and failures as
+ *  sh2z_shade_gouraud.
+ *
+ *  Error bound: every 5-bit channel equals the sh2z_shade_gouraud channel
+ *  or is one less. (x >> 8 is the exact rounding or one less, so m[k] is;
+ *  then lit[k] is the exact value or up to two less, and lit >> 3 moves by
+ *  at most one; the clamp keeps that.) VEHICLE_KERNELS.md gives the
+ *  measured match rate. */
+bool sh2z_shade_gouraud_approx(uint16_t *out,uint32_t *saturated,const sh2z_shade_pair_t *pairs,
+    size_t count,const uint8_t *base,size_t base_stride,const uint8_t *light,
+    size_t light_stride,const uint8_t fog[3]);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* SH2ZAM_SHADE_VEHICLE_KERNELS_1 */

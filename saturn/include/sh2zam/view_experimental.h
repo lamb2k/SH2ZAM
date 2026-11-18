@@ -628,3 +628,39 @@ int sh2z_view_clip_guard_src_center_divu(sh2z_view_guard_vertex_t out[SH2Z_VIEW_
 }
 #endif
 #endif
+
+/* ---- Contract tag vehicle-kernels-1 -------------------------------------- */
+/* Appended section with its own guard: projection of the referenced
+ * vertices of an indexed mesh only. */
+#ifndef SH2ZAM_VIEW_VEHICLE_KERNELS_1
+#define SH2ZAM_VIEW_VEHICLE_KERNELS_1
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** Indexed sh2z_view_batch: for k = 0 .. index_count-1, with i = index[k]
+ *  (i < count, not checked), out[i] is set to exactly the record
+ *  sh2z_view_batch(out, v, positions, in_stride, count) writes there. Other
+ *  records of out are not written. An index may repeat; the order of the
+ *  list does not matter.
+ *
+ *  Returns false, writing nothing, if v is invalid, index_count > 0 with a
+ *  null pointer, count == 0, positions or in_stride break the rules of
+ *  sh2z_view_batch, or out[0 .. count-1] overlaps the positions of count
+ *  records or the index list. index_count == 0 succeeds. The _divu form
+ *  gives the same bytes and uses this CPU's hardware divider on SH-2 (see
+ *  divu_experimental.h for the caller promise); portable builds compute
+ *  in C. */
+bool sh2z_view_batch_indexed(sh2z_view_vertex_t *out,const sh2z_view_t *v,
+    const void *positions,size_t in_stride,size_t count,const uint8_t *index,
+    size_t index_count);
+bool sh2z_view_batch_divu_indexed(sh2z_view_vertex_t *out,const sh2z_view_t *v,
+    const void *positions,size_t in_stride,size_t count,const uint8_t *index,
+    size_t index_count);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* SH2ZAM_VIEW_VEHICLE_KERNELS_1 */

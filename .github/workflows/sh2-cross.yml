@@ -115,6 +115,19 @@ jobs:
             grep -q "muls.w" sh2-shade-fused-disassembly.txt
             "$CC" -m2 -mb -nostdlib -nostartfiles -Wl,-T,saturn/benchmarks/integer-model/model.ld -Wl,-e,0 \
               -o build/sh2/shade-fused-model.elf build/sh2/shade-fused-bridge.o build/sh2/libsh2zam.a -lgcc
+            # Vehicle kernels (vehicle-kernels-1) for the executed-instruction model. The library
+            # objects must not need memcpy/memset and must contain the hand-written SH-2 loops.
+            "$CC" -m2 -mb -O2 -ffreestanding -std=c11 -Wall -Wextra -Werror -DSH2Z_REQUIRE_SH2=1 \
+              -Isaturn/include -c saturn/benchmarks/vehicle-model/bridge.c -o build/sh2/vehicle-bridge.o
+            "$OBJDUMP" -dr build/sh2/sh2zam_vehicle.o build/sh2/sh2zam_view_indexed.o > sh2-vehicle-disassembly.txt
+            "$NM" -u build/sh2/sh2zam_vehicle.o build/sh2/sh2zam_view_indexed.o | tee sh2-vehicle-undefined.txt
+            if grep -qE "memcpy|memset|memmove" sh2-vehicle-undefined.txt; then exit 1; fi
+            grep -q "<_sh2zi_facing_pos>:" sh2-vehicle-disassembly.txt
+            grep -q "<_sh2zi_light_run_sat>:" sh2-vehicle-disassembly.txt
+            grep -q "<_sh2zi_gouraud_run>:" sh2-vehicle-disassembly.txt
+            grep -q "<_sh2zi_view_divu_indexed>:" sh2-vehicle-disassembly.txt
+            "$CC" -m2 -mb -nostdlib -nostartfiles -Wl,-T,saturn/benchmarks/integer-model/model.ld -Wl,-e,0 \
+              -o build/sh2/vehicle-model.elf build/sh2/vehicle-bridge.o build/sh2/libsh2zam.a -lgcc
             make -C saturn/examples/yaul-smoke
             make -C saturn/benchmarks/yaul
             "$CC" -m2 -mb -O2 -ffreestanding -std=c11 -fno-fast-math -ffp-contract=off -fno-lto -DSH2Z_REQUIRE_SH2=1 -DSH2Z_EXHIBIT_CAPACITY=4096 -Isaturn/include -c exhibits/bridge.c -o build/sh2/benchmark-bridge.o
@@ -212,6 +225,15 @@ jobs:
           bash saturn/benchmarks/shade-fused-model/run.sh \
             build/sh2/shade-fused-model.elf \
             build/sh2-model/shade-fused-results.json
+      - name: Verify and cost the vehicle kernels in the SH-2 instruction model
+        env:
+          MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          MODEL_TOOLCHAIN: Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)
+          MODEL_SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          bash saturn/benchmarks/vehicle-model/run.sh \
+            build/sh2/vehicle-model.elf \
+            build/sh2-model/vehicle-results.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -252,3 +274,5 @@ jobs:
             build/sh2-model/merge-raw.json
             build/sh2-model/shade-fused-results.json
             build/sh2-model/shade-fused-raw.json
+            build/sh2-model/vehicle-results.json
+            build/sh2-model/vehicle-raw.json
