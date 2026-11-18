@@ -30,15 +30,19 @@
  * scarcer resources on the targets this was written for. */
 #ifndef SH2ZAM_ADPCM_H
 #define SH2ZAM_ADPCM_H
-#include <stddef.h>
-#include <stdint.h>
+
+#include "sh2zam.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/* ---- Contract tag adpcm-1 ------------------------------------------------ */
+
+/** Number of IMA step indices (0..88): the rows of sh2z_ima_step and sh2z_ima_diff. */
 #define SH2Z_IMA_ROWS 89
 
+/** Decoder state carried between calls; {0, 0} starts a stream. */
 typedef struct {
     int32_t pred;  /**< last decoded sample, -32768..32767 */
     int32_t index; /**< step index, 0..88 */
