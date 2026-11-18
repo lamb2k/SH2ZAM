@@ -253,6 +253,9 @@ static double quantile(const struct drift *d,double q){
 }
 
 /* ---- cost ---- */
+/* Placement model (MODEL_PLACEMENT_LOG): the runs are output; the rails, rows,
+ * end masks and arguments are input. */
+static const struct place_decl place_merge[]={{"_merge_runs",PC_OUTPUT},{NULL,0}};
 enum {TRIALS=64};
 static int cmp_u(const void*a,const void*b){unsigned x=*(const unsigned*)a,y=*(const unsigned*)b;return x<y?-1:x>y;}
 struct config {const char *name,*description;unsigned n;uint32_t mask,tol;int ends,whole;};
@@ -270,6 +273,7 @@ static void cost_config(const struct config *c,int first){
   static const char *const entry[2]={"tier_plan","runs_plan"};
   for(int e=0;e<2;e++){
    poison(st.n+8);
+   {char label[80];snprintf(label,sizeof label,"merge.%s.%s",c->name,entry[e]);place_tag(label,place_merge);}
    const struct cost r=call(entry[e]);
    if((int32_t)r.result!=w||!same(w,want,st.n+8))bad(entry[e],t);
    cyc[e][t]=r.cycles;ins[e]+=r.instructions;
@@ -297,7 +301,7 @@ static void cost_config(const struct config *c,int first){
 int main(int argc,char**argv){
  if(argc<3){fprintf(stderr,"usage: merge_tier_harness model.elf verify-strips\n");return 2;}
  const uint64_t strips=strtoull(argv[2],0,10);
- load_elf_symbols(argv[1]);load_elf(argv[1]);
+ load_elf_symbols(argv[1]);load_elf(argv[1]);place_init(argv[1]);
  cpu.model=SHMT_SH2;cpu.MappedMemoryReadByte=rb;cpu.MappedMemoryReadWord=rw;cpu.MappedMemoryReadLong=rl;cpu.MappedMemoryWriteByte=wb;cpu.MappedMemoryWriteWord=ww;cpu.MappedMemoryWriteLong=wl;
  for(unsigned i=0;i<65536;i++)cpu.opcodes[i]=decode(SHMT_SH2,(u16)i);for(unsigned i=0;i<256;i++)cpu.fetchlist[i]=fetch;
  if(rl(&cpu,symc("merge_capacity"))!=CAP)fail("Merge capacity",0);

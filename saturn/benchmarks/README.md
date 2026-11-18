@@ -117,7 +117,10 @@ run BIOS startup or boot the display/timer application. Whole-batch calls also
 differ from the console harness's 32-vertex timing chunks. The model ratios are
 not physical Saturn speedups or full-system emulator timings and are not converted
 to console milliseconds or FPS. Keep this data in its separate model schema;
-physical-console captures remain empty until measured.
+physical-console captures remain empty until measured. For what memory placement
+adds (cache line fills, cache-through VDP accesses, slow writes), see the separate
+[placement model](placement-model/README.md); it leaves every CPU-only number
+unchanged.
 
 The [cross workflow](../../.github/workflows/sh2-cross.yml) now runs this optional
 model harness against the freshly built ELF and uploads `raw.json` and validated
