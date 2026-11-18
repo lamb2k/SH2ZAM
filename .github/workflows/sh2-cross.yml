@@ -130,6 +130,7 @@ jobs:
       - name: Execute the view batch and divider kernel in the SH-2 instruction model
         env:
           MODEL_SUITE: view
+          MODEL_PLACEMENT_LOG: ${{ github.workspace }}/build/sh2-model/view-placement.jsonl
           MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           bash saturn/benchmarks/sh2-model/run.sh \
@@ -159,6 +160,7 @@ jobs:
           MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
           MODEL_TOOLCHAIN: Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)
           MODEL_SOURCE_COMMIT: ${{ github.sha }}
+          MODEL_PLACEMENT_LOG: ${{ github.workspace }}/build/sh2-model/shade-placement.jsonl
         run: |
           bash saturn/benchmarks/shade-model/run.sh \
             build/sh2/shade-model.elf \
@@ -168,10 +170,22 @@ jobs:
           MODEL_EVIDENCE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
           MODEL_TOOLCHAIN: Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)
           MODEL_SOURCE_COMMIT: ${{ github.sha }}
+          MODEL_PLACEMENT_LOG: ${{ github.workspace }}/build/sh2-model/vlc-placement.jsonl
         run: |
           bash saturn/benchmarks/vlc-model/run.sh \
             build/sh2/vlc-model.elf \
             build/sh2-model/vlc-results.json
+      - name: Cost memory placement for the view, shade and vlc kernels
+        run: |
+          python3 saturn/benchmarks/placement-model/collect.py \
+            --view-log build/sh2-model/view-placement.jsonl --view-results build/sh2-model/view-results.json \
+            --shade-log build/sh2-model/shade-placement.jsonl --shade-results build/sh2-model/shade-results.json \
+            --vlc-log build/sh2-model/vlc-placement.jsonl --vlc-results build/sh2-model/vlc-results.json \
+            --committed-root . \
+            --evidence-url https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }} \
+            --output build/sh2-model/placement-results.json \
+            --markdown build/sh2-model/placement-tables.md
+          cat build/sh2-model/placement-tables.md
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -208,3 +222,8 @@ jobs:
             build/sh2-model/shade-raw.json
             build/sh2-model/vlc-results.json
             build/sh2-model/vlc-raw.json
+            build/sh2-model/view-placement.jsonl
+            build/sh2-model/shade-placement.jsonl
+            build/sh2-model/vlc-placement.jsonl
+            build/sh2-model/placement-results.json
+            build/sh2-model/placement-tables.md
