@@ -13,7 +13,7 @@ equals shade-1's or is one less (proven exhaustively; 94.5443% equal over the wh
   3,976,307 faces, 295,190 indexed vertices, and 9 negative controls (75,743,762 checks).
 - **MODELLED:** the compiled SH-2 code matches the oracles on 30,555 view vertices, 251,325
   faces, 130,563 normals and 1,293,261 Gouraud pairs in the Yabause interpreter before timing
-  ([results](benchmarks/vehicle-model/results.json), CAPTURE). Modelled cycles per element,
+  ([results](benchmarks/vehicle-model/results.json), captured by [CI run 44215071056](https://github.com/lamb2k/SH2ZAM/actions/runs/44215071056)). Modelled cycles per element,
   kernel / today: facing 53.0 / 228.7, indexed light 72.7 / 101 (all normals), approximate
   Gouraud 91.4 / 134.2, indexed view 146.5 / 142.4 (all positions). Cycle numbers are
   modelled, not Saturn timings.
