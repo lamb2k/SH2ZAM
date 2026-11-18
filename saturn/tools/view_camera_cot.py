@@ -6,6 +6,12 @@
 # Exact decimal arithmetic at 60 digits, so no entry depends on binary
 # floating point. The host test re-derives every entry from long double.
 # MIT; SH2ZAM Contributors.
+#
+# usage: view_camera_cot.py            print the C table
+#        view_camera_cot.py --check F  verify the table in F (host CI runs this
+#                                      on saturn/src/sh2zam_view_camera.c)
+import re
+import sys
 from decimal import Decimal, getcontext, ROUND_FLOOR
 
 getcontext().prec = 60
@@ -36,6 +42,17 @@ def entry(h):
 values = [entry(h) for h in range(1024)]
 assert values[1023] > 0 and all(values[h] > values[h + 1] for h in range(1, 1023))
 assert values[1] < (1 << 30)
+if len(sys.argv) == 3 and sys.argv[1] == "--check":
+    text = open(sys.argv[2], encoding="ascii").read()
+    m = re.search(r"cot_q20\[1024\]\s*=\s*\{([^}]*)\}", text)
+    if not m:
+        raise SystemExit("table not found")
+    if [int(v) for v in re.findall(r"-?\d+", m.group(1))] != values:
+        raise SystemExit("table differs from the generator")
+    print(f"cot table: 1024 entries match; entry 1 = {values[1]}, entry 1023 = {values[1023]}")
+    sys.exit(0)
+if len(sys.argv) != 1:
+    raise SystemExit("usage: view_camera_cot.py [--check saturn/src/sh2zam_view_camera.c]")
 print("static const int32_t cot_q20[1024] = {")
 for i in range(0, 1024, 8):
     print("    " + ", ".join(str(v) for v in values[i:i + 8]) + ",")

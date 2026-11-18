@@ -115,8 +115,9 @@ requires the log's CPU-only cycles to equal the capture's.
 
 ## Reproduce
 
-CI builds the ELF with the Yaul project's pinned toolchain image (see
-`.github/workflows/sh2-cross.yml`) and runs the model on the Linux runner:
+CI builds the ELF with the Yaul project's pinned toolchain image and runs the model on the Linux
+runner through [`ci.sh`](ci.sh) (`build` and `model` phases, run by `saturn/benchmarks/ci/suites.sh`).
+By hand:
 
 ```sh
 $CC -m2 -mb -O2 -ffreestanding -std=c11 -Wall -Wextra -Werror -DSH2Z_REQUIRE_SH2=1 \

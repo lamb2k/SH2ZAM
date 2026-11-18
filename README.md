@@ -258,21 +258,6 @@ Host-exact tested against an independent oracle, within 0.05 px of the exact pro
 15,000 synthetic poses, and costed in the SH-2 instruction model (modelled, no console run). See
 [View from a camera](saturn/VIEW_BATCH.md#view-from-a-camera-view-camera-1).
 
-## Block memo kernels
-
-[`sh2zam/memo_experimental.h`](saturn/include/sh2zam/memo_experimental.h) (contract tag `memo-1`)
-skips work on data that has not changed since the last picture:
-- block compare-and-copy over 16-word or 16-longword blocks, with a changed flag or a
-  bit mask over N blocks;
-- keyed write-through of 16-bit words to a slow destination, described by a gate
-  descriptor;
-- a record copy that stops at an end marker;
-- a record-run diff.
-
-All are exact, with hand-written SH-2 kernels. Host-tested against an independent oracle
-and costed in the SH-2 instruction model, CPU-only and placed through the memory placement
-model (modelled, no console run). See [the memo guide](saturn/MEMO.md).
-
 ## Git submodule
 
 ```sh
