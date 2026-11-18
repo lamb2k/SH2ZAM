@@ -14,3 +14,4 @@ and scope.
 - [view-camera-1](validation/view-camera-1.md): 2026-11-17 (view from a camera, view-camera-1)
 - [view-merge-2](validation/view-merge-2.md): 2026-11-17 (tier texture-merge planner, view-merge-2)
 - [vlc-1](validation/vlc-1.md): 2026-11-17 (variable-length decoding, vlc-1)
+- [vlc-2](validation/vlc-2.md): 2026-11-18 (per-symbol variable-length decoding, vlc-2)
