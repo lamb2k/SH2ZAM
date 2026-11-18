@@ -21,6 +21,8 @@ The maintained overview, build commands, API scope and upstream credits are in t
 - [Integer-kernel instruction model](benchmarks/integer-model/README.md)
 - [Experimental shading kernels: per-normal light, Gouraud packing, face culling, depth fog](SHADE.md)
 - [Shading-kernel instruction model](benchmarks/shade-model/README.md)
+- [Experimental fused fade and colour per piece, prepared fog, divides by constants](SHADE_FUSED.md)
+- [Fused shade instruction model](benchmarks/shade-fused-model/README.md)
 - [Experimental variable-length decoding: bounded bit reader, length-limited canonical codes, SH-2 table decoder](VLC.md)
 - [vlc instruction model](benchmarks/vlc-model/README.md)
 - [Experimental 12-bit-angle sin/cos/tan and inline divider quotients](TRIG12.md)

@@ -47,6 +47,11 @@ MODELLED. Not console timing, not emulator timing.
   source commit, the interpreter pin) and
   writes the results file.
 
+The cycles here are CPU-only. With `MODEL_PLACEMENT_LOG` set, the `center.h`
+and `merge.h` timing calls also log placed cycles (cache fills and memory
+region costs); the [placement model](../placement-model/README.md) publishes
+them and leaves every number here unchanged.
+
 Reproduce from the repository root with the benchmark ELF built as in
 `.github/workflows/sh2-cross.yml`:
 

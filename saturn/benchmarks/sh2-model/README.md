@@ -153,7 +153,8 @@ Saturn milliseconds or FPS.
 This model deliberately has:
 
 - Flat, big-endian high-work RAM and immediate instruction/data access.
-- **No cache model, bus wait states, pipeline or multiplier contention.**
+- **No cache model, bus wait states, pipeline or multiplier contention** in its
+  cycle counter (the optional placement model below counts them separately).
 - No DMA, timer, interrupt, second CPU, renderer or other peripheral activity.
 - No BIOS, boot sequence, SDK timer integration or full-console execution.
 
@@ -163,6 +164,17 @@ implementing the assumptions in [../../DIVU.md](../../DIVU.md) (39-cycle latency
 reads hold the CPU) and traps on any division the library promised never to
 issue. It is not evidence about the console. The view capture
 ([../view-model](../view-model/README.md)) is its only user.
+
+The second piece of harness-side hardware is the optional placement model,
+`placement_model.h`, enabled by `MODEL_PLACEMENT_LOG`: an SH7604 cache (4 KB,
+4 ways, 16-byte lines, write-through) and per-region memory costs for code,
+tables, inputs and outputs placed in high or low work RAM, a cartridge, VDP1
+VRAM or VDP2. It counts its stall cycles beside the interpreter's counter and
+never changes it, so every number in this file and in every suite's
+`results.json` stays CPU-only. Placed cycles are published separately in
+[../placement-model](../placement-model/README.md). Its costs come from another
+project's hardware notes, not from this project, and are not console evidence
+either.
 
 Unsupported hardware access, an invalid opcode, an out-of-RAM access, a runaway
 function, an ABI violation or any output mismatch causes failure. The benchmark
