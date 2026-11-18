@@ -1,6 +1,6 @@
 # Model pose from binary32 state (experimental, contract tag `pose-1`)
 
-[`view_experimental.h`](include/sh2zam/view_experimental.h) adds `sh2z_pose_from_f32`: it
+[`contracts/pose_1.h`](include/sh2zam/contracts/pose_1.h), included by `view_experimental.h`, adds `sh2z_pose_from_f32`: it
 builds a model's view (rotation and translation for `sh2z_view_*`), its camera position in
 model space, its basis in Q1.14 and its plane-culling data from model state stored as IEEE 754
 binary32 floats — a rotation basis, per-axis scales, a position and the camera position —
@@ -127,5 +127,5 @@ if(!sh2z_pose_from_f32(&pose,&base,camera_rotation_q30,model_basis,model_scale,
 - **MODELLED** ([`benchmarks/pose-model`](benchmarks/pose-model/README.md)): the compiled
   SH-2 path, the C path with SR.S set and the float procedure match the oracle on every field
   of every case before timing, and the internal difference, reciprocal and basis-value
-  routines match it value by value; see [VALIDATION.md](VALIDATION.md) for the CI capture.
+  routines match it value by value; see [validation/pose-1.md](validation/pose-1.md).
 - **Not done:** console or emulator execution, cache and memory timing, a whole frame.

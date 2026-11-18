@@ -56,7 +56,7 @@ POSE_VERIFY=20000 bash saturn/benchmarks/pose-model/run.sh pose-model.elf result
 
 [`results.json`](results.json) is the committed capture. It records the source commit, the
 ELF SHA-256, the toolchain and the Yabause commit. It is the `pose-results.json` from the
-`sh2-compile-evidence` artifact of the CI run named in [VALIDATION.md](../../VALIDATION.md).
+`sh2-compile-evidence` artifact of the CI run named in [validation/pose-1.md](../../validation/pose-1.md).
 Every CI run uploads a fresh capture there.
 
 ## Not covered

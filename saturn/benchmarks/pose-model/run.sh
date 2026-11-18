@@ -16,7 +16,7 @@ model_output=${2:-"$model_build/pose-results.json"}
 model_core=${YABAUSE_SOURCE:-"$model_build/yabause"}
 model_commit=7e38821dbac265490f115e163c523a939acda759
 verify_count=${POSE_VERIFY:-20000}
-mkdir -p "$model_build"
+mkdir -p "$model_build" "$(dirname "$model_output")"
 if [ ! -d "$model_core/.git" ]; then
   git init "$model_core"
   git -C "$model_core" remote add origin https://github.com/Yabause/yabause.git
