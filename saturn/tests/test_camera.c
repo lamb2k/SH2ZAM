@@ -82,7 +82,10 @@ static int32_t random_word_any(void) {
     case 0: return (int32_t)random_word();
     case 1: return special_word();
     case 2: return random_range(-65536*3,65536*3);
-    case 3: return random_range(-1,1)*65536*random_range(0,32768)+random_range(-32769,32769);
+    case 3: {   /* k * 65536 + small, near a rounding tie; wrapped to 32 bits */
+        const int64_t v=(int64_t)random_range(-1,1)*65536*random_range(0,32768)+random_range(-32769,32769);
+        return (int32_t)(uint32_t)(uint64_t)v;
+    }
     default: return random_range(-(1<<30),1<<30);
     }
 }

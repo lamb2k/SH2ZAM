@@ -1559,7 +1559,7 @@ A single failure word is tested once. There are no 64-bit shifts or libgcc
 calls (`nm -u` is empty).
 
 - **HOST.** `camera_exact` passes under GCC and Clang with `SH2Z_STRICT=ON`
-  and under ASan/UBSan, with 4,074,736 checks:
+  and under ASan/UBSan, with 4,074,767 checks:
   - every table entry, re-derived from `cosl`/`sinl`;
   - every field of view from 5,000 to 11,791,000 (Q16.16);
   - 600,000 random calls mixing valid and invalid inputs against the
@@ -1588,10 +1588,10 @@ calls (`nm -u` is empty).
 | --- | ---: | ---: |
 | `sh2z_view_from_camera30` | 691 | 655 |
 | `sh2z_view_place_q12` | 411 | 394 |
-| float chain: frustum, look-at, product, packing, adapter, centre view (soft-float) | 87,698 | 75,902 |
+| float chain: frustum, look-at, product, packing, adapter, centre view (soft-float) | 87,395 | 75,645 |
 | float-to-fixed adapter and centre view only | 25,762 | 22,431 |
 
-The float chain is 127 times the cost. Its soft-float is libgcc's, not any
+The float chain is 126 times the cost. Its soft-float is libgcc's, not any
 particular port's float library, so treat the ratio as indicative.
 
 The planned cost was 250 to 350 cycles, and 691 is above it. The work is

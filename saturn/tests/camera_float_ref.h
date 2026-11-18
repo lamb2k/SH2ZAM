@@ -89,11 +89,17 @@ static inline int cf_orthonormalize_forward(float b[3][3]) {
     return 0;
 }
 
-/* Pack to 16.16 integer halves, rounding half away from zero. */
+/* Pack to 16.16 integer halves, rounding half away from zero. A packed
+ * element holds less than 32768 in magnitude: a look-at translation beyond
+ * that (an eye at the edge of an int16 world) does not fit, and the source's
+ * conversion is then undefined. Here it saturates; nothing reads the packed
+ * matrices, they are built for cost only. */
 static inline void cf_to_mtx(const cf_mtxf_t *src,cf_mtx_t *dst) {
     for(int i=3;i>=0;--i)for(int j=3;j>=0;--j) {
         const float v=src->m[i][j]*65536.0f;
-        const int32_t n=v<0.0f?(int32_t)(v-0.5f):(int32_t)(v+0.5f);
+        const uint32_t b=cf_bits(v);   /* |v| < 2^30 (and not NaN) by its bits: no float compare */
+        const int32_t n=(b&0x7fffffffu)>=0x4e800000u?((b>>31)?INT32_MIN:INT32_MAX):
+            v<0.0f?(int32_t)(v-0.5f):(int32_t)(v+0.5f);
         dst->i[i][j]=(int16_t)(n>>16);
         dst->f[i][j]=(uint16_t)n;
     }
