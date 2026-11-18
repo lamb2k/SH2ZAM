@@ -1,0 +1,85 @@
+{
+ "schema": 1,
+ "kind": "Yabause isolated SH2 interpreter flat-RAM model, not Saturn timing",
+ "verified": {
+  "cases": 20000,
+  "accepted": 13075,
+  "acceptedCullInvalid": 7003,
+  "fieldsPerEntry": 483775,
+  "aliasedCases": 13075,
+  "entries": "fast_pose (SR.S clear and set) and plain_pose: success, all 37 output fields, output untouched on failure, against tests/pose_oracle.h; each accepted case again with base as &out->view and with every float input inside *out, SR.S clear and set"
+ },
+ "routines": {
+  "delta": 320000,
+  "inverse": 320000,
+  "element": 320000,
+  "entries": "the internal SH-2 difference, reciprocal and basis-value routines through their test entries, one value per call, against the binary32 oracle"
+ },
+ "rows": {
+  "uniform_scale": {
+   "description": "visible poses, one scale on all three axes",
+   "poses": 2000,
+   "fast": {
+    "meanCycles": 1440.03,
+    "medianCycles": 1441.5,
+    "minCycles": 1384,
+    "maxCycles": 1629,
+    "meanInstructions": 1216.3
+   },
+   "fastSrS": {
+    "meanCycles": 2697.78,
+    "medianCycles": 2695.0,
+    "minCycles": 2648,
+    "maxCycles": 2781,
+    "meanInstructions": 2447.61
+   },
+   "plain": {
+    "meanCycles": 23853.27,
+    "medianCycles": 23842.0,
+    "minCycles": 23610,
+    "maxCycles": 24285,
+    "meanInstructions": 20632.45
+   },
+   "fastSpeedup": 16.56
+  },
+  "three_scales": {
+   "description": "visible poses, scales 0.1, 0.125 and 0.15",
+   "poses": 2000,
+   "fast": {
+    "meanCycles": 1574.46,
+    "medianCycles": 1555.0,
+    "minCycles": 1519,
+    "maxCycles": 1759,
+    "meanInstructions": 1343.85
+   },
+   "fastSrS": {
+    "meanCycles": 2831.73,
+    "medianCycles": 2828.0,
+    "minCycles": 2779,
+    "maxCycles": 2918,
+    "meanInstructions": 2578.11
+   },
+   "plain": {
+    "meanCycles": 23878.61,
+    "medianCycles": 23865.5,
+    "minCycles": 23584,
+    "maxCycles": 24270,
+    "meanInstructions": 20652.04
+   },
+   "fastSpeedup": 15.17
+  }
+ },
+ "plainBase": {
+  "meanCycles": 1354.68,
+  "medianCycles": 1356.0,
+  "minCycles": 1347,
+  "maxCycles": 1362,
+  "meanInstructions": 1220.32
+ },
+ "label": "MODELLED: executed SH-2 instructions in the Yabause interpreter; flat RAM, no caches or wait states; not Saturn hardware",
+ "sourceCommit": "769d1a4e63bfb71820d6247f1c2602d1a170f9ba",
+ "elfSha256": "f3949c93ff6c69522ae5c4a065c06b602eebf4f036933d72ce45f2a032f5e1d2",
+ "toolchain": "Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)",
+ "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44247175665",
+ "yabauseCommit": "7e38821dbac265490f115e163c523a939acda759"
+}

@@ -1,0 +1,5623 @@
+{
+ "schema": 1,
+ "kind": "Yabause isolated SH2 interpreter flat-RAM model, not Saturn timing",
+ "verified": {
+  "blockBatches": 3000,
+  "blockSingles": 3000,
+  "blocksInBatches": 235017,
+  "blockCallsUnaligned": 996,
+  "keyedCases": 3000,
+  "keyedDestinationWrites": 547013,
+  "copyCases": 5192,
+  "copyRecords": 873444,
+  "copyCasesUnaligned": 1834,
+  "diffCases": 3000,
+  "diffRuns": 102024,
+  "against": "tests/memo_oracle.h; keyed destination writes logged in order, 16-bit only, never read; no source read after the marker record; guards after every output"
+ },
+ "rows": {
+  "A.steady.w16_batch": {
+   "entry": "w16_batch",
+   "unit": "group",
+   "fixture": "steady",
+   "points": {
+    "1": {
+     "tag": "memo.A.steady.w16_batch.n1",
+     "cycles": 71,
+     "instructions": 69,
+     "dataReads": 23,
+     "dataWrites": 4,
+     "result": 0
+    },
+    "75": {
+     "tag": "memo.A.steady.w16_batch.n75",
+     "cycles": 3047,
+     "instructions": 2965,
+     "dataReads": 1207,
+     "dataWrites": 6,
+     "result": 0
+    },
+    "90": {
+     "tag": "memo.A.steady.w16_batch.n90",
+     "cycles": 3647,
+     "instructions": 3550,
+     "dataReads": 1447,
+     "dataWrites": 6,
+     "result": 0
+    }
+   },
+   "slope": [
+    1,
+    90
+   ],
+   "cyclesPerUnit": 40.18,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 77,
+       "75": 4490,
+       "90": 6080
+      },
+      "perUnit": 67.45
+     },
+     "cold": {
+      "call": {
+       "1": 192,
+       "75": 5249,
+       "90": 6269
+      },
+      "perUnit": 68.28
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 77,
+       "75": 14306,
+       "90": 22763
+      },
+      "perUnit": 254.9
+     },
+     "cold": {
+      "call": {
+       "1": 398,
+       "75": 19972,
+       "90": 23932
+      },
+      "perUnit": 264.43
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 77,
+       "75": 16998,
+       "90": 27208
+      },
+      "perUnit": 304.84
+     },
+     "cold": {
+      "call": {
+       "1": 1249,
+       "75": 24448,
+       "90": 29128
+      },
+      "perUnit": 313.25
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 77,
+       "75": 4686,
+       "90": 6325
+      },
+      "perUnit": 70.2
+     },
+     "cold": {
+      "call": {
+       "1": 731,
+       "75": 5837,
+       "90": 6857
+      },
+      "perUnit": 68.83
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 77,
+       "75": 14306,
+       "90": 22763
+      },
+      "perUnit": 254.9
+     },
+     "cold": {
+      "call": {
+       "1": 398,
+       "75": 19972,
+       "90": 23932
+      },
+      "perUnit": 264.43
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 437,
+       "75": 30121,
+       "90": 36121
+      },
+      "perUnit": 400.94
+     },
+     "cold": {
+      "call": {
+       "1": 677,
+       "75": 38665,
+       "90": 46345
+      },
+      "perUnit": 513.12
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 397,
+       "75": 27111,
+       "90": 32511
+      },
+      "perUnit": 360.83
+     },
+     "cold": {
+      "call": {
+       "1": 632,
+       "75": 35650,
+       "90": 42730
+      },
+      "perUnit": 473.01
+     }
+    }
+   }
+  },
+  "A.steady.w16_loop": {
+   "entry": "w16_loop",
+   "unit": "group",
+   "fixture": "steady",
+   "points": {
+    "1": {
+     "tag": "memo.A.steady.w16_loop.n1",
+     "cycles": 79,
+     "instructions": 74,
+     "dataReads": 27,
+     "dataWrites": 8,
+     "result": 0
+    },
+    "75": {
+     "tag": "memo.A.steady.w16_loop.n75",
+     "cycles": 4075,
+     "instructions": 3700,
+     "dataReads": 1211,
+     "dataWrites": 82,
+     "result": 0
+    },
+    "90": {
+     "tag": "memo.A.steady.w16_loop.n90",
+     "cycles": 4885,
+     "instructions": 4435,
+     "dataReads": 1451,
+     "dataWrites": 97,
+     "result": 0
+    }
+   },
+   "slope": [
+    1,
+    90
+   ],
+   "cyclesPerUnit": 54.0,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 95,
+       "75": 5235,
+       "90": 7249
+      },
+      "perUnit": 80.38
+     },
+     "cold": {
+      "call": {
+       "1": 241,
+       "75": 6309,
+       "90": 7539
+      },
+      "perUnit": 82.0
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 95,
+       "75": 12879,
+       "90": 23321
+      },
+      "perUnit": 260.97
+     },
+     "cold": {
+      "call": {
+       "1": 440,
+       "75": 21012,
+       "90": 25182
+      },
+      "perUnit": 278.0
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 95,
+       "75": 15116,
+       "90": 27622
+      },
+      "perUnit": 309.29
+     },
+     "cold": {
+      "call": {
+       "1": 1510,
+       "75": 25634,
+       "90": 30524
+      },
+      "perUnit": 326.0
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 95,
+       "75": 5480,
+       "90": 7494
+      },
+      "perUnit": 83.13
+     },
+     "cold": {
+      "call": {
+       "1": 927,
+       "75": 6995,
+       "90": 8225
+      },
+      "perUnit": 82.0
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 95,
+       "75": 12879,
+       "90": 23321
+      },
+      "perUnit": 260.97
+     },
+     "cold": {
+      "call": {
+       "1": 440,
+       "75": 21012,
+       "90": 25182
+      },
+      "perUnit": 278.0
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 455,
+       "75": 33969,
+       "90": 40614
+      },
+      "perUnit": 451.22
+     },
+     "cold": {
+      "call": {
+       "1": 726,
+       "75": 41804,
+       "90": 50129
+      },
+      "perUnit": 555.09
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 415,
+       "75": 30594,
+       "90": 36564
+      },
+      "perUnit": 406.17
+     },
+     "cold": {
+      "call": {
+       "1": 681,
+       "75": 38429,
+       "90": 46079
+      },
+      "perUnit": 510.09
+     }
+    }
+   }
+  },
+  "A.steady.plain_w15": {
+   "entry": "plain_w15",
+   "unit": "group",
+   "fixture": "steady",
+   "points": {
+    "1": {
+     "tag": "memo.A.steady.plain_w15.n1",
+     "cycles": 108,
+     "instructions": 92,
+     "dataReads": 28,
+     "dataWrites": 9,
+     "result": 0
+    },
+    "75": {
+     "tag": "memo.A.steady.plain_w15.n75",
+     "cycles": 6250,
+     "instructions": 5050,
+     "dataReads": 1286,
+     "dataWrites": 157,
+     "result": 0
+    },
+    "90": {
+     "tag": "memo.A.steady.plain_w15.n90",
+     "cycles": 7495,
+     "instructions": 6055,
+     "dataReads": 1541,
+     "dataWrites": 187,
+     "result": 0
+    }
+   },
+   "slope": [
+    1,
+    90
+   ],
+   "cyclesPerUnit": 83.0,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 124,
+       "75": 7508,
+       "90": 9957
+      },
+      "perUnit": 110.48
+     },
+     "cold": {
+      "call": {
+       "1": 240,
+       "75": 8454,
+       "90": 10119
+      },
+      "perUnit": 111.0
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 124,
+       "75": 15936,
+       "90": 26813
+      },
+      "perUnit": 299.88
+     },
+     "cold": {
+      "call": {
+       "1": 439,
+       "75": 23157,
+       "90": 27762
+      },
+      "perUnit": 307.0
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 124,
+       "75": 18292,
+       "90": 31233
+      },
+      "perUnit": 349.54
+     },
+     "cold": {
+      "call": {
+       "1": 1217,
+       "75": 27487,
+       "90": 32812
+      },
+      "perUnit": 355.0
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 124,
+       "75": 7704,
+       "90": 10153
+      },
+      "perUnit": 112.69
+     },
+     "cold": {
+      "call": {
+       "1": 730,
+       "75": 8944,
+       "90": 10609
+      },
+      "perUnit": 111.0
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 124,
+       "75": 15936,
+       "90": 26813
+      },
+      "perUnit": 299.88
+     },
+     "cold": {
+      "call": {
+       "1": 439,
+       "75": 23157,
+       "90": 27762
+      },
+      "perUnit": 307.0
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 484,
+       "75": 35708,
+       "90": 42848
+      },
+      "perUnit": 476.0
+     },
+     "cold": {
+      "call": {
+       "1": 725,
+       "75": 44238,
+       "90": 53058
+      },
+      "perUnit": 588.01
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 444,
+       "75": 32338,
+       "90": 38803
+      },
+      "perUnit": 431.0
+     },
+     "cold": {
+      "call": {
+       "1": 680,
+       "75": 40863,
+       "90": 49008
+      },
+      "perUnit": 543.01
+     }
+    }
+   }
+  },
+  "A.steady.l16_batch": {
+   "entry": "l16_batch",
+   "unit": "group",
+   "fixture": "steady",
+   "points": {
+    "1": {
+     "tag": "memo.A.steady.l16_batch.n1",
+     "cycles": 98,
+     "instructions": 96,
+     "dataReads": 39,
+     "dataWrites": 4,
+     "result": 0
+    },
+    "75": {
+     "tag": "memo.A.steady.l16_batch.n75",
+     "cycles": 5442,
+     "instructions": 5360,
+     "dataReads": 2407,
+     "dataWrites": 6,
+     "result": 0
+    },
+    "90": {
+     "tag": "memo.A.steady.l16_batch.n90",
+     "cycles": 6522,
+     "instructions": 6425,
+     "dataReads": 2887,
+     "dataWrites": 6,
+     "result": 0
+    }
+   },
+   "slope": [
+    1,
+    90
+   ],
+   "cyclesPerUnit": 72.18,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 104,
+       "75": 9719,
+       "90": 11639
+      },
+      "perUnit": 129.61
+     },
+     "cold": {
+      "call": {
+       "1": 275,
+       "75": 9789,
+       "90": 11709
+      },
+      "perUnit": 128.47
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 104,
+       "75": 39149,
+       "90": 46949
+      },
+      "perUnit": 526.35
+     },
+     "cold": {
+      "call": {
+       "1": 677,
+       "75": 39219,
+       "90": 47019
+      },
+      "perUnit": 520.7
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 104,
+       "75": 46933,
+       "90": 56173
+      },
+      "perUnit": 629.99
+     },
+     "cold": {
+      "call": {
+       "1": 1868,
+       "75": 47733,
+       "90": 56973
+      },
+      "perUnit": 619.16
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 104,
+       "75": 10111,
+       "90": 12031
+      },
+      "perUnit": 134.01
+     },
+     "cold": {
+      "call": {
+       "1": 1010,
+       "75": 10671,
+       "90": 12591
+      },
+      "perUnit": 130.12
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 104,
+       "75": 39149,
+       "90": 46949
+      },
+      "perUnit": 526.35
+     },
+     "cold": {
+      "call": {
+       "1": 677,
+       "75": 39219,
+       "90": 47019
+      },
+      "perUnit": 520.7
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 824,
+       "75": 74378,
+       "90": 91634
+      },
+      "perUnit": 1020.34
+     },
+     "cold": {
+      "call": {
+       "1": 1204,
+       "75": 76488,
+       "90": 91728
+      },
+      "perUnit": 1017.12
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 744,
+       "75": 68363,
+       "90": 84419
+      },
+      "perUnit": 940.17
+     },
+     "cold": {
+      "call": {
+       "1": 1119,
+       "75": 70473,
+       "90": 84513
+      },
+      "perUnit": 937.01
+     }
+    }
+   }
+  },
+  "A.tenth.w16_batch": {
+   "entry": "w16_batch",
+   "unit": "group",
+   "fixture": "tenth",
+   "points": {
+    "1": {
+     "tag": "memo.A.tenth.w16_batch.n1",
+     "cycles": 71,
+     "instructions": 69,
+     "dataReads": 23,
+     "dataWrites": 4,
+     "result": 0
+    },
+    "75": {
+     "tag": "memo.A.tenth.w16_batch.n75",
+     "cycles": 3223,
+     "instructions": 3117,
+     "dataReads": 1271,
+     "dataWrites": 70,
+     "result": 8
+    },
+    "90": {
+     "tag": "memo.A.tenth.w16_batch.n90",
+     "cycles": 3845,
+     "instructions": 3721,
+     "dataReads": 1519,
+     "dataWrites": 78,
+     "result": 9
+    }
+   },
+   "slope": [
+    1,
+    90
+   ],
+   "cyclesPerUnit": 42.4,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 77,
+       "75": 4850,
+       "90": 6412
+      },
+      "perUnit": 71.18
+     },
+     "cold": {
+      "call": {
+       "1": 192,
+       "75": 5565,
+       "90": 6623
+      },
+      "perUnit": 72.26
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 77,
+       "75": 15654,
+       "90": 23766
+      },
+      "perUnit": 266.17
+     },
+     "cold": {
+      "call": {
+       "1": 398,
+       "75": 20885,
+       "90": 24958
+      },
+      "perUnit": 275.96
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 77,
+       "75": 18442,
+       "90": 28138
+      },
+      "perUnit": 315.29
+     },
+     "cold": {
+      "call": {
+       "1": 1249,
+       "75": 25507,
+       "90": 30300
+      },
+      "perUnit": 326.42
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 77,
+       "75": 5046,
+       "90": 6608
+      },
+      "perUnit": 73.38
+     },
+     "cold": {
+      "call": {
+       "1": 731,
+       "75": 6251,
+       "90": 7309
+      },
+      "perUnit": 73.91
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 77,
+       "75": 15654,
+       "90": 23766
+      },
+      "perUnit": 266.17
+     },
+     "cold": {
+      "call": {
+       "1": 398,
+       "75": 20885,
+       "90": 24958
+      },
+      "perUnit": 275.96
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 437,
+       "75": 33012,
+       "90": 39373
+      },
+      "perUnit": 437.48
+     },
+     "cold": {
+      "call": {
+       "1": 677,
+       "75": 41562,
+       "90": 49603
+      },
+      "perUnit": 549.73
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 397,
+       "75": 29682,
+       "90": 35403
+      },
+      "perUnit": 393.33
+     },
+     "cold": {
+      "call": {
+       "1": 632,
+       "75": 38227,
+       "90": 45628
+      },
+      "perUnit": 505.57
+     }
+    }
+   }
+  },
+  "A.tenth.w16_loop": {
+   "entry": "w16_loop",
+   "unit": "group",
+   "fixture": "tenth",
+   "points": {
+    "1": {
+     "tag": "memo.A.tenth.w16_loop.n1",
+     "cycles": 79,
+     "instructions": 74,
+     "dataReads": 27,
+     "dataWrites": 8,
+     "result": 0
+    },
+    "75": {
+     "tag": "memo.A.tenth.w16_loop.n75",
+     "cycles": 4187,
+     "instructions": 3828,
+     "dataReads": 1275,
+     "dataWrites": 146,
+     "result": 8
+    },
+    "90": {
+     "tag": "memo.A.tenth.w16_loop.n90",
+     "cycles": 5011,
+     "instructions": 4579,
+     "dataReads": 1523,
+     "dataWrites": 169,
+     "result": 9
+    }
+   },
+   "slope": [
+    1,
+    90
+   ],
+   "cyclesPerUnit": 55.42,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 95,
+       "75": 5491,
+       "90": 7537
+      },
+      "perUnit": 83.62
+     },
+     "cold": {
+      "call": {
+       "1": 241,
+       "75": 6572,
+       "90": 7834
+      },
+      "perUnit": 85.31
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 95,
+       "75": 13767,
+       "90": 24320
+      },
+      "perUnit": 272.19
+     },
+     "cold": {
+      "call": {
+       "1": 440,
+       "75": 21907,
+       "90": 26188
+      },
+      "perUnit": 289.3
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 95,
+       "75": 16004,
+       "90": 28621
+      },
+      "perUnit": 320.52
+     },
+     "cold": {
+      "call": {
+       "1": 1510,
+       "75": 26602,
+       "90": 31603
+      },
+      "perUnit": 338.12
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 95,
+       "75": 5736,
+       "90": 7782
+      },
+      "perUnit": 86.37
+     },
+     "cold": {
+      "call": {
+       "1": 927,
+       "75": 7307,
+       "90": 8569
+      },
+      "perUnit": 85.87
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 95,
+       "75": 13767,
+       "90": 24320
+      },
+      "perUnit": 272.19
+     },
+     "cold": {
+      "call": {
+       "1": 440,
+       "75": 21907,
+       "90": 26188
+      },
+      "perUnit": 289.3
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 455,
+       "75": 36841,
+       "90": 43845
+      },
+      "perUnit": 487.53
+     },
+     "cold": {
+      "call": {
+       "1": 726,
+       "75": 44683,
+       "90": 53367
+      },
+      "perUnit": 591.47
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 415,
+       "75": 33146,
+       "90": 39435
+      },
+      "perUnit": 438.43
+     },
+     "cold": {
+      "call": {
+       "1": 681,
+       "75": 40988,
+       "90": 48957
+      },
+      "perUnit": 542.43
+     }
+    }
+   }
+  },
+  "A.tenth.plain_w15": {
+   "entry": "plain_w15",
+   "unit": "group",
+   "fixture": "tenth",
+   "points": {
+    "1": {
+     "tag": "memo.A.tenth.plain_w15.n1",
+     "cycles": 108,
+     "instructions": 92,
+     "dataReads": 28,
+     "dataWrites": 9,
+     "result": 0
+    },
+    "75": {
+     "tag": "memo.A.tenth.plain_w15.n75",
+     "cycles": 6345,
+     "instructions": 5150,
+     "dataReads": 1284,
+     "dataWrites": 221,
+     "result": 8
+    },
+    "90": {
+     "tag": "memo.A.tenth.plain_w15.n90",
+     "cycles": 7651,
+     "instructions": 6204,
+     "dataReads": 1551,
+     "dataWrites": 259,
+     "result": 9
+    }
+   },
+   "slope": [
+    1,
+    90
+   ],
+   "cyclesPerUnit": 84.75,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 124,
+       "75": 7498,
+       "90": 10085
+      },
+      "perUnit": 111.92
+     },
+     "cold": {
+      "call": {
+       "1": 240,
+       "75": 8514,
+       "90": 10247
+      },
+      "perUnit": 112.44
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 124,
+       "75": 15675,
+       "90": 27293
+      },
+      "perUnit": 305.27
+     },
+     "cold": {
+      "call": {
+       "1": 439,
+       "75": 23462,
+       "90": 28242
+      },
+      "perUnit": 312.39
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 124,
+       "75": 17863,
+       "90": 31713
+      },
+      "perUnit": 354.93
+     },
+     "cold": {
+      "call": {
+       "1": 1217,
+       "75": 27792,
+       "90": 33292
+      },
+      "perUnit": 360.39
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 124,
+       "75": 7694,
+       "90": 10281
+      },
+      "perUnit": 114.12
+     },
+     "cold": {
+      "call": {
+       "1": 730,
+       "75": 9004,
+       "90": 10737
+      },
+      "perUnit": 112.44
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 124,
+       "75": 15675,
+       "90": 27293
+      },
+      "perUnit": 305.27
+     },
+     "cold": {
+      "call": {
+       "1": 439,
+       "75": 23462,
+       "90": 28242
+      },
+      "perUnit": 312.39
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 484,
+       "75": 36838,
+       "90": 44444
+      },
+      "perUnit": 493.93
+     },
+     "cold": {
+      "call": {
+       "1": 725,
+       "75": 45378,
+       "90": 54662
+      },
+      "perUnit": 606.03
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 444,
+       "75": 33313,
+       "90": 40194
+      },
+      "perUnit": 446.63
+     },
+     "cold": {
+      "call": {
+       "1": 680,
+       "75": 41848,
+       "90": 50407
+      },
+      "perUnit": 558.73
+     }
+    }
+   }
+  },
+  "A.tenth.l16_batch": {
+   "entry": "l16_batch",
+   "unit": "group",
+   "fixture": "tenth",
+   "points": {
+    "1": {
+     "tag": "memo.A.tenth.l16_batch.n1",
+     "cycles": 98,
+     "instructions": 96,
+     "dataReads": 39,
+     "dataWrites": 4,
+     "result": 0
+    },
+    "75": {
+     "tag": "memo.A.tenth.l16_batch.n75",
+     "cycles": 5746,
+     "instructions": 5640,
+     "dataReads": 2535,
+     "dataWrites": 134,
+     "result": 8
+    },
+    "90": {
+     "tag": "memo.A.tenth.l16_batch.n90",
+     "cycles": 6864,
+     "instructions": 6740,
+     "dataReads": 3031,
+     "dataWrites": 150,
+     "result": 9
+    }
+   },
+   "slope": [
+    1,
+    90
+   ],
+   "cyclesPerUnit": 76.02,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 104,
+       "75": 10275,
+       "90": 12267
+      },
+      "perUnit": 136.66
+     },
+     "cold": {
+      "call": {
+       "1": 275,
+       "75": 10383,
+       "90": 12375
+      },
+      "perUnit": 135.96
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 104,
+       "75": 40918,
+       "90": 48943
+      },
+      "perUnit": 548.75
+     },
+     "cold": {
+      "call": {
+       "1": 677,
+       "75": 41029,
+       "90": 49054
+      },
+      "perUnit": 543.56
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 104,
+       "75": 48556,
+       "90": 58021
+      },
+      "perUnit": 650.75
+     },
+     "cold": {
+      "call": {
+       "1": 1868,
+       "75": 49762,
+       "90": 59227
+      },
+      "perUnit": 644.48
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 104,
+       "75": 10569,
+       "90": 12561
+      },
+      "perUnit": 139.97
+     },
+     "cold": {
+      "call": {
+       "1": 1010,
+       "75": 11412,
+       "90": 13404
+      },
+      "perUnit": 139.26
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 104,
+       "75": 40918,
+       "90": 48943
+      },
+      "perUnit": 548.75
+     },
+     "cold": {
+      "call": {
+       "1": 677,
+       "75": 41029,
+       "90": 49054
+      },
+      "perUnit": 543.56
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 824,
+       "75": 81045,
+       "90": 98126
+      },
+      "perUnit": 1093.28
+     },
+     "cold": {
+      "call": {
+       "1": 1204,
+       "75": 82283,
+       "90": 98244
+      },
+      "perUnit": 1090.34
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 744,
+       "75": 74390,
+       "90": 90191
+      },
+      "perUnit": 1005.02
+     },
+     "cold": {
+      "call": {
+       "1": 1119,
+       "75": 75628,
+       "90": 90309
+      },
+      "perUnit": 1002.13
+     }
+    }
+   }
+  },
+  "A.all.w16_batch": {
+   "entry": "w16_batch",
+   "unit": "group",
+   "fixture": "all",
+   "points": {
+    "1": {
+     "tag": "memo.A.all.w16_batch.n1",
+     "cycles": 93,
+     "instructions": 88,
+     "dataReads": 31,
+     "dataWrites": 12,
+     "result": 1
+    },
+    "75": {
+     "tag": "memo.A.all.w16_batch.n75",
+     "cycles": 4697,
+     "instructions": 4390,
+     "dataReads": 1807,
+     "dataWrites": 606,
+     "result": 75
+    },
+    "90": {
+     "tag": "memo.A.all.w16_batch.n90",
+     "cycles": 5627,
+     "instructions": 5260,
+     "dataReads": 2167,
+     "dataWrites": 726,
+     "result": 90
+    }
+   },
+   "slope": [
+    1,
+    90
+   ],
+   "cyclesPerUnit": 62.18,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 115,
+       "75": 7396,
+       "90": 9490
+      },
+      "perUnit": 105.34
+     },
+     "cold": {
+      "call": {
+       "1": 253,
+       "75": 8112,
+       "90": 9702
+      },
+      "perUnit": 106.17
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 188,
+       "75": 23151,
+       "90": 32904
+      },
+      "perUnit": 367.6
+     },
+     "cold": {
+      "call": {
+       "1": 539,
+       "75": 28462,
+       "90": 34117
+      },
+      "perUnit": 377.28
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 188,
+       "75": 25939,
+       "90": 37276
+      },
+      "perUnit": 416.72
+     },
+     "cold": {
+      "call": {
+       "1": 1609,
+       "75": 33084,
+       "90": 39459
+      },
+      "perUnit": 425.28
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 115,
+       "75": 7592,
+       "90": 9686
+      },
+      "perUnit": 107.54
+     },
+     "cold": {
+      "call": {
+       "1": 939,
+       "75": 8798,
+       "90": 10388
+      },
+      "perUnit": 106.17
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 188,
+       "75": 23151,
+       "90": 32904
+      },
+      "perUnit": 367.6
+     },
+     "cold": {
+      "call": {
+       "1": 539,
+       "75": 28462,
+       "90": 34117
+      },
+      "perUnit": 377.28
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 796,
+       "75": 57200,
+       "90": 68615
+      },
+      "perUnit": 762.01
+     },
+     "cold": {
+      "call": {
+       "1": 1066,
+       "75": 65755,
+       "90": 78850
+      },
+      "perUnit": 873.98
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 716,
+       "75": 51190,
+       "90": 61405
+      },
+      "perUnit": 681.9
+     },
+     "cold": {
+      "call": {
+       "1": 981,
+       "75": 59740,
+       "90": 71635
+      },
+      "perUnit": 793.87
+     }
+    }
+   }
+  },
+  "A.all.w16_loop": {
+   "entry": "w16_loop",
+   "unit": "group",
+   "fixture": "all",
+   "points": {
+    "1": {
+     "tag": "memo.A.all.w16_loop.n1",
+     "cycles": 93,
+     "instructions": 90,
+     "dataReads": 35,
+     "dataWrites": 16,
+     "result": 1
+    },
+    "75": {
+     "tag": "memo.A.all.w16_loop.n75",
+     "cycles": 5125,
+     "instructions": 4900,
+     "dataReads": 1811,
+     "dataWrites": 682,
+     "result": 75
+    },
+    "90": {
+     "tag": "memo.A.all.w16_loop.n90",
+     "cycles": 6145,
+     "instructions": 5875,
+     "dataReads": 2171,
+     "dataWrites": 817,
+     "result": 90
+    }
+   },
+   "slope": [
+    1,
+    90
+   ],
+   "cyclesPerUnit": 68.0,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 127,
+       "75": 7635,
+       "90": 10129
+      },
+      "perUnit": 112.38
+     },
+     "cold": {
+      "call": {
+       "1": 280,
+       "75": 8716,
+       "90": 10426
+      },
+      "perUnit": 114.0
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 206,
+       "75": 21204,
+       "90": 33311
+      },
+      "perUnit": 371.97
+     },
+     "cold": {
+      "call": {
+       "1": 558,
+       "75": 29344,
+       "90": 35179
+      },
+      "perUnit": 389.0
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 206,
+       "75": 23441,
+       "90": 37612
+      },
+      "perUnit": 420.29
+     },
+     "cold": {
+      "call": {
+       "1": 1701,
+       "75": 34039,
+       "90": 40594
+      },
+      "perUnit": 437.0
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 127,
+       "75": 7880,
+       "90": 10374
+      },
+      "perUnit": 115.13
+     },
+     "cold": {
+      "call": {
+       "1": 1015,
+       "75": 9451,
+       "90": 11161
+      },
+      "perUnit": 114.0
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 206,
+       "75": 21204,
+       "90": 33311
+      },
+      "perUnit": 371.97
+     },
+     "cold": {
+      "call": {
+       "1": 558,
+       "75": 29344,
+       "90": 35179
+      },
+      "perUnit": 389.0
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 814,
+       "75": 60894,
+       "90": 72924
+      },
+      "perUnit": 810.22
+     },
+     "cold": {
+      "call": {
+       "1": 1092,
+       "75": 68736,
+       "90": 82446
+      },
+      "perUnit": 914.09
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 734,
+       "75": 54519,
+       "90": 65274
+      },
+      "perUnit": 725.17
+     },
+     "cold": {
+      "call": {
+       "1": 1007,
+       "75": 62361,
+       "90": 74796
+      },
+      "perUnit": 829.09
+     }
+    }
+   }
+  },
+  "A.all.plain_w15": {
+   "entry": "plain_w15",
+   "unit": "group",
+   "fixture": "all",
+   "points": {
+    "1": {
+     "tag": "memo.A.all.plain_w15.n1",
+     "cycles": 129,
+     "instructions": 111,
+     "dataReads": 30,
+     "dataWrites": 17,
+     "result": 1
+    },
+    "75": {
+     "tag": "memo.A.all.plain_w15.n75",
+     "cycles": 7467,
+     "instructions": 6223,
+     "dataReads": 1348,
+     "dataWrites": 757,
+     "result": 75
+    },
+    "90": {
+     "tag": "memo.A.all.plain_w15.n90",
+     "cycles": 8660,
+     "instructions": 7235,
+     "dataReads": 1541,
+     "dataWrites": 907,
+     "result": 90
+    }
+   },
+   "slope": [
+    1,
+    90
+   ],
+   "cyclesPerUnit": 95.85,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 145,
+       "75": 8459,
+       "90": 10457
+      },
+      "perUnit": 115.87
+     },
+     "cold": {
+      "call": {
+       "1": 262,
+       "75": 9406,
+       "90": 10928
+      },
+      "perUnit": 119.84
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 205,
+       "75": 19553,
+       "90": 28114
+      },
+      "perUnit": 313.58
+     },
+     "cold": {
+      "call": {
+       "1": 524,
+       "75": 26826,
+       "90": 31577
+      },
+      "perUnit": 348.91
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 205,
+       "75": 21597,
+       "90": 31598
+      },
+      "perUnit": 352.73
+     },
+     "cold": {
+      "call": {
+       "1": 1302,
+       "75": 31156,
+       "90": 36627
+      },
+      "perUnit": 396.91
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 145,
+       "75": 8655,
+       "90": 10653
+      },
+      "perUnit": 118.07
+     },
+     "cold": {
+      "call": {
+       "1": 752,
+       "75": 9896,
+       "90": 11418
+      },
+      "perUnit": 119.84
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 205,
+       "75": 19553,
+       "90": 28114
+      },
+      "perUnit": 313.58
+     },
+     "cold": {
+      "call": {
+       "1": 524,
+       "75": 26826,
+       "90": 31577
+      },
+      "perUnit": 348.91
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 685,
+       "75": 48445,
+       "90": 56163
+      },
+      "perUnit": 623.35
+     },
+     "cold": {
+      "call": {
+       "1": 930,
+       "75": 57055,
+       "90": 66479
+      },
+      "perUnit": 736.51
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 620,
+       "75": 43420,
+       "90": 50318
+      },
+      "perUnit": 558.4
+     },
+     "cold": {
+      "call": {
+       "1": 860,
+       "75": 52025,
+       "90": 60629
+      },
+      "perUnit": 671.56
+     }
+    }
+   }
+  },
+  "A.all.l16_batch": {
+   "entry": "l16_batch",
+   "unit": "group",
+   "fixture": "all",
+   "points": {
+    "1": {
+     "tag": "memo.A.all.l16_batch.n1",
+     "cycles": 136,
+     "instructions": 131,
+     "dataReads": 55,
+     "dataWrites": 20,
+     "result": 1
+    },
+    "75": {
+     "tag": "memo.A.all.l16_batch.n75",
+     "cycles": 8292,
+     "instructions": 7985,
+     "dataReads": 3607,
+     "dataWrites": 1206,
+     "result": 75
+    },
+    "90": {
+     "tag": "memo.A.all.l16_batch.n90",
+     "cycles": 9942,
+     "instructions": 9575,
+     "dataReads": 4327,
+     "dataWrites": 1446,
+     "result": 90
+    }
+   },
+   "slope": [
+    1,
+    90
+   ],
+   "cyclesPerUnit": 110.18,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 176,
+       "75": 15099,
+       "90": 18099
+      },
+      "perUnit": 201.38
+     },
+     "cold": {
+      "call": {
+       "1": 386,
+       "75": 15208,
+       "90": 18208
+      },
+      "perUnit": 200.25
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 327,
+       "75": 55994,
+       "90": 67169
+      },
+      "perUnit": 751.03
+     },
+     "cold": {
+      "call": {
+       "1": 948,
+       "75": 56110,
+       "90": 67285
+      },
+      "perUnit": 745.36
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 327,
+       "75": 63632,
+       "90": 76247
+      },
+      "perUnit": 853.03
+     },
+     "cold": {
+      "call": {
+       "1": 2504,
+       "75": 64843,
+       "90": 77458
+      },
+      "perUnit": 842.18
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 176,
+       "75": 15393,
+       "90": 18393
+      },
+      "perUnit": 204.69
+     },
+     "cold": {
+      "call": {
+       "1": 1366,
+       "75": 16237,
+       "90": 19237
+      },
+      "perUnit": 200.8
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 327,
+       "75": 55994,
+       "90": 67169
+      },
+      "perUnit": 751.03
+     },
+     "cold": {
+      "call": {
+       "1": 948,
+       "75": 56110,
+       "90": 67285
+      },
+      "perUnit": 745.36
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 1543,
+       "75": 129353,
+       "90": 156528
+      },
+      "perUnit": 1741.4
+     },
+     "cold": {
+      "call": {
+       "1": 1971,
+       "75": 130596,
+       "90": 156651
+      },
+      "perUnit": 1737.98
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 1383,
+       "75": 117338,
+       "90": 142113
+      },
+      "perUnit": 1581.24
+     },
+     "cold": {
+      "call": {
+       "1": 1806,
+       "75": 118581,
+       "90": 142236
+      },
+      "perUnit": 1577.87
+     }
+    }
+   }
+  },
+  "B.steady.put4": {
+   "entry": "put4",
+   "unit": "record",
+   "fixture": "steady",
+   "points": {
+    "1": {
+     "tag": "memo.B.steady.put4.n1",
+     "cycles": 98,
+     "instructions": 92,
+     "dataReads": 29,
+     "dataWrites": 14,
+     "result": 1
+    },
+    "357": {
+     "tag": "memo.B.steady.put4.n357",
+     "cycles": 7930,
+     "instructions": 7568,
+     "dataReads": 1453,
+     "dataWrites": 370,
+     "result": 357
+    },
+    "388": {
+     "tag": "memo.B.steady.put4.n388",
+     "cycles": 8612,
+     "instructions": 8219,
+     "dataReads": 1577,
+     "dataWrites": 401,
+     "result": 388
+    }
+   },
+   "slope": [
+    1,
+    388
+   ],
+   "cyclesPerUnit": 22.0,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 119,
+       "357": 10588,
+       "388": 11480
+      },
+      "perUnit": 29.36
+     },
+     "cold": {
+      "call": {
+       "1": 294,
+       "357": 10632,
+       "388": 11524
+      },
+      "perUnit": 29.02
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 119,
+       "357": 14998,
+       "388": 16233
+      },
+      "perUnit": 41.64
+     },
+     "cold": {
+      "call": {
+       "1": 343,
+       "357": 15042,
+       "388": 16277
+      },
+      "perUnit": 41.17
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 119,
+       "357": 37890,
+       "388": 40972
+      },
+      "perUnit": 105.56
+     },
+     "cold": {
+      "call": {
+       "1": 1827,
+       "357": 38226,
+       "388": 41308
+      },
+      "perUnit": 102.02
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 119,
+       "357": 11274,
+       "388": 12166
+      },
+      "perUnit": 31.13
+     },
+     "cold": {
+      "call": {
+       "1": 1127,
+       "357": 11514,
+       "388": 12406
+      },
+      "perUnit": 29.14
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 119,
+       "357": 26068,
+       "388": 28246
+      },
+      "perUnit": 72.68
+     },
+     "cold": {
+      "call": {
+       "1": 466,
+       "357": 26112,
+       "388": 28290
+      },
+      "perUnit": 71.9
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 119,
+       "357": 25004,
+       "388": 27098
+      },
+      "perUnit": 69.71
+     },
+     "cold": {
+      "call": {
+       "1": 381,
+       "357": 25048,
+       "388": 27142
+      },
+      "perUnit": 69.15
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 119,
+       "357": 23219,
+       "388": 25158
+      },
+      "perUnit": 64.7
+     },
+     "cold": {
+      "call": {
+       "1": 376,
+       "357": 23263,
+       "388": 25202
+      },
+      "perUnit": 64.15
+     }
+    }
+   }
+  },
+  "B.steady.put4_one": {
+   "entry": "put4_one",
+   "unit": "record",
+   "fixture": "steady",
+   "points": {
+    "1": {
+     "tag": "memo.B.steady.put4_one.n1",
+     "cycles": 129,
+     "instructions": 122,
+     "dataReads": 36,
+     "dataWrites": 19,
+     "result": 1
+    },
+    "357": {
+     "tag": "memo.B.steady.put4_one.n357",
+     "cycles": 18285,
+     "instructions": 16498,
+     "dataReads": 4664,
+     "dataWrites": 375,
+     "result": 357
+    },
+    "388": {
+     "tag": "memo.B.steady.put4_one.n388",
+     "cycles": 19866,
+     "instructions": 17924,
+     "dataReads": 5067,
+     "dataWrites": 406,
+     "result": 388
+    }
+   },
+   "slope": [
+    1,
+    388
+   ],
+   "cyclesPerUnit": 51.0,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 156,
+       "357": 20936,
+       "388": 22727
+      },
+      "perUnit": 58.32
+     },
+     "cold": {
+      "call": {
+       "1": 374,
+       "357": 21022,
+       "388": 22813
+      },
+      "perUnit": 57.98
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 156,
+       "357": 25346,
+       "388": 27480
+      },
+      "perUnit": 70.6
+     },
+     "cold": {
+      "call": {
+       "1": 426,
+       "357": 25435,
+       "388": 27569
+      },
+      "perUnit": 70.14
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 156,
+       "357": 48019,
+       "388": 52000
+      },
+      "perUnit": 133.96
+     },
+     "cold": {
+      "call": {
+       "1": 2129,
+       "357": 48765,
+       "388": 52746
+      },
+      "perUnit": 130.79
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 156,
+       "357": 21475,
+       "388": 23266
+      },
+      "perUnit": 59.72
+     },
+     "cold": {
+      "call": {
+       "1": 1354,
+       "357": 22002,
+       "388": 23793
+      },
+      "perUnit": 57.98
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 156,
+       "357": 36416,
+       "388": 39493
+      },
+      "perUnit": 101.65
+     },
+     "cold": {
+      "call": {
+       "1": 549,
+       "357": 36505,
+       "388": 39582
+      },
+      "perUnit": 100.86
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 156,
+       "357": 33654,
+       "388": 36500
+      },
+      "perUnit": 93.91
+     },
+     "cold": {
+      "call": {
+       "1": 464,
+       "357": 33749,
+       "388": 36595
+      },
+      "perUnit": 93.36
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 156,
+       "357": 32314,
+       "388": 35045
+      },
+      "perUnit": 90.15
+     },
+     "cold": {
+      "call": {
+       "1": 459,
+       "357": 32409,
+       "388": 35140
+      },
+      "perUnit": 89.61
+     }
+    }
+   }
+  },
+  "B.steady.plain_memo": {
+   "entry": "plain_memo",
+   "unit": "record",
+   "fixture": "steady",
+   "points": {
+    "1": {
+     "tag": "memo.B.steady.plain_memo.n1",
+     "cycles": 61,
+     "instructions": 55,
+     "dataReads": 10,
+     "dataWrites": 3,
+     "result": 1
+    },
+    "357": {
+     "tag": "memo.B.steady.plain_memo.n357",
+     "cycles": 12877,
+     "instructions": 11803,
+     "dataReads": 1790,
+     "dataWrites": 359,
+     "result": 357
+    },
+    "388": {
+     "tag": "memo.B.steady.plain_memo.n388",
+     "cycles": 13993,
+     "instructions": 12826,
+     "dataReads": 1945,
+     "dataWrites": 390,
+     "result": 388
+    }
+   },
+   "slope": [
+    1,
+    388
+   ],
+   "cyclesPerUnit": 36.0,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 61,
+       "357": 15422,
+       "388": 16748
+      },
+      "perUnit": 43.12
+     },
+     "cold": {
+      "call": {
+       "1": 156,
+       "357": 15464,
+       "388": 16790
+      },
+      "perUnit": 42.98
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 61,
+       "357": 20011,
+       "388": 21694
+      },
+      "perUnit": 55.9
+     },
+     "cold": {
+      "call": {
+       "1": 206,
+       "357": 20053,
+       "388": 21736
+      },
+      "perUnit": 55.63
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 61,
+       "357": 42027,
+       "388": 45557
+      },
+      "perUnit": 117.56
+     },
+     "cold": {
+      "call": {
+       "1": 1033,
+       "357": 42507,
+       "388": 46037
+      },
+      "perUnit": 116.29
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 61,
+       "357": 15618,
+       "388": 16944
+      },
+      "perUnit": 43.63
+     },
+     "cold": {
+      "call": {
+       "1": 646,
+       "357": 15954,
+       "388": 17280
+      },
+      "perUnit": 42.98
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 61,
+       "357": 30999,
+       "388": 33625
+      },
+      "perUnit": 86.73
+     },
+     "cold": {
+      "call": {
+       "1": 247,
+       "357": 31041,
+       "388": 33667
+      },
+      "perUnit": 86.36
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 61,
+       "357": 26190,
+       "388": 28387
+      },
+      "perUnit": 73.19
+     },
+     "cold": {
+      "call": {
+       "1": 244,
+       "357": 26232,
+       "388": 28429
+      },
+      "perUnit": 72.83
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 61,
+       "357": 24405,
+       "388": 26447
+      },
+      "perUnit": 68.18
+     },
+     "cold": {
+      "call": {
+       "1": 239,
+       "357": 24447,
+       "388": 26489
+      },
+      "perUnit": 67.83
+     }
+    }
+   }
+  },
+  "B.steady.plain_all": {
+   "entry": "plain_all",
+   "unit": "record",
+   "fixture": "steady",
+   "points": {
+    "1": {
+     "tag": "memo.B.steady.plain_all.n1",
+     "cycles": 30,
+     "instructions": 29,
+     "dataReads": 6,
+     "dataWrites": 4,
+     "result": 4
+    },
+    "357": {
+     "tag": "memo.B.steady.plain_all.n357",
+     "cycles": 4658,
+     "instructions": 4301,
+     "dataReads": 1430,
+     "dataWrites": 1428,
+     "result": 1428
+    },
+    "388": {
+     "tag": "memo.B.steady.plain_all.n388",
+     "cycles": 5061,
+     "instructions": 4673,
+     "dataReads": 1554,
+     "dataWrites": 1552,
+     "result": 1552
+    }
+   },
+   "slope": [
+    1,
+    388
+   ],
+   "cyclesPerUnit": 13.0,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 35,
+       "357": 7043,
+       "388": 8386
+      },
+      "perUnit": 21.58
+     },
+     "cold": {
+      "call": {
+       "1": 77,
+       "357": 8443,
+       "388": 9170
+      },
+      "perUnit": 23.5
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 44,
+       "357": 10718,
+       "388": 12513
+      },
+      "perUnit": 32.22
+     },
+     "cold": {
+      "call": {
+       "1": 86,
+       "357": 12368,
+       "388": 13435
+      },
+      "perUnit": 34.49
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 44,
+       "357": 16704,
+       "388": 26310
+      },
+      "perUnit": 67.87
+     },
+     "cold": {
+      "call": {
+       "1": 524,
+       "357": 32297,
+       "388": 35043
+      },
+      "perUnit": 89.2
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 35,
+       "357": 7141,
+       "388": 8484
+      },
+      "perUnit": 21.83
+     },
+     "cold": {
+      "call": {
+       "1": 322,
+       "357": 8688,
+       "388": 9415
+      },
+      "perUnit": 23.5
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 44,
+       "357": 13998,
+       "388": 20180
+      },
+      "perUnit": 52.03
+     },
+     "cold": {
+      "call": {
+       "1": 127,
+       "357": 23356,
+       "388": 25366
+      },
+      "perUnit": 65.22
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 158,
+       "357": 64944,
+       "388": 71451
+      },
+      "perUnit": 184.22
+     },
+     "cold": {
+      "call": {
+       "1": 200,
+       "357": 66594,
+       "388": 72373
+      },
+      "perUnit": 186.49
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 143,
+       "357": 57809,
+       "388": 63696
+      },
+      "perUnit": 164.22
+     },
+     "cold": {
+      "call": {
+       "1": 185,
+       "357": 59459,
+       "388": 64618
+      },
+      "perUnit": 166.49
+     }
+    }
+   }
+  },
+  "B.typical.put4": {
+   "entry": "put4",
+   "unit": "record",
+   "fixture": "typical",
+   "points": {
+    "1": {
+     "tag": "memo.B.typical.put4.n1",
+     "cycles": 98,
+     "instructions": 92,
+     "dataReads": 29,
+     "dataWrites": 14,
+     "result": 1
+    },
+    "357": {
+     "tag": "memo.B.typical.put4.n357",
+     "cycles": 11320,
+     "instructions": 9572,
+     "dataReads": 1993,
+     "dataWrites": 832,
+     "result": 627
+    },
+    "388": {
+     "tag": "memo.B.typical.put4.n388",
+     "cycles": 12370,
+     "instructions": 10435,
+     "dataReads": 2171,
+     "dataWrites": 915,
+     "result": 685
+    }
+   },
+   "slope": [
+    1,
+    388
+   ],
+   "cyclesPerUnit": 31.71,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 119,
+       "357": 13971,
+       "388": 15231
+      },
+      "perUnit": 39.05
+     },
+     "cold": {
+      "call": {
+       "1": 294,
+       "357": 14043,
+       "388": 15306
+      },
+      "perUnit": 38.79
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 119,
+       "357": 19232,
+       "388": 20924
+      },
+      "perUnit": 53.76
+     },
+     "cold": {
+      "call": {
+       "1": 343,
+       "357": 19307,
+       "388": 21008
+      },
+      "perUnit": 53.4
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 119,
+       "357": 43203,
+       "388": 46892
+      },
+      "perUnit": 120.86
+     },
+     "cold": {
+      "call": {
+       "1": 1827,
+       "357": 43789,
+       "388": 47487
+      },
+      "perUnit": 117.98
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 119,
+       "357": 14608,
+       "388": 15868
+      },
+      "perUnit": 40.7
+     },
+     "cold": {
+      "call": {
+       "1": 1127,
+       "357": 15023,
+       "388": 16286
+      },
+      "perUnit": 39.17
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 119,
+       "357": 30302,
+       "388": 32937
+      },
+      "perUnit": 84.8
+     },
+     "cold": {
+      "call": {
+       "1": 466,
+       "357": 30377,
+       "388": 33021
+      },
+      "perUnit": 84.12
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 119,
+       "357": 39632,
+       "388": 43201
+      },
+      "perUnit": 111.32
+     },
+     "cold": {
+      "call": {
+       "1": 381,
+       "357": 39709,
+       "388": 43285
+      },
+      "perUnit": 110.86
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 119,
+       "357": 36497,
+       "388": 39776
+      },
+      "perUnit": 102.47
+     },
+     "cold": {
+      "call": {
+       "1": 376,
+       "357": 36574,
+       "388": 39860
+      },
+      "perUnit": 102.03
+     }
+    }
+   }
+  },
+  "B.typical.put4_one": {
+   "entry": "put4_one",
+   "unit": "record",
+   "fixture": "typical",
+   "points": {
+    "1": {
+     "tag": "memo.B.typical.put4_one.n1",
+     "cycles": 129,
+     "instructions": 122,
+     "dataReads": 36,
+     "dataWrites": 19,
+     "result": 1
+    },
+    "357": {
+     "tag": "memo.B.typical.put4_one.n357",
+     "cycles": 19383,
+     "instructions": 18058,
+     "dataReads": 5252,
+     "dataWrites": 837,
+     "result": 627
+    },
+    "388": {
+     "tag": "memo.B.typical.put4_one.n388",
+     "cycles": 21080,
+     "instructions": 19652,
+     "dataReads": 5714,
+     "dataWrites": 920,
+     "result": 685
+    }
+   },
+   "slope": [
+    1,
+    388
+   ],
+   "cyclesPerUnit": 54.14,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 156,
+       "357": 22027,
+       "388": 23934
+      },
+      "perUnit": 61.44
+     },
+     "cold": {
+      "call": {
+       "1": 374,
+       "357": 22120,
+       "388": 24028
+      },
+      "perUnit": 61.12
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 156,
+       "357": 27321,
+       "388": 29702
+      },
+      "perUnit": 76.35
+     },
+     "cold": {
+      "call": {
+       "1": 426,
+       "357": 27417,
+       "388": 29804
+      },
+      "perUnit": 75.91
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 156,
+       "357": 50834,
+       "388": 55170
+      },
+      "perUnit": 142.16
+     },
+     "cold": {
+      "call": {
+       "1": 2129,
+       "357": 51587,
+       "388": 55929
+      },
+      "perUnit": 139.02
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 156,
+       "357": 22566,
+       "388": 24473
+      },
+      "perUnit": 62.83
+     },
+     "cold": {
+      "call": {
+       "1": 1354,
+       "357": 23100,
+       "388": 25008
+      },
+      "perUnit": 61.12
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 156,
+       "357": 38391,
+       "388": 41715
+      },
+      "perUnit": 107.39
+     },
+     "cold": {
+      "call": {
+       "1": 549,
+       "357": 38487,
+       "388": 41817
+      },
+      "perUnit": 106.64
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 156,
+       "357": 48298,
+       "388": 52725
+      },
+      "perUnit": 135.84
+     },
+     "cold": {
+      "call": {
+       "1": 464,
+       "357": 48401,
+       "388": 52828
+      },
+      "perUnit": 135.31
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 156,
+       "357": 45328,
+       "388": 49460
+      },
+      "perUnit": 127.4
+     },
+     "cold": {
+      "call": {
+       "1": 459,
+       "357": 45430,
+       "388": 49563
+      },
+      "perUnit": 126.88
+     }
+    }
+   }
+  },
+  "B.typical.plain_memo": {
+   "entry": "plain_memo",
+   "unit": "record",
+   "fixture": "typical",
+   "points": {
+    "1": {
+     "tag": "memo.B.typical.plain_memo.n1",
+     "cycles": 61,
+     "instructions": 55,
+     "dataReads": 10,
+     "dataWrites": 3,
+     "result": 1
+    },
+    "357": {
+     "tag": "memo.B.typical.plain_memo.n357",
+     "cycles": 13587,
+     "instructions": 12813,
+     "dataReads": 2035,
+     "dataWrites": 851,
+     "result": 627
+    },
+    "388": {
+     "tag": "memo.B.typical.plain_memo.n388",
+     "cycles": 14772,
+     "instructions": 13934,
+     "dataReads": 2214,
+     "dataWrites": 931,
+     "result": 685
+    }
+   },
+   "slope": [
+    1,
+    388
+   ],
+   "cyclesPerUnit": 38.01,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 61,
+       "357": 16713,
+       "388": 18167
+      },
+      "perUnit": 46.79
+     },
+     "cold": {
+      "call": {
+       "1": 156,
+       "357": 16762,
+       "388": 18216
+      },
+      "perUnit": 46.67
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 61,
+       "357": 22644,
+       "388": 24591
+      },
+      "perUnit": 63.39
+     },
+     "cold": {
+      "call": {
+       "1": 206,
+       "357": 22693,
+       "388": 24640
+      },
+      "perUnit": 63.14
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 61,
+       "357": 45253,
+       "388": 49113
+      },
+      "perUnit": 126.75
+     },
+     "cold": {
+      "call": {
+       "1": 1033,
+       "357": 45813,
+       "388": 49673
+      },
+      "perUnit": 125.68
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 61,
+       "357": 16860,
+       "388": 18314
+      },
+      "perUnit": 47.17
+     },
+     "cold": {
+      "call": {
+       "1": 646,
+       "357": 17252,
+       "388": 18706
+      },
+      "perUnit": 46.67
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 61,
+       "357": 33632,
+       "388": 36522
+      },
+      "perUnit": 94.21
+     },
+     "cold": {
+      "call": {
+       "1": 247,
+       "357": 33681,
+       "388": 36571
+      },
+      "perUnit": 93.86
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 61,
+       "357": 39723,
+       "388": 43215
+      },
+      "perUnit": 111.51
+     },
+     "cold": {
+      "call": {
+       "1": 244,
+       "357": 39772,
+       "388": 43264
+      },
+      "perUnit": 111.16
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 61,
+       "357": 36588,
+       "388": 39790
+      },
+      "perUnit": 102.66
+     },
+     "cold": {
+      "call": {
+       "1": 239,
+       "357": 36637,
+       "388": 39839
+      },
+      "perUnit": 102.33
+     }
+    }
+   }
+  },
+  "B.all.put4": {
+   "entry": "put4",
+   "unit": "record",
+   "fixture": "all",
+   "points": {
+    "1": {
+     "tag": "memo.B.all.put4.n1",
+     "cycles": 130,
+     "instructions": 112,
+     "dataReads": 35,
+     "dataWrites": 18,
+     "result": 4
+    },
+    "357": {
+     "tag": "memo.B.all.put4.n357",
+     "cycles": 19354,
+     "instructions": 14708,
+     "dataReads": 3595,
+     "dataWrites": 1798,
+     "result": 1428
+    },
+    "388": {
+     "tag": "memo.B.all.put4.n388",
+     "cycles": 21028,
+     "instructions": 15979,
+     "dataReads": 3905,
+     "dataWrites": 1953,
+     "result": 1552
+    }
+   },
+   "slope": [
+    1,
+    388
+   ],
+   "cyclesPerUnit": 54.0,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 151,
+       "357": 22005,
+       "388": 23889
+      },
+      "perUnit": 61.34
+     },
+     "cold": {
+      "call": {
+       "1": 350,
+       "357": 22080,
+       "388": 23964
+      },
+      "perUnit": 61.02
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 157,
+       "357": 28824,
+       "388": 31261
+      },
+      "perUnit": 80.37
+     },
+     "cold": {
+      "call": {
+       "1": 410,
+       "357": 28904,
+       "388": 31341
+      },
+      "perUnit": 79.93
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 163,
+       "357": 53785,
+       "388": 58255
+      },
+      "perUnit": 150.11
+     },
+     "cold": {
+      "call": {
+       "1": 2046,
+       "357": 54376,
+       "388": 58846
+      },
+      "perUnit": 146.77
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 151,
+       "357": 22642,
+       "388": 24526
+      },
+      "perUnit": 62.98
+     },
+     "cold": {
+      "call": {
+       "1": 1281,
+       "357": 23060,
+       "388": 24944
+      },
+      "perUnit": 61.14
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 157,
+       "357": 39894,
+       "388": 43274
+      },
+      "perUnit": 111.41
+     },
+     "cold": {
+      "call": {
+       "1": 533,
+       "357": 39974,
+       "388": 43354
+      },
+      "perUnit": 110.65
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 263,
+       "357": 77737,
+       "388": 84415
+      },
+      "perUnit": 217.45
+     },
+     "cold": {
+      "call": {
+       "1": 554,
+       "357": 77820,
+       "388": 84498
+      },
+      "perUnit": 216.91
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 248,
+       "357": 70597,
+       "388": 76655
+      },
+      "perUnit": 197.43
+     },
+     "cold": {
+      "call": {
+       "1": 534,
+       "357": 70680,
+       "388": 76738
+      },
+      "perUnit": 196.91
+     }
+    }
+   }
+  },
+  "B.all.put4_one": {
+   "entry": "put4_one",
+   "unit": "record",
+   "fixture": "all",
+   "points": {
+    "1": {
+     "tag": "memo.B.all.put4_one.n1",
+     "cycles": 141,
+     "instructions": 138,
+     "dataReads": 43,
+     "dataWrites": 23,
+     "result": 4
+    },
+    "357": {
+     "tag": "memo.B.all.put4_one.n357",
+     "cycles": 22569,
+     "instructions": 22210,
+     "dataReads": 7163,
+     "dataWrites": 1803,
+     "result": 1428
+    },
+    "388": {
+     "tag": "memo.B.all.put4_one.n388",
+     "cycles": 24522,
+     "instructions": 24132,
+     "dataReads": 7783,
+     "dataWrites": 1958,
+     "result": 1552
+    }
+   },
+   "slope": [
+    1,
+    388
+   ],
+   "cyclesPerUnit": 63.0,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 168,
+       "357": 25213,
+       "388": 27376
+      },
+      "perUnit": 70.3
+     },
+     "cold": {
+      "call": {
+       "1": 387,
+       "357": 25307,
+       "388": 27470
+      },
+      "perUnit": 69.98
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 169,
+       "357": 31317,
+       "388": 33968
+      },
+      "perUnit": 87.34
+     },
+     "cold": {
+      "call": {
+       "1": 453,
+       "357": 31421,
+       "388": 34072
+      },
+      "perUnit": 86.87
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 169,
+       "357": 55598,
+       "388": 60234
+      },
+      "perUnit": 155.21
+     },
+     "cold": {
+      "call": {
+       "1": 2162,
+       "357": 56359,
+       "388": 60995
+      },
+      "perUnit": 152.02
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 168,
+       "357": 25752,
+       "388": 27915
+      },
+      "perUnit": 71.7
+     },
+     "cold": {
+      "call": {
+       "1": 1367,
+       "357": 26287,
+       "388": 28450
+      },
+      "perUnit": 69.98
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 169,
+       "357": 42387,
+       "388": 45981
+      },
+      "perUnit": 118.38
+     },
+     "cold": {
+      "call": {
+       "1": 576,
+       "357": 42491,
+       "388": 46085
+      },
+      "perUnit": 117.59
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 313,
+       "357": 82725,
+       "388": 89840
+      },
+      "perUnit": 231.34
+     },
+     "cold": {
+      "call": {
+       "1": 604,
+       "357": 82836,
+       "388": 89951
+      },
+      "perUnit": 230.87
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 293,
+       "357": 75585,
+       "388": 82080
+      },
+      "perUnit": 211.34
+     },
+     "cold": {
+      "call": {
+       "1": 584,
+       "357": 75696,
+       "388": 82191
+      },
+      "perUnit": 210.87
+     }
+    }
+   }
+  },
+  "B.all.plain_memo": {
+   "entry": "plain_memo",
+   "unit": "record",
+   "fixture": "all",
+   "points": {
+    "1": {
+     "tag": "memo.B.all.plain_memo.n1",
+     "cycles": 66,
+     "instructions": 61,
+     "dataReads": 12,
+     "dataWrites": 8,
+     "result": 4
+    },
+    "357": {
+     "tag": "memo.B.all.plain_memo.n357",
+     "cycles": 14670,
+     "instructions": 13953,
+     "dataReads": 2506,
+     "dataWrites": 2144,
+     "result": 1428
+    },
+    "388": {
+     "tag": "memo.B.all.plain_memo.n388",
+     "cycles": 15941,
+     "instructions": 15162,
+     "dataReads": 2723,
+     "dataWrites": 2330,
+     "result": 1552
+    }
+   },
+   "slope": [
+    1,
+    388
+   ],
+   "cyclesPerUnit": 41.02,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 73,
+       "357": 19707,
+       "388": 21405
+      },
+      "perUnit": 55.12
+     },
+     "cold": {
+      "call": {
+       "1": 168,
+       "357": 19756,
+       "388": 21454
+      },
+      "perUnit": 55.0
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 85,
+       "357": 28758,
+       "388": 31201
+      },
+      "perUnit": 80.4
+     },
+     "cold": {
+      "call": {
+       "1": 232,
+       "357": 28809,
+       "388": 31252
+      },
+      "perUnit": 80.16
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 91,
+       "357": 52843,
+       "388": 57319
+      },
+      "perUnit": 147.88
+     },
+     "cold": {
+      "call": {
+       "1": 1065,
+       "357": 53405,
+       "388": 57881
+      },
+      "perUnit": 146.81
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 73,
+       "357": 19854,
+       "388": 21552
+      },
+      "perUnit": 55.5
+     },
+     "cold": {
+      "call": {
+       "1": 658,
+       "357": 20246,
+       "388": 21944
+      },
+      "perUnit": 55.0
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 85,
+       "357": 39746,
+       "388": 43132
+      },
+      "perUnit": 111.23
+     },
+     "cold": {
+      "call": {
+       "1": 273,
+       "357": 39797,
+       "388": 43183
+      },
+      "perUnit": 110.88
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 199,
+       "357": 78390,
+       "388": 85125
+      },
+      "perUnit": 219.45
+     },
+     "cold": {
+      "call": {
+       "1": 384,
+       "357": 78441,
+       "388": 85179
+      },
+      "perUnit": 219.11
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 184,
+       "357": 71250,
+       "388": 77365
+      },
+      "perUnit": 199.43
+     },
+     "cold": {
+      "call": {
+       "1": 364,
+       "357": 71301,
+       "388": 77419
+      },
+      "perUnit": 199.11
+     }
+    }
+   }
+  },
+  "B.typicalMemoHigh.put4": {
+   "entry": "put4",
+   "unit": "record",
+   "fixture": "typical, memo in high work RAM",
+   "points": {
+    "1": {
+     "tag": "memo.B.typicalMemoHigh.put4.n1",
+     "cycles": 98,
+     "instructions": 92,
+     "dataReads": 29,
+     "dataWrites": 14,
+     "result": 1
+    },
+    "357": {
+     "tag": "memo.B.typicalMemoHigh.put4.n357",
+     "cycles": 11320,
+     "instructions": 9572,
+     "dataReads": 1993,
+     "dataWrites": 832,
+     "result": 627
+    },
+    "388": {
+     "tag": "memo.B.typicalMemoHigh.put4.n388",
+     "cycles": 12370,
+     "instructions": 10435,
+     "dataReads": 2171,
+     "dataWrites": 915,
+     "result": 685
+    }
+   },
+   "slope": [
+    1,
+    388
+   ],
+   "cyclesPerUnit": 31.71,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 119,
+       "357": 13971,
+       "388": 15231
+      },
+      "perUnit": 39.05
+     },
+     "cold": {
+      "call": {
+       "1": 294,
+       "357": 14043,
+       "388": 15306
+      },
+      "perUnit": 38.79
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 119,
+       "357": 13976,
+       "388": 15237
+      },
+      "perUnit": 39.06
+     },
+     "cold": {
+      "call": {
+       "1": 294,
+       "357": 14048,
+       "388": 15313
+      },
+      "perUnit": 38.81
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 119,
+       "357": 43203,
+       "388": 46892
+      },
+      "perUnit": 120.86
+     },
+     "cold": {
+      "call": {
+       "1": 1827,
+       "357": 43789,
+       "388": 47487
+      },
+      "perUnit": 117.98
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 119,
+       "357": 14608,
+       "388": 15868
+      },
+      "perUnit": 40.7
+     },
+     "cold": {
+      "call": {
+       "1": 1127,
+       "357": 15023,
+       "388": 16286
+      },
+      "perUnit": 39.17
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 119,
+       "357": 29198,
+       "388": 31727
+      },
+      "perUnit": 81.67
+     },
+     "cold": {
+      "call": {
+       "1": 458,
+       "357": 29273,
+       "388": 31811
+      },
+      "perUnit": 81.02
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 119,
+       "357": 34376,
+       "388": 37514
+      },
+      "perUnit": 96.63
+     },
+     "cold": {
+      "call": {
+       "1": 332,
+       "357": 34450,
+       "388": 37590
+      },
+      "perUnit": 96.27
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 119,
+       "357": 31241,
+       "388": 34089
+      },
+      "perUnit": 87.78
+     },
+     "cold": {
+      "call": {
+       "1": 327,
+       "357": 31315,
+       "388": 34165
+      },
+      "perUnit": 87.44
+     }
+    }
+   }
+  },
+  "B.typicalMemoHigh.put4_one": {
+   "entry": "put4_one",
+   "unit": "record",
+   "fixture": "typical, memo in high work RAM",
+   "points": {
+    "1": {
+     "tag": "memo.B.typicalMemoHigh.put4_one.n1",
+     "cycles": 129,
+     "instructions": 122,
+     "dataReads": 36,
+     "dataWrites": 19,
+     "result": 1
+    },
+    "357": {
+     "tag": "memo.B.typicalMemoHigh.put4_one.n357",
+     "cycles": 19383,
+     "instructions": 18058,
+     "dataReads": 5252,
+     "dataWrites": 837,
+     "result": 627
+    },
+    "388": {
+     "tag": "memo.B.typicalMemoHigh.put4_one.n388",
+     "cycles": 21080,
+     "instructions": 19652,
+     "dataReads": 5714,
+     "dataWrites": 920,
+     "result": 685
+    }
+   },
+   "slope": [
+    1,
+    388
+   ],
+   "cyclesPerUnit": 54.14,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 156,
+       "357": 22027,
+       "388": 23934
+      },
+      "perUnit": 61.44
+     },
+     "cold": {
+      "call": {
+       "1": 374,
+       "357": 22120,
+       "388": 24028
+      },
+      "perUnit": 61.12
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 156,
+       "357": 22219,
+       "388": 24151
+      },
+      "perUnit": 62.0
+     },
+     "cold": {
+      "call": {
+       "1": 377,
+       "357": 22315,
+       "388": 24250
+      },
+      "perUnit": 61.69
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 156,
+       "357": 50834,
+       "388": 55170
+      },
+      "perUnit": 142.16
+     },
+     "cold": {
+      "call": {
+       "1": 2129,
+       "357": 51587,
+       "388": 55929
+      },
+      "perUnit": 139.02
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 156,
+       "357": 22566,
+       "388": 24473
+      },
+      "perUnit": 62.83
+     },
+     "cold": {
+      "call": {
+       "1": 1354,
+       "357": 23100,
+       "388": 25008
+      },
+      "perUnit": 61.12
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 156,
+       "357": 37391,
+       "388": 40623
+      },
+      "perUnit": 104.57
+     },
+     "cold": {
+      "call": {
+       "1": 541,
+       "357": 37487,
+       "388": 40725
+      },
+      "perUnit": 103.83
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 156,
+       "357": 43196,
+       "388": 47174
+      },
+      "perUnit": 121.49
+     },
+     "cold": {
+      "call": {
+       "1": 415,
+       "357": 43299,
+       "388": 47274
+      },
+      "perUnit": 121.08
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 156,
+       "357": 40226,
+       "388": 43909
+      },
+      "perUnit": 113.06
+     },
+     "cold": {
+      "call": {
+       "1": 410,
+       "357": 40328,
+       "388": 44009
+      },
+      "perUnit": 112.66
+     }
+    }
+   }
+  },
+  "B.typicalMemoHigh.plain_memo": {
+   "entry": "plain_memo",
+   "unit": "record",
+   "fixture": "typical, memo in high work RAM",
+   "points": {
+    "1": {
+     "tag": "memo.B.typicalMemoHigh.plain_memo.n1",
+     "cycles": 61,
+     "instructions": 55,
+     "dataReads": 10,
+     "dataWrites": 3,
+     "result": 1
+    },
+    "357": {
+     "tag": "memo.B.typicalMemoHigh.plain_memo.n357",
+     "cycles": 13587,
+     "instructions": 12813,
+     "dataReads": 2035,
+     "dataWrites": 851,
+     "result": 627
+    },
+    "388": {
+     "tag": "memo.B.typicalMemoHigh.plain_memo.n388",
+     "cycles": 14772,
+     "instructions": 13934,
+     "dataReads": 2214,
+     "dataWrites": 931,
+     "result": 685
+    }
+   },
+   "slope": [
+    1,
+    388
+   ],
+   "cyclesPerUnit": 38.01,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 61,
+       "357": 16713,
+       "388": 18167
+      },
+      "perUnit": 46.79
+     },
+     "cold": {
+      "call": {
+       "1": 156,
+       "357": 16762,
+       "388": 18216
+      },
+      "perUnit": 46.67
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 61,
+       "357": 17568,
+       "388": 19106
+      },
+      "perUnit": 49.21
+     },
+     "cold": {
+      "call": {
+       "1": 157,
+       "357": 17617,
+       "388": 19155
+      },
+      "perUnit": 49.09
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 61,
+       "357": 45253,
+       "388": 49113
+      },
+      "perUnit": 126.75
+     },
+     "cold": {
+      "call": {
+       "1": 1033,
+       "357": 45813,
+       "388": 49673
+      },
+      "perUnit": 125.68
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 61,
+       "357": 16860,
+       "388": 18314
+      },
+      "perUnit": 47.17
+     },
+     "cold": {
+      "call": {
+       "1": 646,
+       "357": 17252,
+       "388": 18706
+      },
+      "perUnit": 46.67
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 61,
+       "357": 32690,
+       "388": 35502
+      },
+      "perUnit": 91.58
+     },
+     "cold": {
+      "call": {
+       "1": 239,
+       "357": 32739,
+       "388": 35551
+      },
+      "perUnit": 91.25
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 61,
+       "357": 34647,
+       "388": 37730
+      },
+      "perUnit": 97.34
+     },
+     "cold": {
+      "call": {
+       "1": 195,
+       "357": 34696,
+       "388": 37779
+      },
+      "perUnit": 97.12
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 61,
+       "357": 31512,
+       "388": 34305
+      },
+      "perUnit": 88.49
+     },
+     "cold": {
+      "call": {
+       "1": 190,
+       "357": 31561,
+       "388": 34354
+      },
+      "perUnit": 88.28
+     }
+    }
+   }
+  },
+  "C.copy8": {
+   "entry": "copy8",
+   "unit": "record",
+   "fixture": "marker at m of 1024",
+   "points": {
+    "0": {
+     "tag": "memo.C.copy8.m0",
+     "cycles": 54,
+     "instructions": 47,
+     "dataReads": 8,
+     "dataWrites": 5,
+     "result": 0
+    },
+    "209": {
+     "tag": "memo.C.copy8.m209",
+     "cycles": 2563,
+     "instructions": 2451,
+     "dataReads": 426,
+     "dataWrites": 423,
+     "result": 209
+    },
+    "1024": {
+     "tag": "memo.C.copy8.m1024",
+     "cycles": 12332,
+     "instructions": 11815,
+     "dataReads": 2054,
+     "dataWrites": 2051,
+     "result": 1024
+    }
+   },
+   "slope": [
+    0,
+    209
+   ],
+   "cyclesPerUnit": 12.0,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "0": 55,
+       "209": 2564,
+       "1024": 15987
+      },
+      "perUnit": 12.0
+     },
+     "cold": {
+      "call": {
+       "0": 147,
+       "209": 3392,
+       "1024": 16031
+      },
+      "perUnit": 15.53
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "0": 64,
+       "209": 5919,
+       "1024": 58484
+      },
+      "perUnit": 28.01
+     },
+     "cold": {
+      "call": {
+       "0": 214,
+       "209": 12110,
+       "1024": 58529
+      },
+      "perUnit": 56.92
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "0": 64,
+       "209": 5919,
+       "1024": 71429
+      },
+      "perUnit": 28.01
+     },
+     "cold": {
+      "call": {
+       "0": 1041,
+       "209": 15506,
+       "1024": 71839
+      },
+      "perUnit": 69.21
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "0": 55,
+       "209": 2564,
+       "1024": 16428
+      },
+      "perUnit": 12.0
+     },
+     "cold": {
+      "call": {
+       "0": 686,
+       "209": 3980,
+       "1024": 16717
+      },
+      "perUnit": 15.76
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "0": 64,
+       "209": 5919,
+       "1024": 58484
+      },
+      "perUnit": 28.01
+     },
+     "cold": {
+      "call": {
+       "0": 214,
+       "209": 12110,
+       "1024": 58529
+      },
+      "perUnit": 56.92
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "0": 95,
+       "209": 18908,
+       "1024": 121972
+      },
+      "perUnit": 90.01
+     },
+     "cold": {
+      "call": {
+       "0": 276,
+       "209": 25130,
+       "1024": 122017
+      },
+      "perUnit": 118.92
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "0": 90,
+       "209": 16813,
+       "1024": 111732
+      },
+      "perUnit": 80.01
+     },
+     "cold": {
+      "call": {
+       "0": 266,
+       "209": 23030,
+       "1024": 111777
+      },
+      "perUnit": 108.92
+     }
+    }
+   }
+  },
+  "C.plain_copy8": {
+   "entry": "plain_copy8",
+   "unit": "record",
+   "fixture": "marker at m of 1024",
+   "points": {
+    "0": {
+     "tag": "memo.C.plain_copy8.m0",
+     "cycles": 18,
+     "instructions": 16,
+     "dataReads": 5,
+     "dataWrites": 2,
+     "result": 0
+    },
+    "209": {
+     "tag": "memo.C.plain_copy8.m209",
+     "cycles": 3362,
+     "instructions": 3151,
+     "dataReads": 632,
+     "dataWrites": 420,
+     "result": 209
+    },
+    "1024": {
+     "tag": "memo.C.plain_copy8.m1024",
+     "cycles": 16396,
+     "instructions": 15369,
+     "dataReads": 3075,
+     "dataWrites": 2048,
+     "result": 1024
+    }
+   },
+   "slope": [
+    0,
+    209
+   ],
+   "cyclesPerUnit": 16.0,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "0": 18,
+       "209": 3362,
+       "1024": 19994
+      },
+      "perUnit": 16.0
+     },
+     "cold": {
+      "call": {
+       "0": 60,
+       "209": 4132,
+       "1024": 20022
+      },
+      "perUnit": 19.48
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "0": 28,
+       "209": 5880,
+       "1024": 58393
+      },
+      "perUnit": 28.0
+     },
+     "cold": {
+      "call": {
+       "0": 119,
+       "209": 12003,
+       "1024": 58421
+      },
+      "perUnit": 56.86
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "0": 28,
+       "209": 5880,
+       "1024": 70827
+      },
+      "perUnit": 28.0
+     },
+     "cold": {
+      "call": {
+       "0": 508,
+       "209": 14888,
+       "1024": 71147
+      },
+      "perUnit": 68.8
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "0": 18,
+       "209": 3362,
+       "1024": 20092
+      },
+      "perUnit": 16.0
+     },
+     "cold": {
+      "call": {
+       "0": 305,
+       "209": 4377,
+       "1024": 20316
+      },
+      "perUnit": 19.48
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "0": 28,
+       "209": 5880,
+       "1024": 58393
+      },
+      "perUnit": 28.0
+     },
+     "cold": {
+      "call": {
+       "0": 119,
+       "209": 12003,
+       "1024": 58421
+      },
+      "perUnit": 56.86
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "0": 59,
+       "209": 18869,
+       "1024": 121881
+      },
+      "perUnit": 90.0
+     },
+     "cold": {
+      "call": {
+       "0": 150,
+       "209": 24992,
+       "1024": 121909
+      },
+      "perUnit": 118.86
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "0": 54,
+       "209": 16774,
+       "1024": 111641
+      },
+      "perUnit": 80.0
+     },
+     "cold": {
+      "call": {
+       "0": 145,
+       "209": 22897,
+       "1024": 111669
+      },
+      "perUnit": 108.86
+     }
+    }
+   }
+  },
+  "C.full_copy": {
+   "entry": "full_copy",
+   "unit": "record",
+   "fixture": "no marker test",
+   "points": {
+    "1": {
+     "tag": "memo.C.full_copy.m1",
+     "cycles": 28,
+     "instructions": 26,
+     "dataReads": 4,
+     "dataWrites": 2,
+     "result": 1
+    },
+    "210": {
+     "tag": "memo.C.full_copy.m210",
+     "cycles": 2536,
+     "instructions": 2116,
+     "dataReads": 422,
+     "dataWrites": 420,
+     "result": 210
+    },
+    "1024": {
+     "tag": "memo.C.full_copy.m1024",
+     "cycles": 12304,
+     "instructions": 10256,
+     "dataReads": 2050,
+     "dataWrites": 2048,
+     "result": 1024
+    }
+   },
+   "slope": [
+    1,
+    1024
+   ],
+   "cyclesPerUnit": 12.0,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 28,
+       "210": 2536,
+       "1024": 15902
+      },
+      "perUnit": 15.52
+     },
+     "cold": {
+      "call": {
+       "1": 63,
+       "210": 3299,
+       "1024": 15916
+      },
+      "perUnit": 15.5
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 36,
+       "210": 5888,
+       "1024": 58388
+      },
+      "perUnit": 57.04
+     },
+     "cold": {
+      "call": {
+       "1": 120,
+       "210": 12004,
+       "1024": 58402
+      },
+      "perUnit": 56.97
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 36,
+       "210": 5888,
+       "1024": 70822
+      },
+      "perUnit": 69.19
+     },
+     "cold": {
+      "call": {
+       "1": 436,
+       "210": 14816,
+       "1024": 70982
+      },
+      "perUnit": 68.96
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 28,
+       "210": 2536,
+       "1024": 16000
+      },
+      "perUnit": 15.61
+     },
+     "cold": {
+      "call": {
+       "1": 259,
+       "210": 3495,
+       "1024": 16112
+      },
+      "perUnit": 15.5
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 36,
+       "210": 5888,
+       "1024": 58388
+      },
+      "perUnit": 57.04
+     },
+     "cold": {
+      "call": {
+       "1": 120,
+       "210": 12004,
+       "1024": 58402
+      },
+      "perUnit": 56.97
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 67,
+       "210": 18877,
+       "1024": 121845
+      },
+      "perUnit": 119.04
+     },
+     "cold": {
+      "call": {
+       "1": 151,
+       "210": 24993,
+       "1024": 121859
+      },
+      "perUnit": 118.97
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 62,
+       "210": 16782,
+       "1024": 111610
+      },
+      "perUnit": 109.04
+     },
+     "cold": {
+      "call": {
+       "1": 146,
+       "210": 22898,
+       "1024": 111624
+      },
+      "perUnit": 108.97
+     }
+    }
+   }
+  },
+  "D.equal66.diff8": {
+   "entry": "diff8",
+   "unit": "record",
+   "fixture": "equal66",
+   "points": {
+    "1": {
+     "tag": "memo.D.equal66.diff8.n1",
+     "cycles": 50,
+     "instructions": 46,
+     "dataReads": 14,
+     "dataWrites": 6,
+     "result": 0
+    },
+    "208": {
+     "tag": "memo.D.equal66.diff8.n208",
+     "cycles": 2956,
+     "instructions": 2503,
+     "dataReads": 752,
+     "dataWrites": 46,
+     "result": 40
+    }
+   },
+   "slope": [
+    1,
+    208
+   ],
+   "cyclesPerUnit": 14.04,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 59,
+       "208": 3241
+      },
+      "perUnit": 15.37
+     },
+     "cold": {
+      "call": {
+       "1": 154,
+       "208": 4544
+      },
+      "perUnit": 21.21
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 59,
+       "208": 4832
+      },
+      "perUnit": 23.06
+     },
+     "cold": {
+      "call": {
+       "1": 252,
+       "208": 14879
+      },
+      "perUnit": 70.66
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 59,
+       "208": 5965
+      },
+      "perUnit": 28.53
+     },
+     "cold": {
+      "call": {
+       "1": 957,
+       "208": 20893
+      },
+      "perUnit": 96.31
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 59,
+       "208": 3486
+      },
+      "perUnit": 16.56
+     },
+     "cold": {
+      "call": {
+       "1": 595,
+       "208": 5230
+      },
+      "perUnit": 22.39
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 59,
+       "208": 4832
+      },
+      "perUnit": 23.06
+     },
+     "cold": {
+      "call": {
+       "1": 252,
+       "208": 14879
+      },
+      "perUnit": 70.66
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 59,
+       "208": 5151
+      },
+      "perUnit": 24.6
+     },
+     "cold": {
+      "call": {
+       "1": 252,
+       "208": 16015
+      },
+      "perUnit": 76.15
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 59,
+       "208": 5066
+      },
+      "perUnit": 24.19
+     },
+     "cold": {
+      "call": {
+       "1": 252,
+       "208": 15815
+      },
+      "perUnit": 75.18
+     }
+    }
+   }
+  },
+  "D.equal66.diff8_c": {
+   "entry": "diff8_c",
+   "unit": "record",
+   "fixture": "equal66",
+   "points": {
+    "1": {
+     "tag": "memo.D.equal66.diff8_c.n1",
+     "cycles": 78,
+     "instructions": 72,
+     "dataReads": 20,
+     "dataWrites": 8,
+     "result": 0
+    },
+    "208": {
+     "tag": "memo.D.equal66.diff8_c.n208",
+     "cycles": 9630,
+     "instructions": 9131,
+     "dataReads": 2308,
+     "dataWrites": 88,
+     "result": 40
+    }
+   },
+   "slope": [
+    1,
+    208
+   ],
+   "cyclesPerUnit": 46.14,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 88,
+       "208": 9902
+      },
+      "perUnit": 47.41
+     },
+     "cold": {
+      "call": {
+       "1": 220,
+       "208": 11369
+      },
+      "perUnit": 53.86
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 88,
+       "208": 10806
+      },
+      "perUnit": 51.78
+     },
+     "cold": {
+      "call": {
+       "1": 318,
+       "208": 21681
+      },
+      "perUnit": 103.2
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 88,
+       "208": 11336
+      },
+      "perUnit": 54.34
+     },
+     "cold": {
+      "call": {
+       "1": 1388,
+       "208": 27987
+      },
+      "perUnit": 128.5
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 88,
+       "208": 10000
+      },
+      "perUnit": 47.88
+     },
+     "cold": {
+      "call": {
+       "1": 906,
+       "208": 12251
+      },
+      "perUnit": 54.81
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 88,
+       "208": 10806
+      },
+      "perUnit": 51.78
+     },
+     "cold": {
+      "call": {
+       "1": 318,
+       "208": 21681
+      },
+      "perUnit": 103.2
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 88,
+       "208": 12363
+      },
+      "perUnit": 59.3
+     },
+     "cold": {
+      "call": {
+       "1": 318,
+       "208": 23238
+      },
+      "perUnit": 110.72
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 88,
+       "208": 12158
+      },
+      "perUnit": 58.31
+     },
+     "cold": {
+      "call": {
+       "1": 318,
+       "208": 23033
+      },
+      "perUnit": 109.73
+     }
+    }
+   }
+  },
+  "D.equal100.diff8": {
+   "entry": "diff8",
+   "unit": "record",
+   "fixture": "equal100",
+   "points": {
+    "1": {
+     "tag": "memo.D.equal100.diff8.n1",
+     "cycles": 50,
+     "instructions": 46,
+     "dataReads": 14,
+     "dataWrites": 6,
+     "result": 0
+    },
+    "208": {
+     "tag": "memo.D.equal100.diff8.n208",
+     "cycles": 2534,
+     "instructions": 2116,
+     "dataReads": 842,
+     "dataWrites": 6,
+     "result": 0
+    }
+   },
+   "slope": [
+    1,
+    208
+   ],
+   "cyclesPerUnit": 12.0,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 59,
+       "208": 2791
+      },
+      "perUnit": 13.2
+     },
+     "cold": {
+      "call": {
+       "1": 154,
+       "208": 4094
+      },
+      "perUnit": 19.03
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 59,
+       "208": 4163
+      },
+      "perUnit": 19.83
+     },
+     "cold": {
+      "call": {
+       "1": 252,
+       "208": 14286
+      },
+      "perUnit": 67.8
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 59,
+       "208": 5200
+      },
+      "perUnit": 24.84
+     },
+     "cold": {
+      "call": {
+       "1": 957,
+       "208": 20008
+      },
+      "perUnit": 92.03
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 59,
+       "208": 3036
+      },
+      "perUnit": 14.38
+     },
+     "cold": {
+      "call": {
+       "1": 595,
+       "208": 4584
+      },
+      "perUnit": 19.27
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 59,
+       "208": 4163
+      },
+      "perUnit": 19.83
+     },
+     "cold": {
+      "call": {
+       "1": 252,
+       "208": 14286
+      },
+      "perUnit": 67.8
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 59,
+       "208": 4163
+      },
+      "perUnit": 19.83
+     },
+     "cold": {
+      "call": {
+       "1": 252,
+       "208": 14286
+      },
+      "perUnit": 67.8
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 59,
+       "208": 4163
+      },
+      "perUnit": 19.83
+     },
+     "cold": {
+      "call": {
+       "1": 252,
+       "208": 14286
+      },
+      "perUnit": 67.8
+     }
+    }
+   }
+  },
+  "D.equal100.diff8_c": {
+   "entry": "diff8_c",
+   "unit": "record",
+   "fixture": "equal100",
+   "points": {
+    "1": {
+     "tag": "memo.D.equal100.diff8_c.n1",
+     "cycles": 78,
+     "instructions": 72,
+     "dataReads": 20,
+     "dataWrites": 8,
+     "result": 0
+    },
+    "208": {
+     "tag": "memo.D.equal100.diff8_c.n208",
+     "cycles": 7323,
+     "instructions": 6903,
+     "dataReads": 1676,
+     "dataWrites": 8,
+     "result": 0
+    }
+   },
+   "slope": [
+    1,
+    208
+   ],
+   "cyclesPerUnit": 35.0,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 88,
+       "208": 7475
+      },
+      "perUnit": 35.69
+     },
+     "cold": {
+      "call": {
+       "1": 220,
+       "208": 8914
+      },
+      "perUnit": 42.0
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 88,
+       "208": 8259
+      },
+      "perUnit": 39.47
+     },
+     "cold": {
+      "call": {
+       "1": 318,
+       "208": 19106
+      },
+      "perUnit": 90.76
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 88,
+       "208": 8789
+      },
+      "perUnit": 42.03
+     },
+     "cold": {
+      "call": {
+       "1": 1388,
+       "208": 25120
+      },
+      "perUnit": 114.65
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 88,
+       "208": 7573
+      },
+      "perUnit": 36.16
+     },
+     "cold": {
+      "call": {
+       "1": 906,
+       "208": 9600
+      },
+      "perUnit": 42.0
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 88,
+       "208": 8259
+      },
+      "perUnit": 39.47
+     },
+     "cold": {
+      "call": {
+       "1": 318,
+       "208": 19106
+      },
+      "perUnit": 90.76
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 88,
+       "208": 8259
+      },
+      "perUnit": 39.47
+     },
+     "cold": {
+      "call": {
+       "1": 318,
+       "208": 19106
+      },
+      "perUnit": 90.76
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 88,
+       "208": 8259
+      },
+      "perUnit": 39.47
+     },
+     "cold": {
+      "call": {
+       "1": 318,
+       "208": 19106
+      },
+      "perUnit": 90.76
+     }
+    }
+   }
+  },
+  "D.equal0.diff8": {
+   "entry": "diff8",
+   "unit": "record",
+   "fixture": "equal0",
+   "points": {
+    "1": {
+     "tag": "memo.D.equal0.diff8.n1",
+     "cycles": 62,
+     "instructions": 55,
+     "dataReads": 14,
+     "dataWrites": 7,
+     "result": 1
+    },
+    "208": {
+     "tag": "memo.D.equal0.diff8.n208",
+     "cycles": 2642,
+     "instructions": 1811,
+     "dataReads": 528,
+     "dataWrites": 7,
+     "result": 1
+    }
+   },
+   "slope": [
+    1,
+    208
+   ],
+   "cyclesPerUnit": 12.46,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 71,
+       "208": 2941
+      },
+      "perUnit": 13.86
+     },
+     "cold": {
+      "call": {
+       "1": 180,
+       "208": 4223
+      },
+      "perUnit": 19.53
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 71,
+       "208": 4519
+      },
+      "perUnit": 21.49
+     },
+     "cold": {
+      "call": {
+       "1": 288,
+       "208": 14425
+      },
+      "perUnit": 68.29
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 71,
+       "208": 5798
+      },
+      "perUnit": 27.67
+     },
+     "cold": {
+      "call": {
+       "1": 1139,
+       "208": 20366
+      },
+      "perUnit": 92.88
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 71,
+       "208": 3284
+      },
+      "perUnit": 15.52
+     },
+     "cold": {
+      "call": {
+       "1": 719,
+       "208": 4860
+      },
+      "perUnit": 20.0
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 71,
+       "208": 4519
+      },
+      "perUnit": 21.49
+     },
+     "cold": {
+      "call": {
+       "1": 288,
+       "208": 14425
+      },
+      "perUnit": 68.29
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 71,
+       "208": 4550
+      },
+      "perUnit": 21.64
+     },
+     "cold": {
+      "call": {
+       "1": 319,
+       "208": 14456
+      },
+      "perUnit": 68.29
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 71,
+       "208": 4545
+      },
+      "perUnit": 21.61
+     },
+     "cold": {
+      "call": {
+       "1": 314,
+       "208": 14451
+      },
+      "perUnit": 68.29
+     }
+    }
+   }
+  },
+  "D.equal0.diff8_c": {
+   "entry": "diff8_c",
+   "unit": "record",
+   "fixture": "equal0",
+   "points": {
+    "1": {
+     "tag": "memo.D.equal0.diff8_c.n1",
+     "cycles": 118,
+     "instructions": 111,
+     "dataReads": 28,
+     "dataWrites": 10,
+     "result": 1
+    },
+    "208": {
+     "tag": "memo.D.equal0.diff8_c.n208",
+     "cycles": 5914,
+     "instructions": 5493,
+     "dataReads": 1684,
+     "dataWrites": 10,
+     "result": 1
+    }
+   },
+   "slope": [
+    1,
+    208
+   ],
+   "cyclesPerUnit": 28.0,
+   "placed": {
+    "best": {
+     "warm": {
+      "call": {
+       "1": 131,
+       "208": 6069
+      },
+      "perUnit": 28.69
+     },
+     "cold": {
+      "call": {
+       "1": 284,
+       "208": 7529
+      },
+      "perUnit": 35.0
+     }
+    },
+    "typical": {
+     "warm": {
+      "call": {
+       "1": 134,
+       "208": 6856
+      },
+      "perUnit": 32.47
+     },
+     "cold": {
+      "call": {
+       "1": 385,
+       "208": 17724
+      },
+      "perUnit": 83.76
+     }
+    },
+    "worst": {
+     "warm": {
+      "call": {
+       "1": 134,
+       "208": 7386
+      },
+      "perUnit": 35.03
+     },
+     "cold": {
+      "call": {
+       "1": 1674,
+       "208": 23957
+      },
+      "perUnit": 107.65
+     }
+    },
+    "codeLow": {
+     "warm": {
+      "call": {
+       "1": 131,
+       "208": 6167
+      },
+      "perUnit": 29.16
+     },
+     "cold": {
+      "call": {
+       "1": 1117,
+       "208": 8362
+      },
+      "perUnit": 35.0
+     }
+    },
+    "cartTables": {
+     "warm": {
+      "call": {
+       "1": 134,
+       "208": 6856
+      },
+      "perUnit": 32.47
+     },
+     "cold": {
+      "call": {
+       "1": 385,
+       "208": 17724
+      },
+      "perUnit": 83.76
+     }
+    },
+    "outVdp1": {
+     "warm": {
+      "call": {
+       "1": 172,
+       "208": 6931
+      },
+      "perUnit": 32.65
+     },
+     "cold": {
+      "call": {
+       "1": 460,
+       "208": 17799
+      },
+      "perUnit": 83.76
+     }
+    },
+    "outVdp2": {
+     "warm": {
+      "call": {
+       "1": 167,
+       "208": 6921
+      },
+      "perUnit": 32.63
+     },
+     "cold": {
+      "call": {
+       "1": 450,
+       "208": 17789
+      },
+      "perUnit": 83.76
+     }
+    }
+   }
+  }
+ },
+ "label": "MODELLED: executed SH-2 instructions in the Yabause interpreter; CPU-only cycles are flat RAM with no caches or wait states; placed cycles add the model-placement-1 cache and bus model; not Saturn hardware",
+ "sourceCommit": "769d1a4e63bfb71820d6247f1c2602d1a170f9ba",
+ "elfSha256": "cc781b82521f9a254ede18105b080a88c7c0ac88447286f4cb0aff363edff444",
+ "toolchain": "Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)",
+ "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44247175665",
+ "yabauseCommit": "7e38821dbac265490f115e163c523a939acda759",
+ "targets": {
+  "note": "Figures for today's code as quoted by the contributing port, from its own cost model (CPU plus memory); not measured here",
+  "A": "about 107 cycles per 16-word group, steady state; 75 to 90 groups a picture",
+  "B": "357 to 388 commands a picture; the memo saves 42 to 80 cycles a command; 64,000 to about 47,000-50,000 cycles a picture",
+  "C": "6,467 cycles for about 209 records with the early stop; 17,940 for the full 1,024-record copy"
+ },
+ "placementModel": {
+  "regions": [
+   {
+    "name": "hwram",
+    "lineFill": 7,
+    "read": [
+     0,
+     0,
+     0
+    ],
+    "write": [
+     4,
+     4,
+     4
+    ]
+   },
+   {
+    "name": "lwram",
+    "lineFill": 56,
+    "read": [
+     0,
+     0,
+     0
+    ],
+    "write": [
+     7,
+     7,
+     14
+    ]
+   },
+   {
+    "name": "cart6",
+    "lineFill": 48,
+    "read": [
+     0,
+     0,
+     0
+    ],
+    "write": [
+     6,
+     6,
+     12
+    ]
+   },
+   {
+    "name": "cart10",
+    "lineFill": 80,
+    "read": [
+     0,
+     0,
+     0
+    ],
+    "write": [
+     10,
+     10,
+     20
+    ]
+   },
+   {
+    "name": "vdp1",
+    "lineFill": 0,
+    "read": [
+     45,
+     45,
+     45
+    ],
+    "write": [
+     45,
+     45,
+     45
+    ]
+   },
+   {
+    "name": "vdp2",
+    "lineFill": 0,
+    "read": [
+     40,
+     40,
+     40
+    ],
+    "write": [
+     40,
+     40,
+     40
+    ]
+   }
+  ],
+  "placements": [
+   {
+    "name": "best",
+    "code": "hwram",
+    "tables": "hwram",
+    "input": "hwram",
+    "output": "hwram",
+    "stack": "hwram"
+   },
+   {
+    "name": "typical",
+    "code": "hwram",
+    "tables": "hwram",
+    "input": "lwram",
+    "output": "lwram",
+    "stack": "hwram"
+   },
+   {
+    "name": "worst",
+    "code": "cart10",
+    "tables": "cart10",
+    "input": "cart10",
+    "output": "lwram",
+    "stack": "hwram"
+   },
+   {
+    "name": "codeLow",
+    "code": "lwram",
+    "tables": "hwram",
+    "input": "hwram",
+    "output": "hwram",
+    "stack": "hwram"
+   },
+   {
+    "name": "cartTables",
+    "code": "hwram",
+    "tables": "cart6",
+    "input": "lwram",
+    "output": "lwram",
+    "stack": "hwram"
+   },
+   {
+    "name": "outVdp1",
+    "code": "hwram",
+    "tables": "hwram",
+    "input": "lwram",
+    "output": "vdp1",
+    "stack": "hwram"
+   },
+   {
+    "name": "outVdp2",
+    "code": "hwram",
+    "tables": "hwram",
+    "input": "lwram",
+    "output": "vdp2",
+    "stack": "hwram"
+   }
+  ],
+  "selfTest": "passed"
+ }
+}
