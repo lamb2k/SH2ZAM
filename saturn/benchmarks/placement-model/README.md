@@ -173,8 +173,10 @@ the 1-element call, so they exclude one-off code fills even when cold.
 ## Results
 
 The tables below come from the CI capture recorded in [results.json](results.json):
-[SH-2 cross compile run 44209972735](https://github.com/lamb2k/SH2ZAM/actions/runs/44209972735),
-source commit `f0136309ea0a9a486c0ab90fe984893778c7b5bb`. They match local runs.
+[SH-2 cross compile run 44213194513](https://github.com/lamb2k/SH2ZAM/actions/runs/44213194513),
+source commit `bd63fddeeab7900b012bb1c2f30fb6f3e4b71ff1`. Every kernel entry equals the
+first capture ([run 44209972735](https://github.com/lamb2k/SH2ZAM/actions/runs/44209972735),
+source commit `f013630`), which matches local runs.
 Fixture ids name the `results.json` entry, and each entry names the published
 value it matches. CPU-only numbers are the published ones, unchanged.
 
