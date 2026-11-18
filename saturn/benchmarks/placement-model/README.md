@@ -28,7 +28,7 @@ For each kernel, [results.json](results.json) gives:
   cycles spent on line fills for code, tables, input, output and stack, on
   cache-through reads, and on waits behind a pending write.
 
-The existing captures (`view-model`, `shade-model`, `vlc-model`) print exactly
+The existing captures (`view-model`, `shade-model`, `vlc-model`, `merge-model`) print exactly
 what they printed before, because the model never writes the interpreter's
 cycle counter. This is checked three ways:
 
@@ -37,7 +37,7 @@ cycle counter. This is checked three ways:
 - In CI, the collector recomputes every CPU-only figure from the log and fails
   unless it equals the value that capture published in the same run.
 - The collector also records whether each figure equals the committed capture
-  (`matchesCommitted`). All 60 do.
+  (`matchesCommitted`). All 76 do.
 
 At start-up the model runs a self-test: eight access sequences whose stalls
 are worked out by hand. They cover the 4 KB working set, LRU order, four ways,
@@ -84,6 +84,7 @@ addresses and sizes.
 | shade fade | `fade_slope`, `fade_bias`, `near_rgb`, `far_rgb` | `colours` |
 | shade vehicle frame | `lut`, `light`, `bases`, `fog_rgb` | `frame_out`, `saturated`, `kept_count`, and the working arrays `lit`, `kept`, `frame_pairs`, `unique_gouraud` |
 | vlc decode | `table` | `out` (the stream and reader state are input) |
+| merge-model tier and runs planners | none | `merge_runs` (rails, rows, end masks are input) |
 
 A **placement** assigns each class to a region. The stack always stays in high
 work RAM.
@@ -193,7 +194,7 @@ The tables come from the CI capture recorded in [results.json](results.json).
 ## Reproduce
 
 Build the ELFs as in [`.github/workflows/sh2-cross.yml`](../../../.github/workflows/sh2-cross.yml),
-then run the three captures with the log on and collect the results:
+then run the four captures with the log on and collect the results:
 
 ```sh
 MODEL_PLACEMENT_LOG=$PWD/build/sh2-model/view-placement.jsonl MODEL_SUITE=view \
@@ -204,10 +205,13 @@ MODEL_PLACEMENT_LOG=$PWD/build/sh2-model/shade-placement.jsonl \
   bash saturn/benchmarks/shade-model/run.sh build/sh2/shade-model.elf build/sh2-model/shade-results.json
 MODEL_PLACEMENT_LOG=$PWD/build/sh2-model/vlc-placement.jsonl \
   bash saturn/benchmarks/vlc-model/run.sh build/sh2/vlc-model.elf build/sh2-model/vlc-results.json
+MODEL_PLACEMENT_LOG=$PWD/build/sh2-model/merge-placement.jsonl \
+  bash saturn/benchmarks/merge-model/run.sh build/sh2/merge-model.elf build/sh2-model/merge-results.json
 python3 saturn/benchmarks/placement-model/collect.py \
   --view-log build/sh2-model/view-placement.jsonl --view-results build/sh2-model/view-results.json \
   --shade-log build/sh2-model/shade-placement.jsonl --shade-results build/sh2-model/shade-results.json \
   --vlc-log build/sh2-model/vlc-placement.jsonl --vlc-results build/sh2-model/vlc-results.json \
+  --merge-log build/sh2-model/merge-placement.jsonl --merge-results build/sh2-model/merge-results.json \
   --committed-root . --evidence-url local --output build/sh2-model/placement-results.json \
   --markdown build/sh2-model/placement-tables.md
 ```

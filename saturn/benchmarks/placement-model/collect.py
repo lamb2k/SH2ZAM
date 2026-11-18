@@ -13,7 +13,8 @@ import argparse, hashlib, json, sys
 from pathlib import Path
 
 parser = argparse.ArgumentParser()
-for suite in ('view', 'shade', 'vlc'):
+SUITES = ('view', 'shade', 'vlc', 'merge')
+for suite in SUITES:
     parser.add_argument(f'--{suite}-log', type=Path, required=True)
     parser.add_argument(f'--{suite}-results', type=Path, required=True)
 parser.add_argument('--committed-root', type=Path, help='repository root: also compare CPU-only values with the committed captures')
@@ -45,7 +46,7 @@ def load_log(path):
 
 
 suites = {}
-for s in ('view', 'shade', 'vlc'):
+for s in SUITES:
     head, declares, calls = load_log(getattr(a, f'{s}_log'))
     suites[s] = dict(head=head, declares=declares, calls=calls,
                      results=json.loads(getattr(a, f'{s}_results').read_text()))
@@ -83,6 +84,11 @@ def mean2(values):
 
 def shade_slope(small, big, n):
     return round((mean2(big) - mean2(small)) / (n - 1), 2)
+
+
+def merge_median_per(values, n):
+    v = sorted(values); m = (v[len(v) // 2 - 1] + v[len(v) // 2]) / 2.0
+    return float('%.2f' % (m / n))
 
 
 def vlc_slope(one, many, n):
@@ -196,6 +202,16 @@ for prof in ('zipf256_w6_l12', 'uniform256_w8_l8', 'longtail256_w6_l12', 'few40_
                           path=['rows', prof, 'decode', dec, 'cyclesPerSymbol'],
                           compute=lambda p, m, t1=t1, tn=tn: vlc_slope(series('vlc', t1, p, m), series('vlc', tn, p, m), 4096)))
 
+for cfg, n in (('pixel1', 64), ('pixel0.5', 64), ('pixel2', 64), ('pixel1Runs2', 64), ('pixel1Single', 64),
+               ('pixel1NoEndMasks', 64), ('short8Pixel1', 8), ('short8Single', 8)):
+    for entry, key, fn in (('tier_plan', 'tier', 'sh2z_view_merge_tier'), ('runs_plan', 'viewMerge1', 'sh2z_view_merge_runs')):
+        tag = f'merge.{cfg}.{entry}'
+        specs.append(dict(id=f'mergeTier.{cfg}.{key}', function=fn, role='library', suite='merge',
+                          fixture=f'{cfg}: {n}-boundary tier strip, 64 strips', unit='cycles per boundary',
+                          statistic=f'median over 64 strips of call cycles (mean of the middle two) / {n}', tags=[tag],
+                          path=['configs', cfg, key, 'medianCyclesPerBoundary'],
+                          compute=lambda p, m, tag=tag, n=n: merge_median_per(series('merge', tag, p, m), n)))
+
 kernels = [make(s) for s in specs]
 head = suites['view']['head']
 regions = {r['name']: r for r in head['regions']}
@@ -244,7 +260,7 @@ if a.markdown:
         return f'{fmt(v)} ({v / base:.2f}x)' if base else fmt(v)
     main = ['center.batch', 'center.project', 'center.edgeSteps', 'center.clipNear', 'center.guardInside', 'center.guardSide',
             'center.guardNearSide', 'srcGuard.inside', 'srcGuard.side', 'srcGuard.nearSide', 'srcGuard.roadNear',
-            'merge.pixel1', 'merge.rows1', 'shade.fast_light_normals', 'shade.fast_gouraud', 'shade.fast_cull',
+            'merge.pixel1', 'merge.rows1', 'mergeTier.pixel1.tier', 'mergeTier.short8Pixel1.tier', 'shade.fast_light_normals', 'shade.fast_gouraud', 'shade.fast_cull',
             'shade.fast_fog_build', 'shade.fast_fog', 'shade.fast_offset', 'shade.fast_mix', 'shade.fast_frame',
             'shade.fast_frame_baked', 'shade.plain_frame', 'vlc.zipf256_w6_l12.fast', 'vlc.uniform256_w8_l8.fast',
             'vlc.few40_w5_l10.fast', 'vlc.zipf256_w6_l12.portable', 'vlc.zipf256_w6_l12.plain']
