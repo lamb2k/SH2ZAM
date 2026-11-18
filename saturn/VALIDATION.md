@@ -3,7 +3,7 @@
 `sh2z_pose_from_f32` in `sh2zam/view_experimental.h` ([guide](POSE.md)) builds a model's view,
 model-space eye, Q1.14 basis and plane-culling data from binary32 model state with no
 floating-point arithmetic. It equals the header's binary32 reference procedure field for field
-(0 LSB, identical projected vertices). Existing SH-2 objects are byte-identical to `3f0f068`.
+(0 LSB, identical projected vertices). Existing SH-2 objects are byte-identical to `198848f`.
 **No console or emulator run was done.** Evidence by tier:
 
 - **HOST:** `pose_exact` passes under GCC and Clang Release with `SH2Z_STRICT=ON` and under
