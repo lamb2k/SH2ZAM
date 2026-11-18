@@ -172,7 +172,9 @@ These are cycles per element in a loop in the Yabause SH-2 interpreter: flat RAM
 wait states, and a divider latency of 39 cycles (assumed). The figures are not Saturn timings.
 "Net" subtracts the bare loop, which loads the inputs and stores one word. Results:
 [`benchmarks/trig12-model/results.json`](benchmarks/trig12-model/results.json), captured by
-[CI run 44208800045](https://github.com/lamb2k/SH2ZAM/actions/runs/44208800045) on `ad5eae2`.
+[CI run 44218666950](https://github.com/lamb2k/SH2ZAM/actions/runs/44218666950) on `9e33abf`
+(the same figures and model ELF as the first capture,
+[run 44208800045](https://github.com/lamb2k/SH2ZAM/actions/runs/44208800045) on `ad5eae2`).
 
 | Kernel | Net cycles | Control | Net cycles |
 | --- | ---: | --- | ---: |
