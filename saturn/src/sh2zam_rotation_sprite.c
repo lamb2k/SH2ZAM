@@ -49,9 +49,9 @@ bool sh2z_rspr_valid(const sh2z_rspr_set_t *set) {
     return true;
 }
 
-bool sh2z_rspr_select(sh2z_rspr_pick_t *out,const sh2z_rspr_set_t *set,
-                      int32_t x,int32_t y,int32_t z) {
-    if(!out||!sh2z_rspr_valid(set)||(x==0&&y==0&&z==0))return false;
+/* Selection on a set already accepted by sh2z_rspr_valid. */
+static bool rspr_select_core(sh2z_rspr_pick_t *out,const sh2z_rspr_set_t *set,int32_t x,int32_t y,int32_t z) {
+    if(x==0&&y==0&&z==0)return false;
     uint32_t largest=rspr_abs32(x);
     if(rspr_abs32(y)>largest)largest=rspr_abs32(y);
     if(rspr_abs32(z)>largest)largest=rspr_abs32(z);
@@ -72,6 +72,12 @@ bool sh2z_rspr_select(sh2z_rspr_pick_t *out,const sh2z_rspr_set_t *set,
     }
     out->cell=(uint16_t)(pitch*set->yaw_count+yaw);out->mirror=mirror;out->reserved=0;
     return true;
+}
+
+bool sh2z_rspr_select(sh2z_rspr_pick_t *out,const sh2z_rspr_set_t *set,
+                      int32_t x,int32_t y,int32_t z) {
+    if(!out||!sh2z_rspr_valid(set))return false;
+    return rspr_select_core(out,set,x,y,z);
 }
 
 bool sh2z_rspr_place(sh2z_rspr_place_t *out,const sh2z_view_t *v,const sh2z_rspr_set_t *set) {
@@ -106,9 +112,9 @@ static bool rspr_corner(int16_t *sx,int16_t *sy,const sh2z_rspr_place_t *p,int32
     *sx=(int16_t)x;*sy=(int16_t)y;return true;
 }
 
-bool sh2z_rspr_emit(uint16_t command[16],const sh2z_rspr_set_t *set,const sh2z_rspr_pick_t *pick,
-                    const sh2z_rspr_place_t *place,uint32_t vram,uint16_t pmod) {
-    if(!command||!pick||!place||!sh2z_rspr_valid(set)||(vram&7u)||vram>0x7ffffu)return false;
+bool sh2z_rspr_emit_valid(uint16_t command[16],const sh2z_rspr_set_t *set,const sh2z_rspr_pick_t *pick,
+                          const sh2z_rspr_place_t *place,uint32_t vram,uint16_t pmod) {
+    if(!command||!set||!pick||!place||(vram&7u)||vram>0x7ffffu)return false;
     if(pick->cell>=(uint32_t)set->yaw_count*set->pitch_count||pick->mirror>1)return false;
     if(place->scale<1||place->scale>(1<<24))return false;
     if(set->bytes>0x80000u-vram)return false;
@@ -128,6 +134,12 @@ bool sh2z_rspr_emit(uint16_t command[16],const sh2z_rspr_set_t *set,const sh2z_r
     for(unsigned i=0;i<8;++i)command[6+i]=(uint16_t)xy[i];
     command[14]=0;command[15]=0;
     return true;
+}
+
+bool sh2z_rspr_emit(uint16_t command[16],const sh2z_rspr_set_t *set,const sh2z_rspr_pick_t *pick,
+                    const sh2z_rspr_place_t *place,uint32_t vram,uint16_t pmod) {
+    if(!sh2z_rspr_valid(set))return false;
+    return sh2z_rspr_emit_valid(command,set,pick,place,vram,pmod);
 }
 
 /* floor(sqrt(v)) for v < 2^32, bit by bit in 32-bit arithmetic. */
@@ -163,7 +175,7 @@ bool sh2z_rspr_pose(sh2z_rspr_pick_t *pick,sh2z_rspr_place_t *place,int32_t *dep
     const int32_t tz=rspr_dot16(c->r[2],d);
     if(tz<=c->near_z||tz<=0)return false;
     sh2z_rspr_pick_t chosen;
-    if(!sh2z_rspr_select(&chosen,set,-rspr_dot16(basis+6,d),-rspr_dot16(basis+3,d),-rspr_dot16(basis,d)))return false;
+    if(!rspr_select_core(&chosen,set,-rspr_dot16(basis+6,d),-rspr_dot16(basis+3,d),-rspr_dot16(basis,d)))return false;
     const int32_t tx=rspr_dot16(c->r[0],d),ty=rspr_dot16(c->r[1],d);
     const int32_t qx=sh2z_divu_div64((int64_t)c->focal_x*tx,tz,NULL);
     const int32_t qy=sh2z_divu_div64((int64_t)c->focal_y*ty,tz,NULL);

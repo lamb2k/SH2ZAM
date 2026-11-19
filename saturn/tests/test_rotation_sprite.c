@@ -158,6 +158,8 @@ static void test_place_emit(void) {
         for(unsigned mirror=0;mirror<2;++mirror) {
             pick.mirror=(uint8_t)mirror;
             if(!sh2z_rspr_emit(cmd,&s.header,&pick,&place,0x10000u,0x0088u)){CHECK(false);continue;}
+            uint16_t again[16];
+            CHECK(sh2z_rspr_emit_valid(again,&s.header,&pick,&place,0x10000u,0x0088u)&&memcmp(again,cmd,sizeof(again))==0);
             CHECK(cmd[0]==0x0002u&&cmd[1]==0&&cmd[2]==0x0088u&&cmd[14]==0&&cmd[15]==0);
             CHECK(cmd[3]==(uint16_t)((0x10000u+s.header.clut_offset+s.cells[5].clut*32u)>>3));
             CHECK(cmd[4]==(uint16_t)((0x10000u+s.cells[5].pixel_offset)>>3));

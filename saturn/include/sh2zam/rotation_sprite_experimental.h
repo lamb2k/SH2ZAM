@@ -169,6 +169,12 @@ bool sh2z_rspr_place(sh2z_rspr_place_t *out,const sh2z_view_t *v,const sh2z_rspr
 bool sh2z_rspr_emit(uint16_t command[16],const sh2z_rspr_set_t *set,const sh2z_rspr_pick_t *pick,
                     const sh2z_rspr_place_t *place,uint32_t vram,uint16_t pmod);
 
+/** sh2z_rspr_emit for a set the caller has already accepted with
+ *  sh2z_rspr_valid (once, at load): identical output and rejections except
+ *  that the set itself is not re-checked on each call. */
+bool sh2z_rspr_emit_valid(uint16_t command[16],const sh2z_rspr_set_t *set,const sh2z_rspr_pick_t *pick,
+                          const sh2z_rspr_place_t *place,uint32_t vram,uint16_t pmod);
+
 /* ---- World-pose fast path (same contract tag) ----
  *
  * For many objects per frame: one camera set up per frame, then one call per
@@ -201,7 +207,8 @@ typedef struct {
  *  Returns false for null pointers, an invalid set or unit_q14 <= 0. */
 bool sh2z_rspr_camera_scale(sh2z_rspr_camera_t *c,const sh2z_rspr_set_t *set,int32_t unit_q14);
 
-/** Pick and place one object from its world pose.
+/** Pick and place one object from its world pose. The set must already have
+ *  been accepted by sh2z_rspr_valid; it is not re-checked per call.
  *
  *  pos      object origin, Q16.16 world units, within 2^31 of the eye.
  *  basis    model axes in world space, Q1.14, nine values row-major:
