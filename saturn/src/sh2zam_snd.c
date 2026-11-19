@@ -258,6 +258,7 @@ void sh2z_cdda_init(sh2z_cdda_t *cd, volatile uint16_t *cd_regs, volatile uint16
     cd->busy_frames = 0u;
     cd->loop_backs = 0u;
     cd->last_status = 0u;
+    cd->last_fad = 0u;
     cd_level(cd, SH2Z_CDDA_LEVEL_MAX);
 }
 
@@ -307,8 +308,13 @@ void sh2z_cdda_frame(sh2z_cdda_t *cd) {
     }
     cd_send(cd);
     if (cd->want || !(cd->cd[CD_HIRQ] & CMOK)) return;
+    /* Read the whole periodic report, CR4 last: the block posts the next report only once the
+     * last one has been read (a player that reads CR1 alone sees the first status forever). */
     const uint32_t status = ((uint32_t)cd->cd[CD_CR1] >> 8) & 0x0Fu;
+    (void)cd->cd[CD_CR2];
+    const uint32_t fad = ((uint32_t)(cd->cd[CD_CR3] & 0xFFu) << 16) | cd->cd[CD_CR4];
     cd->last_status = status;
+    cd->last_fad = fad;
     switch (cd->state) {
     case SH2Z_CDDA_START_SENT:
         if (status == STATUS_PLAY) cd->state = SH2Z_CDDA_PLAYING;

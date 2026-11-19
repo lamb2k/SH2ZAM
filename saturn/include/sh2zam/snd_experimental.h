@@ -159,6 +159,7 @@ typedef struct {
     uint32_t busy_frames;        /* frames a command waited for CMOK */
     uint32_t loop_backs;         /* loop ranges started */
     uint32_t last_status;        /* periodic CD status code */
+    uint32_t last_fad;           /* periodic pickup position */
 } sh2z_cdda_t;
 
 /* Takes the register bases and sets the CD input to full level. */
