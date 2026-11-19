@@ -310,6 +310,27 @@ It makes decisions and records them; the caller reads VDP1 state and does every 
 and upload. Portable C, no libc. Host-tested against a frame model with negative controls (a
 held bank must conflict, a changed guard bit must fail).
 
+## Segmented strip meshes
+
+[`sh2zam/segmesh_experimental.h`](saturn/include/sh2zam/segmesh_experimental.h)
+(contract tag `segmesh-1`) picks what is visible in a closed ring of mesh segments, such as a
+circuit built from strips. `sh2z_segmesh_pick` tests one anchor point per segment against four
+fixed-point clip rows without dividing, groups the visible segments into runs of similar depth
+and returns the runs furthest first, ready for painter-order drawing. Integer arithmetic only,
+no float, libc or allocation. Host-exact tested against an independent oracle with mutation
+controls (no console run). See [the segmesh guide](saturn/SEGMESH.md).
+
+## Link only what you call
+
+From contract tag `sections-1`, every hand-written SH-2 entry and every read-only table has its
+own section. Compile with `-ffunction-sections -fdata-sections` and link with
+`-Wl,--gc-sections`, and a program keeps only the entries and tables it calls, whether it
+builds the sources itself or links `libsh2zam.a`. For example, a program that calls only
+`sh2z_memo_put4` links 820 bytes of the library instead of 2,400. No API or result changed.
+A linker script can also place a cold table by name, for example in low work RAM. See
+[the validation record](saturn/validation/sections-1.md) and
+[the link probe](saturn/benchmarks/gc-probe/README.md).
+
 ## Git submodule
 
 ```sh
