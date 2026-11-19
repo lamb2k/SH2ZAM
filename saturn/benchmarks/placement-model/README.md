@@ -173,10 +173,15 @@ the 1-element call, so they exclude one-off code fills even when cold.
 ## Results
 
 The tables below come from the CI capture recorded in [results.json](results.json):
-[SH-2 cross compile run 44213194513](https://github.com/lamb2k/SH2ZAM/actions/runs/44213194513),
-source commit `bd63fddeeab7900b012bb1c2f30fb6f3e4b71ff1`. Every kernel entry equals the
-first capture ([run 44209972735](https://github.com/lamb2k/SH2ZAM/actions/runs/44209972735),
-source commit `f013630`), which matches local runs.
+[CI run 44513686872](https://github.com/lamb2k/SH2ZAM/actions/runs/44513686872) (merge train 3, push run on `eac28d8`).
+Its values equal, value for value, those of
+[SH-2 cross compile run 44256084857](https://github.com/lamb2k/SH2ZAM/actions/runs/44256084857),
+source commit `b9ae01dbe4866b58b1faf2a50577ca3427a73839` (sections-1). Its CPU-only values
+equal those of the earlier captures ([run 44213194513](https://github.com/lamb2k/SH2ZAM/actions/runs/44213194513)
+on `bd63fdd`, and the first, [run 44209972735](https://github.com/lamb2k/SH2ZAM/actions/runs/44209972735)
+on `f013630`, which matches local runs). Placed values of the view and vlc kernels moved
+when sections-1 put each hand-written kernel in its own section: the images' layouts
+changed, and the cache's set conflicts follow the image's addresses.
 Fixture ids name the `results.json` entry, and each entry names the published
 value it matches. CPU-only numbers are the published ones, unchanged.
 
@@ -184,21 +189,21 @@ Best, typical and worst placement. Each cell is warm / cold, then the warm ratio
 
 | Kernel | Fixture | Unit | CPU-only | best | typical | worst |
 | --- | --- | --- | ---: | ---: | ---: | ---: |
-| `sh2z_view_batch_center_divu` | center.batch | cycles per vertex | 147.45 | 156.77 / 158.72 (1.06x) | 197.12 / 207.71 (1.34x) | 208.41 / 229.21 (1.41x) |
-| `sh2z_view_project_center_divu` | center.project | cycles per point | 106.04 | 122.83 / 123.16 (1.16x) | 214.58 / 214.93 (2.02x) | 251.90 / 254.67 (2.38x) |
-| `sh2z_view_edge_steps_center_divu` | center.edgeSteps | cycles per point | 182.64 | 198.91 / 221.03 (1.09x) | 243.84 / 327.81 (1.34x) | 281.48 / 473.39 (1.54x) |
-| `sh2z_view_clip_near_center_divu` | center.clipNear | cycles per quad | 1,776 | 1,967 / 2,935 (1.11x) | 2,145 / 3,615 (1.21x) | 2,145 / 11,228 (1.21x) |
-| `sh2z_view_clip_guard_center_divu` | center.guardInside | cycles per polygon | 2,955 | 3,449 / 4,728 (1.17x) | 3,826 / 5,791 (1.29x) | 5,967 / 18,099 (2.02x) |
-| `sh2z_view_clip_guard_center_divu` | center.guardSide | cycles per polygon | 4,669 | 5,952 / 7,118 (1.27x) | 6,505 / 8,260 (1.39x) | 14,609 / 25,313 (3.13x) |
-| `sh2z_view_clip_guard_center_divu` | center.guardNearSide | cycles per polygon | 7,758 | 9,523 / 10,579 (1.23x) | 10,175 / 11,770 (1.31x) | 21,654 / 31,402 (2.79x) |
-| `sh2z_view_clip_guard_src_center_divu` | srcGuard.inside | cycles per polygon | 2,879 | 3,086 / 4,468 (1.07x) | 3,417 / 5,540 (1.19x) | 3,417 / 16,680 (1.19x) |
-| `sh2z_view_clip_guard_src_center_divu` | srcGuard.side | cycles per polygon | 4,583 | 5,850 / 6,981 (1.28x) | 6,725 / 8,137 (1.47x) | 15,141 / 25,629 (3.30x) |
-| `sh2z_view_clip_guard_src_center_divu` | srcGuard.nearSide | cycles per polygon | 6,875 | 8,444 / 9,542 (1.23x) | 9,350 / 10,698 (1.36x) | 19,461 / 29,649 (2.83x) |
-| `sh2z_view_clip_guard_src_center_divu` | srcGuard.roadNear | cycles per polygon | 8,870 | 11,075 / 11,977 (1.25x) | 12,080 / 13,119 (1.36x) | 26,094 / 33,706 (2.94x) |
-| `sh2z_view_merge_runs` | merge.pixel1 | cycles per boundary | 223.11 | 260.91 / 278.95 (1.17x) | 337.09 / 434.00 (1.51x) | 412.72 / 598.38 (1.85x) |
-| `sh2z_view_merge_runs` | merge.rows1 | cycles per boundary | 527.14 | 594.89 / 611.30 (1.13x) | 661.88 / 755.64 (1.26x) | 756.33 / 936.66 (1.43x) |
-| `sh2z_view_merge_tier` | mergeTier.pixel1.tier | cycles per boundary | 38.74 | 46.78 / 66.29 (1.21x) | 80.94 / 202.62 (2.09x) | 124.66 / 339.59 (3.22x) |
-| `sh2z_view_merge_tier` | mergeTier.short8Pixel1.tier | cycles per boundary | 65.50 | 69.50 / 145.12 (1.06x) | 69.50 / 291.25 (1.06x) | 70.19 / 882.75 (1.07x) |
+| `sh2z_view_batch_center_divu` | center.batch | cycles per vertex | 147.45 | 156.99 / 158.79 (1.06x) | 198.20 / 207.78 (1.34x) | 210.91 / 229.99 (1.43x) |
+| `sh2z_view_project_center_divu` | center.project | cycles per point | 106.04 | 122.83 / 123.18 (1.16x) | 214.58 / 214.94 (2.02x) | 251.90 / 254.83 (2.38x) |
+| `sh2z_view_edge_steps_center_divu` | center.edgeSteps | cycles per point | 182.64 | 202.59 / 222.11 (1.11x) | 256.05 / 330.44 (1.40x) | 316.47 / 481.33 (1.73x) |
+| `sh2z_view_clip_near_center_divu` | center.clipNear | cycles per quad | 1,776 | 1,967 / 2,917 (1.11x) | 2,145 / 3,596 (1.21x) | 2,145 / 11,063 (1.21x) |
+| `sh2z_view_clip_guard_center_divu` | center.guardInside | cycles per polygon | 2,955 | 3,606 / 4,767 (1.22x) | 3,983 / 5,830 (1.35x) | 7,584 / 18,430 (2.57x) |
+| `sh2z_view_clip_guard_center_divu` | center.guardSide | cycles per polygon | 4,669 | 6,055 / 7,150 (1.30x) | 6,657 / 8,291 (1.43x) | 15,442 / 25,490 (3.31x) |
+| `sh2z_view_clip_guard_center_divu` | center.guardNearSide | cycles per polygon | 7,758 | 9,619 / 10,613 (1.24x) | 10,221 / 11,754 (1.32x) | 22,676 / 31,581 (2.92x) |
+| `sh2z_view_clip_guard_src_center_divu` | srcGuard.inside | cycles per polygon | 2,879 | 3,086 / 4,452 (1.07x) | 3,417 / 5,524 (1.19x) | 3,417 / 16,664 (1.19x) |
+| `sh2z_view_clip_guard_src_center_divu` | srcGuard.side | cycles per polygon | 4,583 | 5,710 / 6,977 (1.25x) | 6,616 / 8,179 (1.44x) | 13,821 / 25,695 (3.02x) |
+| `sh2z_view_clip_guard_src_center_divu` | srcGuard.nearSide | cycles per polygon | 6,875 | 8,334 / 9,544 (1.21x) | 9,343 / 10,749 (1.36x) | 18,367 / 29,797 (2.67x) |
+| `sh2z_view_clip_guard_src_center_divu` | srcGuard.roadNear | cycles per polygon | 8,870 | 11,165 / 12,034 (1.26x) | 12,213 / 13,176 (1.38x) | 27,073 / 34,469 (3.05x) |
+| `sh2z_view_merge_runs` | merge.pixel1 | cycles per boundary | 223.11 | 259.67 / 278.56 (1.16x) | 328.17 / 431.28 (1.47x) | 400.16 / 595.59 (1.79x) |
+| `sh2z_view_merge_runs` | merge.rows1 | cycles per boundary | 527.14 | 591.78 / 609.27 (1.12x) | 657.41 / 754.19 (1.25x) | 734.55 / 922.39 (1.39x) |
+| `sh2z_view_merge_tier` | mergeTier.pixel1.tier | cycles per boundary | 38.74 | 46.84 / 66.25 (1.21x) | 78.09 / 202.53 (2.02x) | 123.73 / 337.19 (3.19x) |
+| `sh2z_view_merge_tier` | mergeTier.short8Pixel1.tier | cycles per boundary | 65.50 | 69.50 / 143.88 (1.06x) | 69.50 / 290.12 (1.06x) | 69.50 / 853.38 (1.06x) |
 | `sh2z_shade_light_normals` | shade.fast_light_normals | cycles per normal | 99.43 | 99.48 / 101.69 (1.00x) | 105.13 / 119.90 (1.06x) | 105.22 / 130.85 (1.06x) |
 | `sh2z_shade_gouraud` | shade.fast_gouraud | cycles per pair | 134.19 | 134.53 / 136.54 (1.00x) | 136.04 / 148.84 (1.01x) | 137.86 / 161.05 (1.03x) |
 | `sh2z_shade_cull` | shade.fast_cull | cycles per face | 82.81 | 89.81 / 93.09 (1.08x) | 124.88 / 154.79 (1.51x) | 147.71 / 185.86 (1.78x) |
@@ -209,31 +214,31 @@ Best, typical and worst placement. Each cell is warm / cold, then the warm ratio
 | light + cull + gouraud kernels | shade.fast_frame | cycles per vehicle | 55,683 | 60,020 / 60,205 (1.08x) | 76,392.50 / 77,670.50 (1.37x) | 98,929.50 / 100,992 (1.78x) |
 | kernels, baked unique pairs | shade.fast_frame_baked | cycles per vehicle | 70,955.50 | 75,783.50 / 75,909.50 (1.07x) | 94,951 / 95,517.50 (1.34x) | 119,220 / 120,375 (1.68x) |
 | port C | shade.plain_frame | cycles per vehicle | 84,697 | 90,012.50 / 90,752 (1.06x) | 101,586.50 / 105,030 (1.20x) | 113,957.50 / 121,516.50 (1.35x) |
-| `sh2z_vlc8_decode` | vlc.zipf256_w6_l12.fast | cycles per symbol | 40.51 | 40.78 / 40.99 (1.01x) | 42.27 / 43.38 (1.04x) | 43.48 / 46.01 (1.07x) |
-| `sh2z_vlc8_decode` | vlc.uniform256_w8_l8.fast | cycles per symbol | 31.00 | 31.39 / 31.49 (1.01x) | 33.84 / 34.54 (1.09x) | 35.38 / 36.64 (1.14x) |
-| `sh2z_vlc8_decode` | vlc.few40_w5_l10.fast | cycles per symbol | 25.61 | 25.67 / 25.88 (1.00x) | 25.92 / 27.26 (1.01x) | 26.25 / 28.75 (1.02x) |
-| `sh2z_vlc8_decode_portable` | vlc.zipf256_w6_l12.portable | cycles per symbol | 73.92 | 74.13 / 74.34 (1.00x) | 75.42 / 76.73 (1.02x) | 76.30 / 78.74 (1.03x) |
+| `sh2z_vlc8_decode` | vlc.zipf256_w6_l12.fast | cycles per symbol | 40.51 | 40.82 / 40.98 (1.01x) | 42.65 / 43.37 (1.05x) | 43.94 / 45.88 (1.08x) |
+| `sh2z_vlc8_decode` | vlc.uniform256_w8_l8.fast | cycles per symbol | 31.00 | 31.40 / 31.49 (1.01x) | 33.94 / 34.54 (1.09x) | 35.56 / 36.61 (1.15x) |
+| `sh2z_vlc8_decode` | vlc.few40_w5_l10.fast | cycles per symbol | 25.61 | 25.64 / 25.88 (1.00x) | 25.78 / 27.26 (1.01x) | 25.92 / 28.71 (1.01x) |
+| `sh2z_vlc8_decode_portable` | vlc.zipf256_w6_l12.portable | cycles per symbol | 73.92 | 74.16 / 74.34 (1.00x) | 75.57 / 76.73 (1.02x) | 76.55 / 78.74 (1.04x) |
 | contributed C | vlc.zipf256_w6_l12.plain | cycles per symbol | 75.31 | 75.45 / 75.73 (1.00x) | 76.29 / 78.12 (1.01x) | 76.83 / 80.14 (1.02x) |
 
 Other placements, warm cache (ratio to CPU-only):
 
 | Fixture | CPU-only | codeLow | cartTables | outVdp1 | outVdp2 |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| center.batch | 147.45 | 160.98 (1.09x) | 197.12 (1.34x) | 291.55 (1.98x) | 275.05 (1.87x) |
+| center.batch | 147.45 | 161.87 (1.10x) | 198.20 (1.34x) | 292.62 (1.98x) | 276.12 (1.87x) |
 | center.project | 106.04 | 127.62 (1.20x) | 214.58 (2.02x) | 309.20 (2.92x) | 292.68 (2.76x) |
-| center.edgeSteps | 182.64 | 224.17 (1.23x) | 243.84 (1.34x) | 544.12 (2.98x) | 497.69 (2.72x) |
+| center.edgeSteps | 182.64 | 241.64 (1.32x) | 256.05 (1.40x) | 552.16 (3.02x) | 505.56 (2.77x) |
 | center.clipNear | 1,776 | 1,967 (1.11x) | 2,145 (1.21x) | 2,734 (1.54x) | 2,639 (1.49x) |
-| center.guardInside | 2,955 | 4,870 (1.65x) | 3,826 (1.29x) | 5,025 (1.70x) | 4,835 (1.64x) |
-| center.guardSide | 4,669 | 11,343 (2.43x) | 6,505 (1.39x) | 7,980 (1.71x) | 7,745 (1.66x) |
-| center.guardNearSide | 7,758 | 17,089 (2.20x) | 10,216 (1.32x) | 11,636 (1.50x) | 11,401 (1.47x) |
+| center.guardInside | 2,955 | 6,007 (2.03x) | 3,983 (1.35x) | 5,183 (1.75x) | 4,993 (1.69x) |
+| center.guardSide | 4,669 | 11,888 (2.55x) | 6,657 (1.43x) | 8,133 (1.74x) | 7,898 (1.69x) |
+| center.guardNearSide | 7,758 | 17,873 (2.30x) | 10,262 (1.32x) | 11,697 (1.51x) | 11,462 (1.48x) |
 | srcGuard.inside | 2,879 | 3,086 (1.07x) | 3,417 (1.19x) | 4,592 (1.59x) | 4,407 (1.53x) |
-| srcGuard.side | 4,583 | 11,368 (2.48x) | 6,725 (1.47x) | 8,135 (1.78x) | 7,900 (1.72x) |
-| srcGuard.nearSide | 6,875 | 15,089 (2.19x) | 9,350 (1.36x) | 10,778 (1.57x) | 10,543 (1.53x) |
-| srcGuard.roadNear | 8,870 | 20,334 (2.29x) | 12,080 (1.36x) | 13,777 (1.55x) | 13,497 (1.52x) |
-| merge.pixel1 | 223.11 | 289.20 (1.30x) | 337.09 (1.51x) | 349.56 (1.57x) | 347.92 (1.56x) |
-| merge.rows1 | 527.14 | 634.95 (1.20x) | 661.88 (1.26x) | 693.80 (1.32x) | 689.27 (1.31x) |
-| mergeTier.pixel1.tier | 38.74 | 65.54 (1.69x) | 80.94 (2.09x) | 88.09 (2.27x) | 87.43 (2.26x) |
-| mergeTier.short8Pixel1.tier | 65.50 | 70.06 (1.07x) | 69.50 (1.06x) | 81.19 (1.24x) | 79.69 (1.22x) |
+| srcGuard.side | 4,583 | 10,390 (2.27x) | 6,616 (1.44x) | 8,024 (1.75x) | 7,789 (1.70x) |
+| srcGuard.nearSide | 6,875 | 14,214 (2.07x) | 9,343 (1.36x) | 10,765 (1.57x) | 10,530 (1.53x) |
+| srcGuard.roadNear | 8,870 | 20,965 (2.36x) | 12,213 (1.38x) | 13,920 (1.57x) | 13,640 (1.54x) |
+| merge.pixel1 | 223.11 | 288.75 (1.29x) | 328.17 (1.47x) | 340.64 (1.53x) | 339.00 (1.52x) |
+| merge.rows1 | 527.14 | 622.41 (1.18x) | 657.41 (1.25x) | 691.47 (1.31x) | 686.94 (1.30x) |
+| mergeTier.pixel1.tier | 38.74 | 68.22 (1.76x) | 78.09 (2.02x) | 87.21 (2.25x) | 86.12 (2.22x) |
+| mergeTier.short8Pixel1.tier | 65.50 | 69.50 (1.06x) | 69.50 (1.06x) | 81.19 (1.24x) | 79.69 (1.22x) |
 | shade.fast_light_normals | 99.43 | 99.48 (1.00x) | 105.13 (1.06x) | 204.12 (2.05x) | 189.07 (1.90x) |
 | shade.fast_gouraud | 134.19 | 135.18 (1.01x) | 136.11 (1.01x) | 137.59 (1.03x) | 137.38 (1.02x) |
 | shade.fast_cull | 82.81 | 93.79 (1.13x) | 124.88 (1.51x) | 130.11 (1.57x) | 128.83 (1.56x) |
@@ -244,10 +249,10 @@ Other placements, warm cache (ratio to CPU-only):
 | shade.fast_frame | 55,683 | 70,284 (1.26x) | 77,469.50 (1.39x) | 159,047 (2.86x) | 148,161 (2.66x) |
 | shade.fast_frame_baked | 70,955.50 | 86,207.50 (1.21x) | 96,026 (1.35x) | 194,016.50 (2.73x) | 181,037.50 (2.55x) |
 | shade.plain_frame | 84,697 | 94,122.50 (1.11x) | 102,283.50 (1.21x) | 184,073.50 (2.17x) | 173,258.50 (2.05x) |
-| vlc.zipf256_w6_l12.fast | 40.51 | 40.98 (1.01x) | 42.37 (1.05x) | 52.13 (1.29x) | 50.12 (1.24x) |
-| vlc.uniform256_w8_l8.fast | 31.00 | 31.60 (1.02x) | 33.85 (1.09x) | 48.93 (1.58x) | 45.73 (1.48x) |
-| vlc.few40_w5_l10.fast | 25.61 | 25.79 (1.01x) | 25.94 (1.01x) | 45.80 (1.79x) | 41.95 (1.64x) |
-| vlc.zipf256_w6_l12.portable | 73.92 | 74.28 (1.00x) | 75.44 (1.02x) | 77.47 (1.05x) | 75.84 (1.03x) |
+| vlc.zipf256_w6_l12.fast | 40.51 | 41.03 (1.01x) | 42.69 (1.05x) | 52.64 (1.30x) | 50.61 (1.25x) |
+| vlc.uniform256_w8_l8.fast | 31.00 | 31.64 (1.02x) | 33.95 (1.10x) | 49.08 (1.58x) | 45.87 (1.48x) |
+| vlc.few40_w5_l10.fast | 25.61 | 25.66 (1.00x) | 25.80 (1.01x) | 45.61 (1.78x) | 41.77 (1.63x) |
+| vlc.zipf256_w6_l12.portable | 73.92 | 74.33 (1.01x) | 75.59 (1.02x) | 77.69 (1.05x) | 76.04 (1.03x) |
 | vlc.zipf256_w6_l12.plain | 75.31 | 75.51 (1.00x) | 76.31 (1.01x) | 77.33 (1.03x) | 76.73 (1.02x) |
 
 ### What the model says
@@ -262,11 +267,11 @@ values.
   | --- | ---: |
   | batch | 1.34× |
   | projection | 2.02× |
-  | edge steps | 1.34× |
-  | merge | 1.51× |
+  | edge steps | 1.40× |
+  | merge | 1.47× |
   | cull | 1.51× |
   | vehicle frame | 1.37× |
-  | road guard clip | 1.36× |
+  | road guard clip | 1.38× |
 
   Most of the stall is input line fills (56 clocks a line) and waits behind
   14-clock long writes. For a road path whose arrays sit in low work RAM,
@@ -274,14 +279,14 @@ values.
 
   | Kernel | CPU-only | `typical`, warm |
   | --- | ---: | ---: |
-  | `sh2z_view_batch_center_divu` | 147.45 a vertex | 197.12 |
-  | `sh2z_view_edge_steps_center_divu` | 182.64 a point | 243.84 |
-  | `sh2z_view_merge_runs` (1 px) | 223.11 a boundary | 337.09 |
-  | `sh2z_view_clip_guard_src_center_divu` (road quad) | 8,870 a quad | 12,080 |
+  | `sh2z_view_batch_center_divu` | 147.45 a vertex | 198.20 |
+  | `sh2z_view_edge_steps_center_divu` | 182.64 a point | 256.05 |
+  | `sh2z_view_merge_runs` (1 px) | 223.11 a boundary | 328.17 |
+  | `sh2z_view_clip_guard_src_center_divu` (road quad) | 8,870 a quad | 12,213 |
 
 - **The tier merge planner is now memory-bound.** `sh2z_view_merge_tier`
   costs 38.74 CPU-only cycles a boundary, but reading its rails from low work
-  RAM brings it to 80.94 warm (2.09×), and to 124.66 (3.22×) in the cart.
+  RAM brings it to 78.09 warm (2.02×), and to 123.73 (3.19×) in the cart.
   Placing its rails matters more than its arithmetic.
 - **The guard clips' code does not fit the cache.**
   - The body of `sh2z_view_clip_guard_src_center[_divu]` (the static
@@ -290,16 +295,16 @@ values.
   - With a warm cache and everything in high work RAM, code fills are still
     about 60% of the stall for the crossing cases.
   - With code in low work RAM (`codeLow`), the side, near-side and road
-    cases cost 2.2–2.5× warm. A source-order clip whose quad crosses nothing
+    cases cost 2.1–2.6× warm. A source-order clip whose quad crosses nothing
     costs 1.07×.
   - Keep guard-clip code in high work RAM. Calling it in a tight loop does
     not keep it cached.
 - **Writes dominate the cheap placements.** With everything in high work
   RAM, waits behind 4-clock long writes are most of the stall for the batch
-  (77%) and edge steps (70%). This is because their 20-byte records are
+  (75%) and edge steps (58%). This is because their 20-byte records are
   stored back to back.
 - **Writing straight to VRAM** (`outVdp1`, `outVdp2`) costs 1.5–3.0× for
-  kernels that write a lot: edge steps 2.98×, projection 2.92×, batch 1.98×,
+  kernels that write a lot: edge steps 3.02×, projection 2.92×, batch 1.98×,
   vehicle frame 2.86×. Build in work RAM and copy by DMA instead.
 - **Compute-bound kernels barely notice placement when warm**: fade
   offset/mix, Gouraud, vlc decode and the plain decoders, at up to 1.09×

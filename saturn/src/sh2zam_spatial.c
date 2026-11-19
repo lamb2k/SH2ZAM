@@ -5,6 +5,7 @@
  */
 #include "sh2zam/spatial.h"
 #include <limits.h>
+#include "sh2zam_sections.h"
 
 static bool spatial_valid_box(const sh2z_aabb_t *b) {
     return b->min.x<=b->max.x&&b->min.y<=b->max.y&&b->min.z<=b->max.z;
@@ -251,7 +252,7 @@ static bool spatial_query_valid(uint32_t *hits,size_t capacity,size_t *hit_count
 static void spatial_set_hit(uint32_t *hits,uint32_t object) {
     /* SH-2 has no variable logical shift. The first native capture called a
      * shift helper for every hit; a 128-byte table avoids that call. */
-    static const uint32_t masks[32]={
+    static const uint32_t masks[32] SH2ZI_RODATA(sh2zi_spatial_masks)={
         UINT32_C(0x00000001),UINT32_C(0x00000002),UINT32_C(0x00000004),UINT32_C(0x00000008),
         UINT32_C(0x00000010),UINT32_C(0x00000020),UINT32_C(0x00000040),UINT32_C(0x00000080),
         UINT32_C(0x00000100),UINT32_C(0x00000200),UINT32_C(0x00000400),UINT32_C(0x00000800),

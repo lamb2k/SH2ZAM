@@ -65,6 +65,7 @@ uint32_t sh2zi_facing_slow(uint32_t id,const facing_frame_t *frame);
  * r9 count, r10 kept, r11 vertices + 12, r12 vertices + 16, r13 corners,
  * r14 = 20; the frame pointer is kept on the stack for the slow call. */
 #define FACING_ENTRY(tag,a,b) \
+"    .pushsection .text.sh2zi_facing_" tag ",\"ax\",@progbits\n" \
 "    .align 2\n" \
 "    .global _sh2zi_facing_" tag "\n" \
 "    .type _sh2zi_facing_" tag ",@function\n" \
@@ -168,9 +169,9 @@ uint32_t sh2zi_facing_slow(uint32_t id,const facing_frame_t *frame);
 "    nop\n" \
 "    .align 2\n" \
 "5:  .long   _sh2zi_facing_slow\n" \
-"    .size _sh2zi_facing_" tag ",.-_sh2zi_facing_" tag "\n"
+"    .size _sh2zi_facing_" tag ",.-_sh2zi_facing_" tag "\n" \
+"    .popsection\n"
 __asm__(
-"    .text\n"
 FACING_ENTRY("pos","r1","r0")
 FACING_ENTRY("neg","r0","r1")
 );
@@ -301,6 +302,7 @@ sat \
 "    subc    r3,r3\n" \
 "    or      r3,r2\n"
 #define LIGHT_ENTRY(tag,sat,satload) \
+"    .pushsection .text.sh2zi_light_" tag ",\"ax\",@progbits\n" \
 "    .align 2\n" \
 "    .global _sh2zi_light_" tag "\n" \
 "    .type _sh2zi_light_" tag ",@function\n" \
@@ -402,9 +404,9 @@ LIGHT_CHANNEL("12","24","3",sat) \
 "    extu.b  r1,r1\n" \
 "10: bra     6b\n" \
 "    mov     r2,r12\n" \
-"    .size _sh2zi_light_" tag ",.-_sh2zi_light_" tag "\n"
+"    .size _sh2zi_light_" tag ",.-_sh2zi_light_" tag "\n" \
+"    .popsection\n"
 __asm__(
-"    .text\n"
 LIGHT_ENTRY("run","","")
 LIGHT_ENTRY("run_sat",LIGHT_SAT,"    mov.l   @(52,r6),r14\n")
 );
@@ -509,7 +511,7 @@ n ":  mov.l   @(36,r6),r3\n" \
 "    bra     " n "0b\n" \
 "    mov     r12,r0\n"
 __asm__(
-"    .text\n"
+"    .pushsection .text.sh2zi_gouraud_run,\"ax\",@progbits\n"
 "    .align 2\n"
 "    .global _sh2zi_gouraud_run\n"
 "    .type _sh2zi_gouraud_run,@function\n"
@@ -573,6 +575,7 @@ GOURAUD_SAT("21")
 GOURAUD_SAT("22")
 GOURAUD_SAT("23")
 "    .size _sh2zi_gouraud_run,.-_sh2zi_gouraud_run\n"
+"    .popsection\n"
 );
 void sh2zi_gouraud_run(const sh2z_shade_pair_t *pairs,size_t count,gouraud_frame_t *frame,uint16_t *out);
 #endif

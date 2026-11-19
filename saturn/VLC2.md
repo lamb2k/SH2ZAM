@@ -225,12 +225,12 @@ carried over from the previous tile):
 | | vlc-2, byte-packed tiles | 3,078 | 1,640 (24.0) | 3,962 | 4,218 | 8,793 | 12,790 |
 | | vlc-2 portable C | 4,732 | 3,294 (48.1) | 5,712 | 5,977 | 10,750 | 15,443 |
 | | marker-bit variant | 3,365 | 1,928 (28.2) | 4,366 | 4,622 | 9,729 | 14,397 |
-| | vlc-1, one call per symbol | 9,478 | 8,040 (117.4) | 12,866 | 13,178 | 18,988 | 24,281 |
+| | vlc-1, one call per symbol | 9,478 | 8,040 (117.4) | 12,898 | 13,239 | 19,210 | 24,560 |
 | | caller only (no decoding) | 1,438 | | 1,459 | 1,466 | 1,501 | 1,541 |
 | dense (104.5 symbols) | **vlc-2** | **4,356** | 2,503 (24.0) | **5,723** | 6,125 | **13,229** | 19,509 |
 | | vlc-2 portable C | 6,836 | 4,984 (47.7) | 8,332 | 8,730 | 16,121 | 23,365 |
 | | marker-bit variant | 4,789 | 2,937 (28.1) | 6,346 | 6,741 | 14,678 | 22,095 |
-| | vlc-1, one call per symbol | 14,234 | 12,382 (118.5) | 19,371 | 19,827 | 28,564 | 36,560 |
+| | vlc-1, one call per symbol | 14,234 | 12,382 (118.5) | 19,406 | 19,906 | 28,822 | 36,862 |
 | | caller only (no decoding) | 1,853 | | 1,874 | 1,881 | 1,917 | 1,958 |
 
 The column placements are the placement model's `best`, `typical`, `cartTables` (stream and
@@ -272,9 +272,13 @@ figures stay high for any decoder whose hot tables (8.2 KB here) exceed the 4 KB
 
 The numbers above are from the committed capture
 [`benchmarks/vlc2-model/results.json`](benchmarks/vlc2-model/results.json), from
-[CI run 44247175665](https://github.com/lamb2k/SH2ZAM/actions/runs/44247175665), source `769d1a4`,
-pinned Yaul GCC 13.2, ELF SHA-256 `d04deb11...`; apart from its provenance it equals the capture of
-[CI run 44243332134](https://github.com/lamb2k/SH2ZAM/actions/runs/44243332134) on `254b725`. A local run with the same toolchain gave identical
+[CI run 44513686872](https://github.com/lamb2k/SH2ZAM/actions/runs/44513686872) (merge train 3, push run on `eac28d8`), pinned Yaul GCC 13.2.
+Its figures equal, value for value, those of
+[CI run 44256084857](https://github.com/lamb2k/SH2ZAM/actions/runs/44256084857), source `b9ae01d`, ELF SHA-256 `60e9cb04...`. Its vlc-2 figures equal those of the captures of
+[CI run 44247175665](https://github.com/lamb2k/SH2ZAM/actions/runs/44247175665) on `769d1a4` and
+[CI run 44243332134](https://github.com/lamb2k/SH2ZAM/actions/runs/44243332134) on `254b725`; the
+placed figures of the vlc-1 comparison rows moved by up to 1.2% when sections-1 changed the
+model ELF's layout (the cache model's set conflicts follow the image's addresses). A local run with the same toolchain gave identical
 values. Every CI run uploads a fresh capture there.
 
 ## Not included

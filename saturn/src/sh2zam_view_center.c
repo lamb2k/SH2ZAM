@@ -97,7 +97,7 @@ void sh2zi_view_divu_project_center(sh2z_view_vertex_t *out,const divu_block_cen
 
 __asm__(
 #include "sh2zam_view_asm.h"
-"    .text\n"
+"    .pushsection .text.sh2zi_view_divu_run_center,\"ax\",@progbits\n"
 "    .align 2\n"
 "    .global _sh2zi_view_divu_run_center\n"
 "    .type _sh2zi_view_divu_run_center,@function\n"
@@ -107,6 +107,8 @@ __asm__(
 "    SH2ZI_VD_TRANSFORM\n"
 "    SH2ZI_VD_REST TC, 0, 1\n"
 "    .size _sh2zi_view_divu_run_center,.-_sh2zi_view_divu_run_center\n"
+"    .popsection\n"
+"    .pushsection .text.sh2zi_view_divu_project_center,\"ax\",@progbits\n"
 "    .align 2\n"
 "    .global _sh2zi_view_divu_project_center\n"
 "    .type _sh2zi_view_divu_project_center,@function\n"
@@ -116,6 +118,7 @@ __asm__(
 "    SH2ZI_VD_LOAD\n"
 "    SH2ZI_VD_REST PC, 0, 1\n"
 "    .size _sh2zi_view_divu_project_center,.-_sh2zi_view_divu_project_center\n"
+"    .popsection\n"
 );
 
 /* fill_block takes the floor of the centre from view.center_x, center_y,

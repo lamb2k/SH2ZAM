@@ -205,7 +205,7 @@ uint32_t sh2zi_memo_diff8_runs_c(const uint16_t *a, const uint16_t *b, uint32_t 
  * MACL, GBR, r14 and PR are not touched. */
 /* ---- generated: block kernels ---- */
 __asm__(
-"    .text\n"
+"    .pushsection .text.sh2z_memo_sync16w,\"ax\",@progbits\n"
 "    .align 2\n"
 "    .global _sh2z_memo_sync16w\n"
 "    .type _sh2z_memo_sync16w,@function\n"
@@ -276,9 +276,10 @@ __asm__(
 ".Lsh2zi_memo_s8_c:\n"
 "    .long   _sh2zi_memo_sync16w_c\n"
 "    .size _sh2z_memo_sync16w,.-_sh2z_memo_sync16w\n"
+"    .popsection\n"
 );
 __asm__(
-"    .text\n"
+"    .pushsection .text.sh2z_memo_sync16l,\"ax\",@progbits\n"
 "    .align 2\n"
 "    .global _sh2z_memo_sync16l\n"
 "    .type _sh2z_memo_sync16l,@function\n"
@@ -386,9 +387,10 @@ __asm__(
 "    rts\n"
 "    mov     #0,r0\n"
 "    .size _sh2z_memo_sync16l,.-_sh2z_memo_sync16l\n"
+"    .popsection\n"
 );
 __asm__(
-"    .text\n"
+"    .pushsection .text.sh2z_memo_sync16w_batch,\"ax\",@progbits\n"
 "    .align 2\n"
 "    .global _sh2z_memo_sync16w_batch\n"
 "    .type _sh2z_memo_sync16w_batch,@function\n"
@@ -495,9 +497,10 @@ __asm__(
 ".Lsh2zi_memo_8_c:\n"
 "    .long   _sh2zi_memo_sync16w_batch_c\n"
 "    .size _sh2z_memo_sync16w_batch,.-_sh2z_memo_sync16w_batch\n"
+"    .popsection\n"
 );
 __asm__(
-"    .text\n"
+"    .pushsection .text.sh2z_memo_sync16l_batch,\"ax\",@progbits\n"
 "    .align 2\n"
 "    .global _sh2z_memo_sync16l_batch\n"
 "    .type _sh2z_memo_sync16l_batch,@function\n"
@@ -641,6 +644,7 @@ __asm__(
 "    bra     .Lsh2zi_memo_16_next\n"
 "    mov.l   r10,@(60,r4)\n"
 "    .size _sh2z_memo_sync16l_batch,.-_sh2z_memo_sync16l_batch\n"
+"    .popsection\n"
 );
 /* ---- end of generated block kernels ---- */
 
@@ -655,7 +659,7 @@ __asm__(
  * argument, on the stack), r8 dst at entry (callee-saved, restored). */
 /* ---- generated: copy kernel ---- */
 __asm__(
-"    .text\n"
+"    .pushsection .text.sh2z_memo_copy8_until,\"ax\",@progbits\n"
 "    .align 2\n"
 "    .global _sh2z_memo_copy8_until\n"
 "    .type _sh2z_memo_copy8_until,@function\n"
@@ -738,6 +742,7 @@ __asm__(
 ".Lsh2zi_memo_c8_c:\n"
 "    .long   _sh2zi_memo_copy8_until_c\n"
 "    .size _sh2z_memo_copy8_until,.-_sh2z_memo_copy8_until\n"
+"    .popsection\n"
 );
 /* ---- end of generated copy kernel ---- */
 
@@ -748,7 +753,7 @@ __asm__(
  * total < max_runs. Callee-saved r8-r11 are saved and restored. */
 /* ---- generated: diff kernel ---- */
 __asm__(
-"    .text\n"
+"    .pushsection .text.sh2z_memo_diff8_runs,\"ax\",@progbits\n"
 "    .align 2\n"
 "    .global _sh2z_memo_diff8_runs\n"
 "    .type _sh2z_memo_diff8_runs,@function\n"
@@ -844,6 +849,7 @@ __asm__(
 ".Lsh2zi_memo_d8_c:\n"
 "    .long   _sh2zi_memo_diff8_runs_c\n"
 "    .size _sh2z_memo_diff8_runs,.-_sh2z_memo_diff8_runs\n"
+"    .popsection\n"
 );
 /* ---- end of generated diff kernel ---- */
 
@@ -861,7 +867,7 @@ __asm__(
  * records, r14 records left; r8-r14 are saved and restored. */
 /* ---- generated: keyed write kernel ---- */
 __asm__(
-"    .text\n"
+"    .pushsection .text.sh2z_memo_put4,\"ax\",@progbits\n"
 "    .align 2\n"
 "    .global _sh2z_memo_put4\n"
 "    .type _sh2z_memo_put4,@function\n"
@@ -1184,6 +1190,7 @@ __asm__(
 "    bra     .Lsh2zi_memo_p4_4_mn\n"
 "    mov.l   r2,@r12\n"
 "    .size _sh2z_memo_put4,.-_sh2z_memo_put4\n"
+"    .popsection\n"
 );
 /* ---- end of generated keyed write kernel ---- */
 #else

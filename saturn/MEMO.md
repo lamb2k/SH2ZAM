@@ -194,10 +194,15 @@ Its region costs are cited hardware notes, not this project's measurements:
 
 The tables come from the committed capture
 [`benchmarks/memo-model/results.json`](benchmarks/memo-model/results.json):
-[SH-2 cross compile run 44247175665](https://github.com/lamb2k/SH2ZAM/actions/runs/44247175665),
-source commit `769d1a4`. Apart from its provenance it equals the first capture,
-[run 44231934774](https://github.com/lamb2k/SH2ZAM/actions/runs/44231934774) on `d401348`, which is identical to a local run with the same pinned Yaul GCC
-(the same ELF SHA-256).
+[CI run 44513686872](https://github.com/lamb2k/SH2ZAM/actions/runs/44513686872) (merge train 3, push run on `eac28d8`).
+Its figures equal, value for value, those of
+[SH-2 cross compile run 44256084857](https://github.com/lamb2k/SH2ZAM/actions/runs/44256084857),
+source commit `b9ae01d` (sections-1). Its CPU-only figures equal those of the earlier captures,
+[run 44247175665](https://github.com/lamb2k/SH2ZAM/actions/runs/44247175665) on `769d1a4` and
+[run 44231934774](https://github.com/lamb2k/SH2ZAM/actions/runs/44231934774) on `d401348` (the latter
+identical to a local run with the same pinned Yaul GCC). Some placed figures moved, in the tables
+below by up to 6%: sections-1 moved the hand-written kernels to their own sections, which
+changed the model ELF's layout, and the cache model's set conflicts follow the image's addresses.
 
 <!-- tables -->
 **A. Block compare-and-copy**, cycles per group (slope from 1 to 90 groups), and whole calls at 75 and 90 groups. Placed = `best` (all in high work RAM), warm / cold.
@@ -205,17 +210,17 @@ source commit `769d1a4`. Apart from its provenance it equals the first capture,
 | Groups changed | Entry | CPU-only per group | Placed per group | 75 groups: CPU / placed cold | 90 groups: CPU / placed cold |
 | --- | --- | ---: | ---: | ---: | ---: |
 | none (steady state) | `sh2z_memo_sync16w_batch` | 40.18 | 67.45 / 68.28 | 3,047 / 5,249 | 3,647 / 6,269 |
-| none (steady state) | `sh2z_memo_sync16w`, one call per group | 54 | 80.38 / 82 | 4,075 / 6,309 | 4,885 / 7,539 |
+| none (steady state) | `sh2z_memo_sync16w`, one call per group | 54 | 82.27 / 82 | 4,075 / 6,309 | 4,885 / 7,539 |
 | none (steady state) | plain C: 7 longwords + 1 word, a call per group | 83 | 110.48 / 111 | 6,250 / 8,454 | 7,495 / 10,119 |
-| none (steady state) | `sh2z_memo_sync16l_batch` (64-byte groups) | 72.18 | 129.61 / 128.47 | 5,442 / 9,789 | 6,522 / 11,709 |
+| none (steady state) | `sh2z_memo_sync16l_batch` (64-byte groups) | 72.18 | 129.70 / 128.56 | 5,442 / 9,789 | 6,522 / 11,717 |
 | every tenth | `sh2z_memo_sync16w_batch` | 42.40 | 71.18 / 72.26 | 3,223 / 5,565 | 3,845 / 6,623 |
-| every tenth | `sh2z_memo_sync16w`, one call per group | 55.42 | 83.62 / 85.31 | 4,187 / 6,572 | 5,011 / 7,834 |
+| every tenth | `sh2z_memo_sync16w`, one call per group | 55.42 | 85.82 / 85.31 | 4,187 / 6,572 | 5,011 / 7,834 |
 | every tenth | plain C: 7 longwords + 1 word, a call per group | 84.75 | 111.92 / 112.44 | 6,345 / 8,514 | 7,651 / 10,247 |
-| every tenth | `sh2z_memo_sync16l_batch` (64-byte groups) | 76.02 | 136.66 / 135.96 | 5,746 / 10,383 | 6,864 / 12,375 |
+| every tenth | `sh2z_memo_sync16l_batch` (64-byte groups) | 76.02 | 136.75 / 136.04 | 5,746 / 10,383 | 6,864 / 12,383 |
 | all | `sh2z_memo_sync16w_batch` | 62.18 | 105.34 / 106.17 | 4,697 / 8,112 | 5,627 / 9,702 |
-| all | `sh2z_memo_sync16w`, one call per group | 68 | 112.38 / 114 | 5,125 / 8,716 | 6,145 / 10,426 |
+| all | `sh2z_memo_sync16w`, one call per group | 68 | 114.58 / 114 | 5,125 / 8,716 | 6,145 / 10,426 |
 | all | plain C: 7 longwords + 1 word, a call per group | 95.85 | 115.87 / 119.84 | 7,467 / 9,406 | 8,660 / 10,928 |
-| all | `sh2z_memo_sync16l_batch` (64-byte groups) | 110.18 | 201.38 / 200.25 | 8,292 / 15,208 | 9,942 / 18,208 |
+| all | `sh2z_memo_sync16l_batch` (64-byte groups) | 110.18 | 201.47 / 200.34 | 8,292 / 15,208 | 9,942 / 18,216 |
 
 **B. Keyed write-through**, the example layout (stride 32, offsets 8, 10, 6, 12, word 3 always). Cycles per record (slope from 1 to 388 records) and whole calls at 357 and 388 records. Placed: `outVdp1` (destination VDP1 VRAM, 45 a write) and `outVdp2` (VDP2, 40), memo in low work RAM, staged records in high work RAM; cold.
 
@@ -247,12 +252,12 @@ source commit `769d1a4`. Apart from its provenance it equals the first capture,
 
 | Records equal | Entry | CPU-only per record | Placed per record | 208 records: CPU / placed warm / cold |
 | --- | --- | ---: | ---: | ---: |
-| 66% | `sh2z_memo_diff8_runs` | 14.04 | 15.37 / 21.21 | 2,956 / 3,241 / 4,544 |
-| 66% | its portable C path | 46.14 | 47.41 / 53.86 | 9,630 / 9,902 / 11,369 |
-| all | `sh2z_memo_diff8_runs` | 12 | 13.20 / 19.03 | 2,534 / 2,791 / 4,094 |
-| all | its portable C path | 35 | 35.69 / 42 | 7,323 / 7,475 / 8,914 |
-| none | `sh2z_memo_diff8_runs` | 12.46 | 13.86 / 19.53 | 2,642 / 2,941 / 4,223 |
-| none | its portable C path | 28 | 28.69 / 35 | 5,914 / 6,069 / 7,529 |
+| 66% | `sh2z_memo_diff8_runs` | 14.04 | 16.12 / 21.21 | 2,956 / 3,395 / 4,544 |
+| 66% | its portable C path | 46.14 | 49.10 / 53.86 | 9,630 / 10,252 / 11,369 |
+| all | `sh2z_memo_diff8_runs` | 12 | 13.54 / 19.03 | 2,534 / 2,861 / 4,094 |
+| all | its portable C path | 35 | 37.14 / 42 | 7,323 / 7,776 / 8,914 |
+| none | `sh2z_memo_diff8_runs` | 12.46 | 14.47 / 19.53 | 2,642 / 3,067 / 4,223 |
+| none | its portable C path | 28 | 30.48 / 35 | 5,914 / 6,440 / 7,529 |
 <!-- end tables -->
 
 <!-- targets -->
