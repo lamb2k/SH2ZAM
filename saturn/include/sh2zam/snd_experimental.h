@@ -106,6 +106,7 @@ typedef struct {
 
 typedef struct {
     volatile uint16_t *slots;    /* SCSP slot registers (0x25B00000) */
+    uint32_t mix_level;          /* direct send level of every play, 0..7 (DISDL, 6 dB steps); init sets 7 */
     sh2z_snd_voice_t voice[SH2Z_SND_SLOTS];
     uint32_t plays;              /* key-ons written */
     uint32_t refused;            /* plays with no slot to take */
@@ -154,6 +155,7 @@ typedef struct {
     uint32_t state;
     uint32_t loop_fad, loop_sectors;
     uint32_t level;              /* current CD input level, 0..7 */
+    uint32_t level_max;          /* the level plays start at (EFSDL, 6 dB steps); init sets 7 */
     uint32_t fade_frames, fade_left;
     uint32_t commands;           /* commands written */
     uint32_t busy_frames;        /* frames a command waited for CMOK */

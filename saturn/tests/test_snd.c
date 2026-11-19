@@ -114,7 +114,7 @@ static void check_slot(uint32_t s, const sh2z_snd_clip_t *c, uint8_t level, int8
     const uint32_t dipan = (R(s, 0x16) >> 8) & 0x1Fu;
     const int got_pan = (dipan & 0x10u) ? -(int)(dipan & 0xFu) : (int)(dipan & 0xFu);
     CHECK(got_pan == (pan < -15 ? -15 : pan > 15 ? 15 : pan));
-    CHECK((R(s, 0x16) >> 13) == 7u);
+    CHECK((R(s, 0x16) >> 13) == 7u);                                        /* init's mix level */
     /* level: TL within one step of the exact attenuation */
     const uint32_t tl = R(s, 0x0C) & 0xFFu;
     if (level == 0u) CHECK(tl == 255u);
@@ -203,6 +203,8 @@ static void test_voices(void) {
     sh2z_snd_t snd; sh2z_snd_init(&snd, slots);
     CHECK(sh2z_snd_play(&snd, &clips[0], 31u, 2u, 0u, 255u, 0) == -1 && snd.refused == 1u);
     CHECK(sh2z_snd_play(&snd, &clips[0], 32u, 1u, 0u, 255u, 0) == -1);
+    snd.mix_level = 5u;                                                    /* a quieter mix */
+    CHECK(sh2z_snd_play(&snd, &clips[1], 3u, 1u, 0u, 255u, 0) == 3 && (R(3u, 0x16) >> 13) == 5u);
     /* every level: TL within one step of the exact value */
     for (uint32_t l = 0; l < 256u; ++l) {
         const uint8_t tl = sh2z_snd_tl(&clips[0], (uint8_t)l);
@@ -269,10 +271,12 @@ static void test_cdda(void) {
         cdblock_t m; memset(&m, 0, sizeof(m)); m.status = 0x02u;
         sh2z_cdda_t cd; sh2z_cdda_init(&cd, cdregs, scsp);
         CHECK(((scsp[16 * SH2Z_SND_SLOT_STRIDE + 0xB] >> 5) & 7u) == 7u);
+        cd.level_max = 1u + rnd() % 7u;
         const uint32_t start = 1000u + rnd() % 5000u, n = 20u + rnd() % 60u, loop = start + 5u + rnd() % 10u, ln = 10u + rnd() % 30u;
         cdregs[4] = (uint16_t)((rnd() & 1u) ? 1u : 0u);                    /* sometimes busy at the start */
         if (!(cdregs[4] & 1u)) m.busy = 2u;
         sh2z_cdda_play(&cd, start, n, loop, ln);
+        CHECK(((scsp[16 * SH2Z_SND_SLOT_STRIDE + 0xB] >> 5) & 7u) == cd.level_max);
         uint32_t frame = 0u;
         while (cd.state != SH2Z_CDDA_LOOPING && frame < 400u) { cd_model(&m); sh2z_cdda_frame(&cd); ++frame; }
         CHECK(cd.state == SH2Z_CDDA_LOOPING && cd.loop_backs == 1u && m.cmds == 2u);
@@ -281,7 +285,7 @@ static void test_cdda(void) {
         /* fade over F frames: levels never rise, 0 by the end, then a pause and quiet */
         const uint32_t f = rnd() % 40u;
         sh2z_cdda_fade(&cd, f);
-        uint32_t prev = 7u, k = 0u;
+        uint32_t prev = cd.level_max, k = 0u;
         while (!sh2z_cdda_quiet(&cd) && k < 400u) {
             cd_model(&m); sh2z_cdda_frame(&cd); ++k;
             const uint32_t lvl = (scsp[16 * SH2Z_SND_SLOT_STRIDE + 0xB] >> 5) & 7u;

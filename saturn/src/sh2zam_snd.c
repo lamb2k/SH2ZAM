@@ -98,6 +98,7 @@ static void key_execute(sh2z_snd_t *snd, uint32_t slot) {
 
 void sh2z_snd_init(sh2z_snd_t *snd, volatile uint16_t *slots) {
     snd->slots = slots;
+    snd->mix_level = 7u;
     snd->plays = 0u;
     snd->refused = 0u;
     snd->stolen = 0u;
@@ -148,7 +149,7 @@ int32_t sh2z_snd_play(sh2z_snd_t *snd, const sh2z_snd_clip_t *clip, uint32_t fir
     REG(r, s, 0x10) = pitch_word(clip->oct, clip->fns);
     REG(r, s, 0x12) = 0u;
     REG(r, s, 0x14) = 0u;
-    REG(r, s, 0x16) = (uint16_t)(7u << 13 | (uint32_t)pan_bits(pan) << 8);
+    REG(r, s, 0x16) = (uint16_t)((snd->mix_level & 7u) << 13 | (uint32_t)pan_bits(pan) << 8);
     REG(r, s, 0x00) = (uint16_t)(KYONB | (clip->loop ? LOOP_NORMAL : 0u) | (clip->pcm8 ? PCM8B : 0u) |
                                  ((clip->address >> 16) & 0xFu));
     key_execute(snd, s);
@@ -259,6 +260,7 @@ void sh2z_cdda_init(sh2z_cdda_t *cd, volatile uint16_t *cd_regs, volatile uint16
     cd->loop_backs = 0u;
     cd->last_status = 0u;
     cd->last_fad = 0u;
+    cd->level_max = SH2Z_CDDA_LEVEL_MAX;
     cd_level(cd, SH2Z_CDDA_LEVEL_MAX);
 }
 
@@ -272,7 +274,7 @@ void sh2z_cdda_play(sh2z_cdda_t *cd, uint32_t start_fad, uint32_t sectors, uint3
     cd->loop_fad = loop_fad;
     cd->loop_sectors = loop_sectors;
     cd->fade_left = 0u;
-    cd_level(cd, SH2Z_CDDA_LEVEL_MAX);
+    cd_level(cd, cd->level_max & SH2Z_CDDA_LEVEL_MAX);
     play_command(cd, start_fad, sectors, 0u);
     cd->state = SH2Z_CDDA_START_SENT;
     cd_send(cd);
@@ -295,9 +297,10 @@ void sh2z_cdda_frame(sh2z_cdda_t *cd) {
     if (cd->state == SH2Z_CDDA_FADING) {
         if (cd->fade_left) {
             --cd->fade_left;
-            /* level = 7 * left / frames, by comparison: no division */
-            uint32_t level = SH2Z_CDDA_LEVEL_MAX;
-            while (level && level * cd->fade_frames > SH2Z_CDDA_LEVEL_MAX * cd->fade_left) --level;
+            /* level = max * left / frames, by comparison: no division */
+            const uint32_t top = cd->level_max & SH2Z_CDDA_LEVEL_MAX;
+            uint32_t level = top;
+            while (level && level * cd->fade_frames > top * cd->fade_left) --level;
             if (level != cd->level) cd_level(cd, level);
         }
         if (!cd->fade_left) {
