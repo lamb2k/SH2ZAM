@@ -21,6 +21,7 @@
 #include "sh2zam/view_experimental.h"
 #include "sh2zam/vlc2_experimental.h"
 #include "sh2zam/vlc_experimental.h"
+#include "sh2zam/scene_experimental.h"
 #include <stdio.h>
 
 int main(void) {

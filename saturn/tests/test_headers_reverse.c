@@ -21,6 +21,7 @@
 #include "sh2zam/box2.h"
 #include "sh2zam/batch_experimental.h"
 #include "sh2zam/sh2zam.h"
+#include "sh2zam/scene_experimental.h"
 #include <stdio.h>
 
 int main(void) {
