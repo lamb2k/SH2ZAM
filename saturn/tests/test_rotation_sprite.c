@@ -1,4 +1,4 @@
-/* Host tests for rotation sprite sets (contract tag rotation-sprites-1):
+/* Host tests for rotation sprite sets (contract tag rotation-sprites-2):
  * validation, selection against a floating-point reference over the whole
  * sphere, placement and distorted-sprite corners against references, the
  * command words, mirroring and every rejection path.
@@ -147,8 +147,9 @@ static void test_place_emit(void) {
         const sh2z_view_t v=view_for(alpha,k,tx,ty,tz);
         if(!sh2z_rspr_place(&place,&v,&s.header)){CHECK(false);continue;}
         const int64_t qx=((int64_t)v.focal_x*tx)/tz,qy=((int64_t)v.focal_y*ty)/tz;
-        CHECK(place.x==(int16_t)(v.center_x+(qx>>16)));
-        CHECK(place.y==(int16_t)(v.center_y-(qy>>16)));
+        const int64_t ax=(int64_t)v.center_x*65536+qx,ay=(int64_t)v.center_y*65536-qy;
+        CHECK(place.x==(int16_t)(ax>>16)&&place.frac[0]==(uint16_t)(ax&0xffff));
+        CHECK(place.y==(int16_t)(ay>>16)&&place.frac[1]==(uint16_t)(ay&0xffff));
         /* up = {ux, -uy} on screen. */
         CHECK(fabs(place.up[0]/16384.0-(-sin(alpha)))<2.5e-4);
         CHECK(fabs(place.up[1]/16384.0-(-cos(alpha)))<2.5e-4);
@@ -169,8 +170,10 @@ static void test_place_emit(void) {
             for(unsigned c=0;c<4;++c) {
                 double px=corner[c][0]-s.cells[5].origin_x,py=corner[c][1]-s.cells[5].origin_y;
                 if(mirror)px=-px;
-                const double ex=place.x+sc*(px*(-uy)-py*ux),ey=place.y+sc*(px*ux-py*uy);
-                CHECK(fabs((int16_t)cmd[6+2*c]-ex)<=1.0&&fabs((int16_t)cmd[7+2*c]-ey)<=1.0);
+                const double ox=place.x+place.frac[0]/65536.0,oy=place.y+place.frac[1]/65536.0;
+                const double ex=ox+sc*(px*(-uy)-py*ux),ey=oy+sc*(px*ux-py*uy);
+                /* One rounding from the sub-pixel origin: within half a pixel plus the Q14 up error. */
+                CHECK(fabs((int16_t)cmd[6+2*c]-ex)<=0.5+1e-3*sc*CELL_W&&fabs((int16_t)cmd[7+2*c]-ey)<=0.5+1e-3*sc*CELL_W);
             }
             ++cases;
         }
@@ -204,6 +207,35 @@ static void rot(double m[3][3],double a,double b,double c) {
     for(int i=0;i<3;++i)for(int j=0;j<3;++j){m[i][j]=0;for(int k=0;k<3;++k)m[i][j]+=z[i][k]*t[k][j];}
 }
 
+/* An object held still on screen, its origin a hair either side of a pixel
+ * boundary (the chase-camera case: the player at the screen centre with
+ * rounding noise in the view): every corner must stay put. rotation-sprites-1
+ * floored the origin and then rounded the offsets, so its sprite stepped a
+ * whole pixel with the sign of the noise. */
+static void test_still(void) {
+    static test_set_t s;build(&s,true);
+    sh2z_rspr_camera_t cam;memset(&cam,0,sizeof(cam));
+    cam.focal_x=139*65536+20000;cam.focal_y=cam.focal_x;cam.center_x=160;cam.center_y=112;cam.near_z=16384;
+    cam.r[0][0]=16384;cam.r[1][1]=16384;cam.r[2][2]=16384;
+    CHECK(sh2z_rspr_camera_scale(&cam,&s.header,1638));
+    const int16_t basis[9]={0,0,-16384, 0,16384,0, -16384,0,0}; /* seen from behind */
+    unsigned steps=0,cases=0;
+    for(int32_t lift=-40;lift<=40;lift+=8) for(int32_t depth=60;depth<=400;depth+=17) {
+        uint16_t first[16];
+        for(int32_t e=-3;e<=3;++e) { /* view-space x of a few 1/65536 units either side of 0 */
+            const int32_t pos[3]={e,lift*65536,depth*65536};
+            sh2z_rspr_pick_t pick;sh2z_rspr_place_t place;int32_t dz;uint16_t cmd[16];
+            if(!sh2z_rspr_pose(&pick,&place,&dz,&cam,&s.header,pos,basis)){CHECK(false);continue;}
+            if(!sh2z_rspr_emit_valid(cmd,&s.header,&pick,&place,0,0)){CHECK(false);continue;}
+            if(e==-3)memcpy(first,cmd,sizeof(cmd));
+            else if(memcmp(first+6,cmd+6,16)!=0)++steps;
+            ++cases;
+        }
+    }
+    CHECK(cases>400);CHECK(steps==0);
+    printf("still: %u poses, %u corner steps\n",cases,steps);
+}
+
 static void test_pose(void) {
     static test_set_t s;build(&s,true);
     sh2z_rspr_camera_t cam;memset(&cam,0,sizeof(cam));
@@ -231,7 +263,7 @@ static void test_pose(void) {
         const double tz=vz,fx=200.0,fy=180.0;
         const double dn=sqrt(dw[0]*dw[0]+dw[1]*dw[1]+dw[2]*dw[2]);
         CHECK(fabs(depth/16384.0-tz)<=3.0*dn/16384.0+0.01);
-        CHECK(fabs(place.x-(160+fx*vx/tz))<=1.5&&fabs(place.y-(112-fy*vy/tz))<=1.5);
+        CHECK(fabs(place.x+place.frac[0]/65536.0-(160+fx*vx/tz))<=0.5&&fabs(place.y+place.frac[1]/65536.0-(112-fy*vy/tz))<=0.5);
         const double want=fy*0.75/tz/1.5;
         CHECK(fabs(place.scale/65536.0-want)<=want*2e-3+3.0/65536.0);
         /* up = model +y in view, screen x/y. */
@@ -258,6 +290,7 @@ int main(void) {
     test_select(true);
     test_select(false);
     test_place_emit();
+    test_still();
     test_pose();
     if(failures){fprintf(stderr,"rotation_sprite: %u failures\n",failures);return 1;}
     puts("rotation_sprite: all checks passed");

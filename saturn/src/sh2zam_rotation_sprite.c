@@ -84,7 +84,8 @@ bool sh2z_rspr_place(sh2z_rspr_place_t *out,const sh2z_view_t *v,const sh2z_rspr
     if(!out||!v||!sh2z_rspr_valid(set)||v->t[2]<=v->near_z||v->t[2]<=0)return false;
     const int64_t qx=rspr_div_trunc((int64_t)v->focal_x*v->t[0],v->t[2]);
     const int64_t qy=rspr_div_trunc((int64_t)v->focal_y*v->t[1],v->t[2]);
-    const int64_t x=(int64_t)v->center_x+(qx>>16),y=(int64_t)v->center_y-(qy>>16);
+    const int64_t ax=(int64_t)v->center_x*65536+qx,ay=(int64_t)v->center_y*65536-qy;
+    const int64_t x=ax>>16,y=ay>>16;
     if(x< -1023||x>1023||y< -1023||y>1023)return false;
     const int32_t ux=v->r[0][1],uy=v->r[1][1],uz=v->r[2][1];
     const uint32_t screen=rspr_isqrt64((uint64_t)((int64_t)ux*ux+(int64_t)uy*uy));
@@ -96,17 +97,20 @@ bool sh2z_rspr_place(sh2z_rspr_place_t *out,const sh2z_view_t *v,const sh2z_rspr
     const int64_t scale=rspr_div_trunc(pixels*65536,set->pixels_per_unit);
     if(scale<1||scale>((int64_t)1<<24))return false;
     out->x=(int16_t)x;out->y=(int16_t)y;out->scale=(int32_t)scale;
+    out->frac[0]=(uint16_t)(ax&0xffff);out->frac[1]=(uint16_t)(ay&0xffff);
     out->up[0]=(int16_t)rspr_div_trunc((int64_t)16384*ux,screen);
     out->up[1]=(int16_t)rspr_div_trunc(-(int64_t)16384*uy,screen);
     return true;
 }
 
 static bool rspr_corner(int16_t *sx,int16_t *sy,const sh2z_rspr_place_t *p,int32_t px,int32_t py) {
-    /* R = {-up.y, up.x}; point = scale * (px*R - py*up), Q16 * Q14 = Q30. */
+    /* R = {-up.y, up.x}; point = frac + scale * (px*R - py*up), Q16 * Q14 = Q30,
+     * rounded once. */
     const int64_t ex=(int64_t)px*(-p->up[1])-(int64_t)py*p->up[0];
     const int64_t ey=(int64_t)px*p->up[0]-(int64_t)py*p->up[1];
     const int64_t half=(int64_t)1<<29;
-    const int64_t dx=(ex*p->scale+half)>>30,dy=(ey*p->scale+half)>>30;
+    const int64_t dx=(ex*p->scale+((int64_t)p->frac[0]<<14)+half)>>30;
+    const int64_t dy=(ey*p->scale+((int64_t)p->frac[1]<<14)+half)>>30;
     const int64_t x=p->x+dx,y=p->y+dy;
     if(x< -1024||x>1023||y< -1024||y>1023)return false;
     *sx=(int16_t)x;*sy=(int16_t)y;return true;
@@ -179,7 +183,9 @@ bool sh2z_rspr_pose(sh2z_rspr_pick_t *pick,sh2z_rspr_place_t *place,int32_t *dep
     const int32_t tx=rspr_dot16(c->r[0],d),ty=rspr_dot16(c->r[1],d);
     const int32_t qx=sh2z_divu_div64((int64_t)c->focal_x*tx,tz,NULL);
     const int32_t qy=sh2z_divu_div64((int64_t)c->focal_y*ty,tz,NULL);
-    const int32_t x=(int32_t)c->center_x+(qx>>16),y=(int32_t)c->center_y-(qy>>16);
+    /* The origin in 1/65536 pixel; |q| < 2^31 and |center| < 2^15 keep it in int64. */
+    const int64_t ax=(int64_t)c->center_x*65536+qx,ay=(int64_t)c->center_y*65536-qy;
+    const int32_t x=(int32_t)(ax>>16),y=(int32_t)(ay>>16);
     if(x< -1023||x>1023||y< -1023||y>1023)return false;
     const int32_t scale=sh2z_divu_div64(c->scale_num,tz,NULL);
     if(scale<1||scale>(1<<24))return false;
@@ -190,6 +196,7 @@ bool sh2z_rspr_pose(sh2z_rspr_pick_t *pick,sh2z_rspr_place_t *place,int32_t *dep
     if(len==0)return false;
     *pick=chosen;
     place->x=(int16_t)x;place->y=(int16_t)y;place->scale=scale;
+    place->frac[0]=(uint16_t)(ax&0xffff);place->frac[1]=(uint16_t)(ay&0xffff);
     place->up[0]=(int16_t)sh2z_divu_div64((int64_t)16384*ux,(int32_t)len,NULL);
     place->up[1]=(int16_t)sh2z_divu_div64(-(int64_t)16384*uy,(int32_t)len,NULL);
     *depth=tz;

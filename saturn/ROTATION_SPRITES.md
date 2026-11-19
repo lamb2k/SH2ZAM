@@ -1,4 +1,4 @@
-# Rotation sprite sets (contract tag rotation-sprites-1)
+# Rotation sprite sets (contract tag rotation-sprites-2)
 
 Draw a 3D object as a pre-rendered view of itself. An offline baker renders the object from a grid of
 viewing directions around its own up axis and packs the images as one set. At run time:
@@ -30,10 +30,23 @@ One contiguous block (big-endian in files; used in place on the SH-2), so it can
   for objects whose image is symmetric about the y-z plane (decals may not be).
 - Selection uses dot products with the bin centres, with no square root and no divide.
 - Placement projects the origin exactly as `sh2z_view_batch` does and divides 64-bit integers four times.
+- The origin keeps its sub-pixel position (`sh2z_rspr_place_t.frac`, 1/65536 pixel), and each corner is
+  rounded once from it.
+
+## Contract history
+
+- **rotation-sprites-2:** the sub-pixel origin. rotation-sprites-1 floored the projected origin, then rounded
+  each corner offset. An object held at a fixed screen position (a chase-camera player at the screen centre,
+  with rounding noise either side of a pixel boundary) then stepped one whole pixel left and right from frame to
+  frame. Now `x`/`y` stay the floor, `frac` carries the rest, and the corners round once. The struct grows by
+  4 bytes; code that only passes it between `pose`/`place` and `emit` is unchanged.
+- **rotation-sprites-1:** first contract.
 
 ## Validation
 
 `saturn/tests/test_rotation_sprite.c` checks selection against a floating-point reference over the whole
-sphere (mirrored and full sets, magnitudes up to 2e9), placement and corners against references (within one
-pixel), the command words, mirroring and every rejection path. It passes under gcc and clang with
+sphere (mirrored and full sets, magnitudes up to 2e9), placement and corners against references (within half
+a pixel of the sub-pixel origin), the command words, mirroring and every rejection path. A stillness test
+holds an object a hair either side of a pixel boundary and requires identical corners. Its control: on the
+rotation-sprites-1 code the same test finds 924 corner steps in 1,617 poses. It passes under gcc and clang with
 UBSan and ASan. Not yet run on Saturn hardware.
