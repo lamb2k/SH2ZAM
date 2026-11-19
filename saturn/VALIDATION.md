@@ -11,6 +11,7 @@ and scope.
 - [integer-kernels-1](validation/integer-kernels-1.md): 2026-11-15 (integer kernels)
 - [memo-1](validation/memo-1.md): 2026-11-17 (block memo kernels, memo-1)
 - [pose-1](validation/pose-1.md): 2026-11-17 (model pose from binary32 state, pose-1)
+- [scene-1](validation/scene-1.md): 2026-11-19 (scene sequencing, scene-1)
 - [sections-1](validation/sections-1.md): 2026-11-18 (one section per hand-written entry and table, sections-1)
 - [segmesh-1](validation/segmesh-1.md): 2026-11-19 (segmented strip mesh visibility pick, segmesh-1)
 - [sprite-cache-1](validation/sprite-cache-1.md): 2026-11-19 (sprite slot cache and cell4z decoder, sprite-cache-1)
