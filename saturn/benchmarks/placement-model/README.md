@@ -173,6 +173,8 @@ the 1-element call, so they exclude one-off code fills even when cold.
 ## Results
 
 The tables below come from the CI capture recorded in [results.json](results.json):
+[CI run 44513686872](https://github.com/lamb2k/SH2ZAM/actions/runs/44513686872) (merge train 3, push run on `eac28d8`).
+Its values equal, value for value, those of
 [SH-2 cross compile run 44256084857](https://github.com/lamb2k/SH2ZAM/actions/runs/44256084857),
 source commit `b9ae01dbe4866b58b1faf2a50577ca3427a73839` (sections-1). Its CPU-only values
 equal those of the earlier captures ([run 44213194513](https://github.com/lamb2k/SH2ZAM/actions/runs/44213194513)
