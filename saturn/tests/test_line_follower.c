@@ -167,10 +167,10 @@ static void test_pace_avoid_lod(void) {
 }
 
 static sh2z_track_state_t g_states[255];
-static const sh2z_line_t *g_line;
+static sh2z_line_t g_line; /* a copy: comparators outlive no caller's local */
 static int cmp_total(const void *x, const void *y) {
     const uint8_t a = *(const uint8_t *)x, b = *(const uint8_t *)y;
-    const int32_t ta = sh2z_track_total(g_line, &g_states[a]), tb = sh2z_track_total(g_line, &g_states[b]);
+    const int32_t ta = sh2z_track_total(&g_line, &g_states[a]), tb = sh2z_track_total(&g_line, &g_states[b]);
     if(ta != tb) return ta > tb ? -1 : 1;
     return a < b ? -1 : 1;
 }
@@ -182,7 +182,7 @@ static int cmp_dist(const void *x, const void *y) {
 
 static void test_sort(void) {
     const sh2z_line_t l = make_line(64, 64 * 65000);
-    g_line = &l;
+    g_line = l;
     for(int round = 0; round < 2000; ++round) {
         const uint32_t count = (uint32_t)rnd_range(1, 255);
         uint8_t order[255], want[255];
