@@ -192,11 +192,71 @@ static void test_place_emit(void) {
     CHECK(memcmp(cmd,keep,sizeof(cmd))==0);
 }
 
+
+/* Rotation from yaw (about y), pitch (about x) and roll (about z), row-major. */
+static void rot(double m[3][3],double a,double b,double c) {
+    const double ca=cos(a),sa=sin(a),cb=cos(b),sb=sin(b),cc=cos(c),sc=sin(c);
+    const double y[3][3]={{ca,0,sa},{0,1,0},{-sa,0,ca}},x[3][3]={{1,0,0},{0,cb,-sb},{0,sb,cb}},z[3][3]={{cc,-sc,0},{sc,cc,0},{0,0,1}};
+    double t[3][3];
+    for(int i=0;i<3;++i)for(int j=0;j<3;++j){t[i][j]=0;for(int k=0;k<3;++k)t[i][j]+=x[i][k]*y[k][j];}
+    for(int i=0;i<3;++i)for(int j=0;j<3;++j){m[i][j]=0;for(int k=0;k<3;++k)m[i][j]+=z[i][k]*t[k][j];}
+}
+
+static void test_pose(void) {
+    static test_set_t s;build(&s,true);
+    sh2z_rspr_camera_t cam;memset(&cam,0,sizeof(cam));
+    cam.focal_x=200*65536;cam.focal_y=180*65536;cam.center_x=160;cam.center_y=112;cam.near_z=16384;
+    CHECK(!sh2z_rspr_camera_scale(&cam,&s.header,0));
+    CHECK(sh2z_rspr_camera_scale(&cam,&s.header,12288)); /* model scale 0.75 */
+    srand(12345);
+    unsigned placed=0,cells=0,ties=0;
+    for(unsigned n=0;n<20000;++n) {
+        double R[3][3],B[3][3];
+        rot(R,(rand()%6283)/1000.0,((rand()%1000)-500)/1000.0,((rand()%1000)-500)/2000.0);
+        rot(B,(rand()%6283)/1000.0,((rand()%600)-300)/1000.0,((rand()%1000)-500)/1000.0);
+        int16_t basis[9];
+        /* basis rows: model +z, +y, +x in world space = columns 2,1,0 of B. */
+        for(int k=0;k<3;++k){basis[k]=(int16_t)lrint(16384*B[k][2]);basis[3+k]=(int16_t)lrint(16384*B[k][1]);basis[6+k]=(int16_t)lrint(16384*B[k][0]);}
+        for(int i=0;i<3;++i)for(int k=0;k<3;++k)cam.r[i][k]=(int16_t)lrint(16384*R[i][k]);
+        for(int i=0;i<3;++i)cam.eye[i]=(rand()%2000000-1000000)*64;
+        /* Object ahead of the camera: world d = R^T * view offset. */
+        const double vz=200+rand()%3000,vx=(rand()%2001-1000)*vz/1600.0,vy=(rand()%2001-1000)*vz/1800.0;
+        double dw[3];for(int k=0;k<3;++k)dw[k]=R[0][k]*vx+R[1][k]*vy+R[2][k]*vz;
+        int32_t pos[3];for(int k=0;k<3;++k)pos[k]=cam.eye[k]+(int32_t)lrint(dw[k]*65536.0);
+        sh2z_rspr_pick_t pick;sh2z_rspr_place_t place;int32_t depth;
+        if(!sh2z_rspr_pose(&pick,&place,&depth,&cam,&s.header,pos,basis))continue;
+        ++placed;
+        const double tz=vz,fx=200.0,fy=180.0;
+        const double dn=sqrt(dw[0]*dw[0]+dw[1]*dw[1]+dw[2]*dw[2]);
+        CHECK(fabs(depth/16384.0-tz)<=3.0*dn/16384.0+0.01);
+        CHECK(fabs(place.x-(160+fx*vx/tz))<=1.5&&fabs(place.y-(112-fy*vy/tz))<=1.5);
+        const double want=fy*0.75/tz/1.5;
+        CHECK(fabs(place.scale/65536.0-want)<=want*2e-3+3.0/65536.0);
+        /* up = model +y in view, screen x/y. */
+        double ux=0,uy=0;for(int k=0;k<3;++k){ux+=R[0][k]*B[k][1];uy+=R[1][k]*B[k][1];}
+        const double l=sqrt(ux*ux+uy*uy);
+        if(l>0.05){CHECK(fabs(place.up[0]/16384.0-ux/l)<2e-3&&fabs(place.up[1]/16384.0+uy/l)<2e-3);}
+        /* Cell: same as sh2z_rspr_select on the exact model-frame direction (skip near-ties). */
+        double e[3];for(int j=0;j<3;++j){e[j]=0;for(int k=0;k<3;++k)e[j]-=B[k][j]*dw[k];}
+        sh2z_rspr_pick_t ref;
+        if(sh2z_rspr_select(&ref,&s.header,(int32_t)lrint(e[0]*64),(int32_t)lrint(e[1]*64),(int32_t)lrint(e[2]*64))) {
+            if(ref.cell==pick.cell&&ref.mirror==pick.mirror)++cells;else ++ties;
+        }
+    }
+    CHECK(placed>15000);CHECK(ties*200<placed); /* bin-edge disagreements below 0.5% */
+    printf("pose: %u placed, %u cells match, %u bin-edge differences\n",placed,cells,ties);
+    int32_t pos[3]={cam.eye[0],cam.eye[1],cam.eye[2]};int16_t b[9]={0,0,16384,0,16384,0,16384,0,0};
+    sh2z_rspr_pick_t pk;sh2z_rspr_place_t pl;int32_t dp;
+    CHECK(!sh2z_rspr_pose(&pk,&pl,&dp,&cam,&s.header,pos,b)); /* at the eye: behind near */
+    CHECK(!sh2z_rspr_pose(NULL,&pl,&dp,&cam,&s.header,pos,b));
+}
+
 int main(void) {
     test_valid();
     test_select(true);
     test_select(false);
     test_place_emit();
+    test_pose();
     if(failures){fprintf(stderr,"rotation_sprite: %u failures\n",failures);return 1;}
     puts("rotation_sprite: all checks passed");
     return 0;

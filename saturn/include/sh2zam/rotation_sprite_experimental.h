@@ -40,6 +40,7 @@
 
 #include "sh2zam.h"
 #include "sh2zam/view_experimental.h"
+#include "sh2zam/divu_experimental.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -167,6 +168,63 @@ bool sh2z_rspr_place(sh2z_rspr_place_t *out,const sh2z_view_t *v,const sh2z_rspr
  *  corner outside -1024..1023, or null pointers. */
 bool sh2z_rspr_emit(uint16_t command[16],const sh2z_rspr_set_t *set,const sh2z_rspr_pick_t *pick,
                     const sh2z_rspr_place_t *place,uint32_t vram,uint16_t pmod);
+
+/* ---- World-pose fast path (same contract tag) ----
+ *
+ * For many objects per frame: one camera set up per frame, then one call per
+ * object from a fixed-point world pose. Per object: 32 x 32 -> 64-bit
+ * multiplies, a 32-bit integer square root and five divisions on the
+ * hardware divider (sh2z_divu_div64); no 64-bit division by software and no
+ * 64-bit square root. */
+
+/** Per-frame camera.
+ *
+ *  r        world-to-view rotation rows, Q1.14 (as sh2z_view_t).
+ *  eye      camera position, Q16.16 world units.
+ *  focal_x, focal_y, center_x, center_y, near_z  as sh2z_view_t (near_z in
+ *           Q18.14 view units: one world unit is one view unit).
+ *  scale_num  set by sh2z_rspr_camera_scale. */
+typedef struct {
+    int16_t r[3][3];
+    int32_t eye[3];
+    int32_t focal_x,focal_y;
+    int16_t center_x,center_y;
+    int32_t near_z;
+    int64_t scale_num;
+} sh2z_rspr_camera_t;
+
+/** Set c->scale_num for objects whose model unit is unit_q14 view units
+ *  (Q1.14, > 0; the model scale) drawn with set:
+ *      scale_num = trunc(focal_y * unit_q14 * 65536 / pixels_per_unit)
+ *  so that scale = trunc(scale_num / t.z) matches sh2z_rspr_place for a
+ *  model unit of the same length. Once per frame and set (64-bit division).
+ *  Returns false for null pointers, an invalid set or unit_q14 <= 0. */
+bool sh2z_rspr_camera_scale(sh2z_rspr_camera_t *c,const sh2z_rspr_set_t *set,int32_t unit_q14);
+
+/** Pick and place one object from its world pose.
+ *
+ *  pos      object origin, Q16.16 world units, within 2^31 of the eye.
+ *  basis    model axes in world space, Q1.14, nine values row-major:
+ *           basis[0..2] = model +z, basis[3..5] = model +y (up),
+ *           basis[6..8] = model +x.
+ *
+ *  With d = pos - eye (int32, wrapping is the caller's error):
+ *      t[i]  = floor(sum_k r[i][k] * d[k] / 2^16)                (Q18.14)
+ *      view  = {-floor(B2.d / 2^16), -floor(B1.d / 2^16), -floor(B0.d / 2^16)}
+ *              with Bk = basis[3k..3k+2]                   (camera in model)
+ *      *pick = sh2z_rspr_select(set, view)
+ *      x     = center_x + floor(Q(focal_x * t.x, t.z) / 2^16)
+ *      y     = center_y - floor(Q(focal_y * t.y, t.z) / 2^16)
+ *      scale = Q(scale_num, t.z)
+ *      U     = {floor(r[0].B1 / 2^14), floor(r[1].B1 / 2^14)}
+ *      up    = {Q(16384 * U.x, |U|), Q(-16384 * U.y, |U|)},  |U| = isqrt(U.x^2 + U.y^2)
+ *  where Q(n, d) = sh2z_divu_div64(n, d) (truncating; saturating on
+ *  overflow) and *depth = t.z. Returns false, leaving the outputs
+ *  unchanged, for t.z <= near_z, |x| or |y| > 1023, scale outside 1..2^24,
+ *  |U| == 0, a selection failure or null pointers. */
+bool sh2z_rspr_pose(sh2z_rspr_pick_t *pick,sh2z_rspr_place_t *place,int32_t *depth,
+                    const sh2z_rspr_camera_t *c,const sh2z_rspr_set_t *set,
+                    const int32_t pos[3],const int16_t basis[9]);
 
 #ifdef __cplusplus
 }

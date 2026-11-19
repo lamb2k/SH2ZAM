@@ -129,3 +129,57 @@ bool sh2z_rspr_emit(uint16_t command[16],const sh2z_rspr_set_t *set,const sh2z_r
     command[14]=0;command[15]=0;
     return true;
 }
+
+/* floor(sqrt(v)) for v < 2^32, bit by bit in 32-bit arithmetic. */
+static uint32_t rspr_isqrt32(uint32_t v) {
+    uint32_t root=0,bit=UINT32_C(1)<<30;
+    while(bit>v)bit>>=2;
+    while(bit) {
+        if(v>=root+bit){v-=root+bit;root=(root>>1)+bit;}
+        else root>>=1;
+        bit>>=2;
+    }
+    return root;
+}
+
+static int32_t rspr_dot16(const int16_t row[3],const int32_t d[3]) {
+    const int64_t sum=(int64_t)row[0]*d[0]+(int64_t)row[1]*d[1]+(int64_t)row[2]*d[2];
+    return (int32_t)(sum>>16);
+}
+
+bool sh2z_rspr_camera_scale(sh2z_rspr_camera_t *c,const sh2z_rspr_set_t *set,int32_t unit_q14) {
+    if(!c||!sh2z_rspr_valid(set)||unit_q14<=0||c->focal_y<=0)return false;
+    c->scale_num=(int64_t)c->focal_y*unit_q14*65536/set->pixels_per_unit;
+    return true;
+}
+
+bool sh2z_rspr_pose(sh2z_rspr_pick_t *pick,sh2z_rspr_place_t *place,int32_t *depth,
+                    const sh2z_rspr_camera_t *c,const sh2z_rspr_set_t *set,
+                    const int32_t pos[3],const int16_t basis[9]) {
+    if(!pick||!place||!depth||!c||!set||!pos||!basis)return false;
+    const int32_t d[3]={(int32_t)((uint32_t)pos[0]-(uint32_t)c->eye[0]),
+                        (int32_t)((uint32_t)pos[1]-(uint32_t)c->eye[1]),
+                        (int32_t)((uint32_t)pos[2]-(uint32_t)c->eye[2])};
+    const int32_t tz=rspr_dot16(c->r[2],d);
+    if(tz<=c->near_z||tz<=0)return false;
+    sh2z_rspr_pick_t chosen;
+    if(!sh2z_rspr_select(&chosen,set,-rspr_dot16(basis+6,d),-rspr_dot16(basis+3,d),-rspr_dot16(basis,d)))return false;
+    const int32_t tx=rspr_dot16(c->r[0],d),ty=rspr_dot16(c->r[1],d);
+    const int32_t qx=sh2z_divu_div64((int64_t)c->focal_x*tx,tz,NULL);
+    const int32_t qy=sh2z_divu_div64((int64_t)c->focal_y*ty,tz,NULL);
+    const int32_t x=(int32_t)c->center_x+(qx>>16),y=(int32_t)c->center_y-(qy>>16);
+    if(x< -1023||x>1023||y< -1023||y>1023)return false;
+    const int32_t scale=sh2z_divu_div64(c->scale_num,tz,NULL);
+    if(scale<1||scale>(1<<24))return false;
+    const int64_t ux64=(int64_t)c->r[0][0]*basis[3]+(int64_t)c->r[0][1]*basis[4]+(int64_t)c->r[0][2]*basis[5];
+    const int64_t uy64=(int64_t)c->r[1][0]*basis[3]+(int64_t)c->r[1][1]*basis[4]+(int64_t)c->r[1][2]*basis[5];
+    const int32_t ux=(int32_t)(ux64>>14),uy=(int32_t)(uy64>>14);
+    const uint32_t len=rspr_isqrt32((uint32_t)(ux*ux)+(uint32_t)(uy*uy));
+    if(len==0)return false;
+    *pick=chosen;
+    place->x=(int16_t)x;place->y=(int16_t)y;place->scale=scale;
+    place->up[0]=(int16_t)sh2z_divu_div64((int64_t)16384*ux,(int32_t)len,NULL);
+    place->up[1]=(int16_t)sh2z_divu_div64(-(int64_t)16384*uy,(int32_t)len,NULL);
+    *depth=tz;
+    return true;
+}
