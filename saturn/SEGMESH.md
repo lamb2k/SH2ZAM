@@ -57,3 +57,30 @@ emission.
   inside the depth range.
 - **Division:** libgcc's 32-bit divide runs once per run for the average. The
   64-bit divide runs only when a run's depth sum leaves int32.
+
+# Cluster bounds culling (segmesh-2, experimental)
+
+`sh2z_segmesh_cull` classifies up to 32 cluster bounds against one centre view
+(`sh2z_view_center_t`) and returns a bit per bound: clear only when every face
+of that cluster is culled. A baker groups a segment's faces into clusters and
+stores, per cluster, a sphere holding every vertex and a cone (Q1.14 axis,
+conservative cos and sin) holding every face normal.
+
+- **Frustum:** the sphere lies wholly beyond the near or far plane, or wholly
+  outside one of the guard clip's four side half spaces moved outward by a
+  margin (0..64 px). Every vertex in front of the near plane then projects
+  outside that side, and the six-plane clip of every face is empty.
+- **Facing:** `dot(c, a) cos t + |c| sin t + R <= 0` in view space (normal
+  negated for a reflecting rotation), the bound of `dot(q, n)` over the
+  sphere and the cone. Every face then projects with a non-negative signed
+  area `sum(sx_i * sy_{i+1} - sy_i * sx_{i+1})` (sy downward), up to the
+  projection's rounding of corners.
+- **Arithmetic:** 32-bit products into 64-bit sums, every rounding against
+  culling; the cone test runs in 1/16-unit steps. No float, no divide.
+- **Tests:** `test_segmesh_cull.c` checks every culled bound against the view
+  batch's outcodes, the guard clip and the exact projected area, over random
+  views (including reflecting ones).
+
+Measured use (emulator, modelled timing): on a road with about eight faces per
+segment the clusters hold about two faces each, and the per-cluster test cost
+more than the per-face work it skipped. It pays only where clusters are large.
