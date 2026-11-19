@@ -6,7 +6,7 @@ loop forever, fade and pause) over caller-named register bases. No existing cont
 **No console run was done.** Evidence by tier:
 
 - **HOST:** `test_snd` passes under GCC and Clang with `-Wall -Wextra -Wpedantic -Wconversion
-  -Werror`, and under ASan/UBSan (3,911,593 checks):
+  -Werror`, and under ASan/UBSan (3,911,876 checks):
   - **Queue:** a worked example covering the closed start, another epoch, a post after the close,
     exactly-once delivery and a full queue. 3,000 random scripts of 400 operations match a
     reference queue.
