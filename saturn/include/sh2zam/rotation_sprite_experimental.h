@@ -5,7 +5,10 @@
  * object's projected origin and emits one VDP1 distorted sprite that scales
  * the cell with depth and rotates it with the object's on-screen roll.
  *
- * Contract tag: rotation-sprites-1. Every function below is a pure function of
+ * Contract tag: rotation-sprites-2 (2 adds the sub-pixel anchor: placement keeps
+ * the fraction it used to drop and emission rounds each corner once, so an
+ * object held still on screen no longer steps a pixel with rounding noise).
+ * Every function below is a pure function of
  * its inputs as stated. Selection is exact for the stated rule; placement and
  * emission round as stated (no floating point). Nothing here knows what the
  * object is: the set format, the angle bins and the pixel data belong to the
@@ -96,7 +99,11 @@ typedef struct {
 
 /** Where and how large to draw a cell.
  *
- *  x, y     screen pixel of the object origin (VDP1 coordinates).
+ *  x, y     screen position of the object origin (VDP1 coordinates): the
+ *           whole pixel at or left of / above it (floor).
+ *  frac     the rest of that position, {x, y}, in 1/65536 pixel (0..65535):
+ *           the origin is at x + frac[0] / 65536, y + frac[1] / 65536.
+ *           A place built by hand may leave it 0.
  *  scale    screen pixels per cell pixel, Q16.16, > 0.
  *  up       the object's up axis as a unit screen direction {x, y}, Q1.14,
  *           y pointing down the screen ({0, -16384} is upright).
@@ -105,6 +112,7 @@ typedef struct {
     int16_t x,y;
     int32_t scale;
     int16_t up[2];
+    uint16_t frac[2];
 } sh2z_rspr_place_t;
 
 /** Check a set before use: magic, counts, flags, offsets, sizes, alignment and
@@ -134,9 +142,10 @@ bool sh2z_rspr_select(sh2z_rspr_pick_t *out,const sh2z_rspr_set_t *set,
 
 /** Place a set drawn for model view v (v->r includes the object's model
  *  scale; v->t is the object origin in view space; see sh2z_view_t):
- *      x     = v->center_x + floor(trunc(focal_x * t.x / t.z) / 65536)
- *      y     = v->center_y - floor(trunc(focal_y * t.y / t.z) / 65536)
- *  as sh2z_view_batch projects the origin. With U = the model up column
+ *      X     = v->center_x * 65536 + trunc(focal_x * t.x / t.z)
+ *      Y     = v->center_y * 65536 - trunc(focal_y * t.y / t.z)
+ *      x, y  = floor(X / 65536), floor(Y / 65536); frac = X, Y mod 65536
+ *  (X, Y: the origin in 1/65536 pixel; x is sh2z_view_batch's whole pixel). With U = the model up column
  *  {r[0][1], r[1][1]} and |U| = isqrt(U.x^2 + U.y^2) (floor):
  *      up    = {16384 * U.x / |U|, -16384 * U.y / |U|}       (truncated)
  *      scale = trunc(trunc(focal_y * L / t.z) * 65536 / pixels_per_unit)
@@ -158,7 +167,8 @@ bool sh2z_rspr_place(sh2z_rspr_place_t *out,const sh2z_view_t *v,const sh2z_rspr
  *  Corners. With c = the cell, R = {-up.y, up.x} and a cell pixel (px, py)
  *  measured from the origin (px = column - origin_x, py = row - origin_y;
  *  px is negated when mirrored), the screen point is
- *      {x, y} + floor((scale * (px * R - py * up)) / 2^30 + 1/2)
+ *      {x, y} + floor((frac * 2^14 + scale * (px * R - py * up)) / 2^30 + 1/2)
+ *  (one rounding from the sub-pixel origin)
  *  for the four cell corners A = (0, 0), B = (width, 0), C = (width, height)
  *  and D = (0, height) in column/row pixels. CTRL = 0x0002 (distorted
  *  sprite, next command follows), LINK = 0, GRDA = 0, COLR = (vram +
@@ -220,8 +230,9 @@ bool sh2z_rspr_camera_scale(sh2z_rspr_camera_t *c,const sh2z_rspr_set_t *set,int
  *      view  = {-floor(B2.d / 2^16), -floor(B1.d / 2^16), -floor(B0.d / 2^16)}
  *              with Bk = basis[3k..3k+2]                   (camera in model)
  *      *pick = sh2z_rspr_select(set, view)
- *      x     = center_x + floor(Q(focal_x * t.x, t.z) / 2^16)
- *      y     = center_y - floor(Q(focal_y * t.y, t.z) / 2^16)
+ *      X     = center_x * 2^16 + Q(focal_x * t.x, t.z)
+ *      Y     = center_y * 2^16 - Q(focal_y * t.y, t.z)
+ *      x, y  = floor(X / 2^16), floor(Y / 2^16); frac = X, Y mod 2^16
  *      scale = Q(scale_num, t.z)
  *      U     = {floor(r[0].B1 / 2^14), floor(r[1].B1 / 2^14)}
  *      up    = {Q(16384 * U.x, |U|), Q(-16384 * U.y, |U|)},  |U| = isqrt(U.x^2 + U.y^2)
