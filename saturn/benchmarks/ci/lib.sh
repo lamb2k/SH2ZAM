@@ -43,6 +43,35 @@ sh2z_require_no_mem_calls() {
   fi
 }
 
+# Compile library sources as a consumer does (-ffunction-sections
+# -fdata-sections) and fail if anything is left in a shared section: every
+# defined global symbol must sit in a section of its own (.text.<symbol>,
+# .rodata.<symbol>, ...), and the plain .text, .data, .rodata and .bss
+# sections must be empty. With those flags the compiler splits C by itself,
+# so this catches hand-written assembly entries and tables left in .text or
+# .rodata, which --gc-sections cannot drop (saturn/CONTRIBUTING-KERNELS.md).
+#   sh2z_require_per_symbol_sections saturn/src/sh2zam_<name>.c ...
+sh2z_require_per_symbol_sections() {
+  local src obj bad=0
+  mkdir -p build/sh2/sections
+  for src in "$@"; do
+    obj="build/sh2/sections/$(basename "${src%.c}").o"
+    "$SH2Z_CC" -m2 -mb -O2 -ffreestanding -std=c11 -Wall -Wextra -Werror -DSH2Z_REQUIRE_SH2=1 \
+      -ffunction-sections -fdata-sections -Isaturn/include -c "$src" -o "$obj"
+    if "$SH2Z_OBJDUMP" -t "$obj" | grep -E '^[0-9a-f]+ g.{6} \.(text|data|rodata|bss)[[:space:]]'; then
+      echo "$src: the global symbols above are in a shared section" >&2
+      bad=1
+    fi
+    if "$SH2Z_OBJDUMP" -h "$obj" | awk '$2 ~ /^\.(text|data|rodata|bss)$/ && $3 !~ /^0+$/ {print; found=1} END {exit !found}'; then
+      echo "$src: the plain sections above are not empty" >&2
+      bad=1
+    fi
+  done
+  if [ "$bad" != 0 ]; then
+    exit 1
+  fi
+}
+
 # Export the provenance a bridge suite's run.sh records (MODEL_EVIDENCE_URL,
 # MODEL_TOOLCHAIN, MODEL_SOURCE_COMMIT). An empty value means "use the default".
 sh2z_model_env() {

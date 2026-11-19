@@ -5,9 +5,10 @@
  * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
  */
 #include "sh2zam_internal.h"
+#include "sh2zam_sections.h"
 
 /* Quarter turn = 16384 units. Linear interpolation between 64-unit steps. */
-static const int32_t sin_quarter[257] = {
+static const int32_t sin_quarter[257] SH2ZI_RODATA(sh2zi_sin_quarter) = {
     0, 402, 804, 1206, 1608, 2010, 2412, 2814,
     3216, 3617, 4019, 4420, 4821, 5222, 5623, 6023,
     6424, 6824, 7224, 7623, 8022, 8421, 8820, 9218,
@@ -99,7 +100,7 @@ void sh2z_sincos(sh2z_angle_t angle,sh2z_fx_t *s,sh2z_fx_t *c) {
  * This 514-byte table only nominates an angle. The two neighboring decision
  * boundaries below restore the original answer, including lower-angle ties.
  * Exhaustive ratio-bin tests prove the estimate is within one angle unit. */
-static const uint16_t atan_octant[257] = {
+static const uint16_t atan_octant[257] SH2ZI_RODATA(sh2zi_atan_octant) = {
     0, 41, 81, 122, 163, 204, 244, 285, 326, 367, 407, 448,
     489, 529, 570, 610, 651, 692, 732, 773, 813, 854, 894, 935,
     975, 1015, 1056, 1096, 1136, 1176, 1217, 1257, 1297, 1337, 1377, 1417,

@@ -10,6 +10,7 @@
  * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
  */
 #include "sh2zam/unit30_experimental.h"
+#include "sh2zam_sections.h"
 
 volatile uint32_t sh2z_u30_overflows;
 
@@ -21,7 +22,7 @@ volatile uint32_t sh2z_u30_overflows;
  * the smallest worst relative error, at most 2^-9 + 2^-16). Every entry lies
  * in (2^15, 2^16). tests/test_unit30.c rebuilds the table from this rule. */
 extern const uint16_t sh2zi_u30_seed[256];
-const uint16_t sh2zi_u30_seed[256]={
+const uint16_t sh2zi_u30_seed[256] SH2ZI_RODATA(sh2zi_u30_seed)={
     65408,65155,64905,64658,64414,64172,63933,63697,63463,63232,63003,62777,
     62553,62331,62112,61896,61681,61469,61259,61051,60845,60641,60439,60239,
     60041,59845,59651,59459,59269,59081,58894,58709,58526,58344,58165,57986,
@@ -47,7 +48,7 @@ const uint16_t sh2zi_u30_seed[256]={
 
 /* Powers of two for variable right shifts: SH-2 has no barrel shifter, but
  * x >> n == high word of x * 2^(32-n) (one DMULU.L) for n in 1 .. 31. */
-static const uint32_t sh2zi_u30_pow2[32]={
+static const uint32_t sh2zi_u30_pow2[32] SH2ZI_RODATA(sh2zi_u30_pow2)={
     UINT32_C(1),UINT32_C(1)<<1,UINT32_C(1)<<2,UINT32_C(1)<<3,UINT32_C(1)<<4,UINT32_C(1)<<5,
     UINT32_C(1)<<6,UINT32_C(1)<<7,UINT32_C(1)<<8,UINT32_C(1)<<9,UINT32_C(1)<<10,UINT32_C(1)<<11,
     UINT32_C(1)<<12,UINT32_C(1)<<13,UINT32_C(1)<<14,UINT32_C(1)<<15,UINT32_C(1)<<16,UINT32_C(1)<<17,
@@ -215,7 +216,7 @@ bool sh2zi_u30_normalize_c(int32_t out[3],const int32_t v[3]) {
  * tests: the model harness compares every result with the portable C
  * (sh2zi_u30_normalize_c) on SH-2 and on the host. */
 __asm__(
-"    .text\n"
+"    .pushsection .text.sh2z_vec3_normalize_u30,\"ax\",@progbits\n"
 "    .align 2\n"
 "    .global _sh2z_vec3_normalize_u30\n"
 "    .type _sh2z_vec3_normalize_u30,@function\n"
@@ -396,6 +397,7 @@ __asm__(
 ".Lsh2zi_u30n_k15:  .word 0x7fff\n"
 "    .align 2\n"
 "    .size _sh2z_vec3_normalize_u30,.-_sh2z_vec3_normalize_u30\n"
+"    .popsection\n"
 );
 #else
 bool sh2z_vec3_normalize_u30(int32_t out[3],const int32_t v[3]) {

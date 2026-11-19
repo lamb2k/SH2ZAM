@@ -27,6 +27,7 @@
  * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
  */
 #include "sh2zam/view_experimental.h"
+#include "sh2zam_sections.h"
 
 #if defined(__sh__) && defined(__SH2__) && (!defined(SH2Z_FORCE_PORTABLE) || !SH2Z_FORCE_PORTABLE)
 #define SH2ZI_POSE_NATIVE 1
@@ -56,7 +57,7 @@ _Static_assert(__FLT_MANT_DIG__==24 && __FLT_MAX_EXP__==128,"binary32 float requ
 /* pose_g[i] = 2^(i - 113) for i >= 113, else 0. mulhi(x, pose_g[i]) is
  * floor(x / 2^(145 - i)): a right shift by 1..32, or zero past 32. */
 #define POSE_G_ONE 113u
-static const uint32_t pose_g[145]={
+static const uint32_t pose_g[145] SH2ZI_RODATA(sh2zi_pose_g)={
     [113]=UINT32_C(1),[114]=UINT32_C(2),[115]=UINT32_C(4),[116]=UINT32_C(8),
     [117]=UINT32_C(16),[118]=UINT32_C(32),[119]=UINT32_C(64),[120]=UINT32_C(128),
     [121]=UINT32_C(256),[122]=UINT32_C(512),[123]=UINT32_C(1024),[124]=UINT32_C(2048),
@@ -371,7 +372,7 @@ uint32_t sh2zi_pose_test_element(uint32_t b,uint32_t s,int32_t out[2]); /* {B, M
 #define PD_DIV "rotcl r3\n\tdiv1 r2,r1\n\t"
 #define PD_DIV7 PD_DIV PD_DIV PD_DIV PD_DIV PD_DIV PD_DIV PD_DIV
 __asm__(
-"    .pushsection .text\n"
+"    .pushsection .text.sh2z_pose_from_f32,\"ax\",@progbits\n"
 "    .align 2\n"
 "    .global _sh2z_pose_from_f32\n"
 "    .type _sh2z_pose_from_f32,@function\n"
