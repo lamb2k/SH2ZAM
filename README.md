@@ -294,6 +294,22 @@ writes, with no floating point, divider, libc or allocation. Host-exact tested a
 independent oracle and costed in the SH-2 instruction model (modelled, no console run). See
 [the memo guide](saturn/MEMO.md).
 
+## VDP1 double banks
+
+[`sh2zam/vdp1_banks_experimental.h`](saturn/include/sh2zam/vdp1_banks_experimental.h)
+(contract tag `vdp1-banks-1`) is bookkeeping for building frame N+1 while VDP1 still draws
+frame N:
+- bank state with serial, overlap and conflict counters;
+- guard words;
+- carving a guarded region;
+- an in-order queue for tables uploaded at the end of a draw;
+- per-bank staleness for tables uploaded only when they change;
+- a jump-skip command record that keeps a block at a fixed slot.
+
+It makes decisions and records them; the caller reads VDP1 state and does every wait, transfer
+and upload. Portable C, no libc. Host-tested against a frame model with negative controls (a
+held bank must conflict, a changed guard bit must fail).
+
 ## Git submodule
 
 ```sh
