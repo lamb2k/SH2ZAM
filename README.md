@@ -308,7 +308,8 @@ frame N:
 
 It makes decisions and records them; the caller reads VDP1 state and does every wait, transfer
 and upload. Portable C, no libc. Host-tested against a frame model with negative controls (a
-held bank must conflict, a changed guard bit must fail).
+held bank must conflict, a changed guard bit must fail). See
+[the VDP1 banks guide](saturn/VDP1_BANKS.md).
 
 ## Segmented strip meshes
 
