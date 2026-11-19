@@ -31,7 +31,10 @@ program or links `libsh2zam.a`. No API, contract or result changed.
 - **MODELLED:** every capture's CPU-only cycles, instruction counts and checked outputs are
   unchanged (CI run
   [44256084857](https://github.com/lamb2k/SH2ZAM/actions/runs/44256084857) against main's
-  [44250671574](https://github.com/lamb2k/SH2ZAM/actions/runs/44250671574)). The model ELFs'
+  [44250671574](https://github.com/lamb2k/SH2ZAM/actions/runs/44250671574)). Merge train 3 re-ran them on main `317d610` plus
+  the train ([run 44513686872](https://github.com/lamb2k/SH2ZAM/actions/runs/44513686872), on `eac28d8`): against main's own
+  [run 44387384150](https://github.com/lamb2k/SH2ZAM/actions/runs/44387384150) every suite is identical apart from provenance
+  except the placed figures of memo, vlc-2 and placement, which equal this record's capture value for value. The model ELFs'
   layouts changed: the cache model's set conflicts follow the image's addresses, so placed
   figures moved in the memo, vlc-2 (vlc-1 rows) and placement captures, which are re-recorded
   from that run. The moves are cache aliasing, not instruction timing: `best` and `typical`

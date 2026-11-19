@@ -194,6 +194,8 @@ Its region costs are cited hardware notes, not this project's measurements:
 
 The tables come from the committed capture
 [`benchmarks/memo-model/results.json`](benchmarks/memo-model/results.json):
+[CI run 44513686872](https://github.com/lamb2k/SH2ZAM/actions/runs/44513686872) (merge train 3, push run on `eac28d8`).
+Its figures equal, value for value, those of
 [SH-2 cross compile run 44256084857](https://github.com/lamb2k/SH2ZAM/actions/runs/44256084857),
 source commit `b9ae01d` (sections-1). Its CPU-only figures equal those of the earlier captures,
 [run 44247175665](https://github.com/lamb2k/SH2ZAM/actions/runs/44247175665) on `769d1a4` and

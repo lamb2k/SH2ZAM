@@ -272,8 +272,9 @@ figures stay high for any decoder whose hot tables (8.2 KB here) exceed the 4 KB
 
 The numbers above are from the committed capture
 [`benchmarks/vlc2-model/results.json`](benchmarks/vlc2-model/results.json), from
-[CI run 44256084857](https://github.com/lamb2k/SH2ZAM/actions/runs/44256084857), source `b9ae01d`,
-pinned Yaul GCC 13.2, ELF SHA-256 `60e9cb04...`. Its vlc-2 figures equal those of the captures of
+[CI run 44513686872](https://github.com/lamb2k/SH2ZAM/actions/runs/44513686872) (merge train 3, push run on `eac28d8`), pinned Yaul GCC 13.2.
+Its figures equal, value for value, those of
+[CI run 44256084857](https://github.com/lamb2k/SH2ZAM/actions/runs/44256084857), source `b9ae01d`, ELF SHA-256 `60e9cb04...`. Its vlc-2 figures equal those of the captures of
 [CI run 44247175665](https://github.com/lamb2k/SH2ZAM/actions/runs/44247175665) on `769d1a4` and
 [CI run 44243332134](https://github.com/lamb2k/SH2ZAM/actions/runs/44243332134) on `254b725`; the
 placed figures of the vlc-1 comparison rows moved by up to 1.2% when sections-1 changed the
