@@ -9,6 +9,7 @@
 #include "sh2zam/unit30_experimental.h"
 #include "sh2zam/trig12_experimental.h"
 #include "sh2zam/spatial.h"
+#include "sh2zam/snd_experimental.h"
 #include "sh2zam/shade_experimental.h"
 #include "sh2zam/rotation_batch.h"
 #include "sh2zam/reuse_experimental.h"
