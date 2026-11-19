@@ -102,7 +102,7 @@ uint32_t sh2zi_vlc8_run(const sh2z_vlc8_t *t,sh2z_vlc_reader_t *r,uint8_t *dst,s
  * Callee-saved r8-r13, MACH and MACL are saved and restored (DMULU.L and
  * MULU.W write them); r14, GBR and PR are not touched. */
 __asm__(
-"    .text\n"
+"    .pushsection .text.sh2zi_vlc8_run,\"ax\",@progbits\n"
 "    .align 2\n"
 "    .global _sh2zi_vlc8_run\n"
 "    .type _sh2zi_vlc8_run,@function\n"
@@ -248,7 +248,8 @@ __asm__(
 ".Lsh2zi_vlc_fp:  .long .Lsh2zi_vlc_f\n"
 ".Lsh2zi_vlc_hp:  .long .Lsh2zi_vlc_h\n"
 "    .size _sh2zi_vlc8_run,.-_sh2zi_vlc8_run\n"
-"    .pushsection .rodata\n"
+"    .popsection\n"
+"    .pushsection .rodata.sh2zi_vlc8_run,\"a\",@progbits\n"
 "    .align 2\n"
 ".Lsh2zi_vlc_mk:\n"                /* 2^k - 1, k = 0..8 */
 "    .long 0,1,3,7,15,31,63,127,255\n"

@@ -208,32 +208,32 @@
      "speedupOverVlc1": 1.0,
      "placedPerTile": {
       "best": {
-       "warm": 12866.0,
-       "cold": 13714.8
+       "warm": 12897.8,
+       "cold": 13742.1
       },
       "typical": {
-       "warm": 13178.4,
-       "cold": 14368.0
+       "warm": 13239.3,
+       "cold": 14396.5
       },
       "worst": {
-       "warm": 24280.5,
-       "cold": 32910.1
+       "warm": 24559.6,
+       "cold": 33213.4
       },
       "codeLow": {
-       "warm": 13321.6,
-       "cold": 16021.2
+       "warm": 13306.6,
+       "cold": 16166.8
       },
       "cartTables": {
-       "warm": 18987.9,
-       "cold": 22791.6
+       "warm": 19209.9,
+       "cold": 22875.2
       },
       "outVdp1": {
-       "warm": 19766.1,
-       "cold": 20763.3
+       "warm": 19797.7,
+       "cold": 20791.7
       },
       "outVdp2": {
-       "warm": 18877.6,
-       "cold": 19874.6
+       "warm": 18909.2,
+       "cold": 19903.1
       }
      }
     },
@@ -487,32 +487,32 @@
      "speedupOverVlc1": 1.0,
      "placedPerTile": {
       "best": {
-       "warm": 19370.9,
-       "cold": 20239.2
+       "warm": 19406.0,
+       "cold": 20275.3
       },
       "typical": {
-       "warm": 19826.9,
-       "cold": 20991.2
+       "warm": 19905.7,
+       "cold": 21027.7
       },
       "worst": {
-       "warm": 36560.4,
-       "cold": 45507.0
+       "warm": 36861.8,
+       "cold": 45895.1
       },
       "codeLow": {
-       "warm": 20087.5,
-       "cold": 22630.6
+       "warm": 20056.8,
+       "cold": 22771.6
       },
       "cartTables": {
-       "warm": 28564.1,
-       "cold": 32682.9
+       "warm": 28822.2,
+       "cold": 32829.0
       },
       "outVdp1": {
-       "warm": 30213.6,
-       "cold": 31239.0
+       "warm": 30245.6,
+       "cold": 31273.1
       },
       "outVdp2": {
-       "warm": 28858.5,
-       "cold": 29884.0
+       "warm": 28890.6,
+       "cold": 29918.1
       }
      }
     },
@@ -779,10 +779,10 @@
   }
  },
  "label": "MODELLED: executed SH-2 instructions in the Yabause interpreter; flat RAM, no caches or wait states; not Saturn hardware",
- "sourceCommit": "769d1a4e63bfb71820d6247f1c2602d1a170f9ba",
- "elfSha256": "d04deb11673f7e7072a231ef3aa6f8f4009cc4c5486b42e50d67449465fb76e1",
+ "sourceCommit": "b9ae01dbe4866b58b1faf2a50577ca3427a73839",
+ "elfSha256": "60e9cb04613370b964930b91bc466204bbd12aeaef57492a5319e6bb5d0870b3",
  "toolchain": "Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)",
- "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44247175665",
+ "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44256084857",
  "yabauseCommit": "7e38821dbac265490f115e163c523a939acda759",
  "targetCyclesPerTile": {
   "cpuOnly": 3396,

@@ -65,7 +65,12 @@ extern "C" {
 
 #define SH2Z_ANGLE12_TURN 4096u
 #define SH2Z_ANGLE12_QUARTER 1024u
-#define SH2Z_U30_ONE ((int32_t)1073741824)
+/* Q2.30 one. Defined identically, behind the same guard, in
+ * unit30_experimental.h and trig12_experimental.h, so that the two headers
+ * can be included together in either order. */
+#ifndef SH2Z_U30_ONE
+#define SH2Z_U30_ONE INT32_C(0x40000000)
+#endif
 
 /** Quarter-wave sine table, Q2.30, entries 0..1024 (see above). */
 extern const int32_t sh2z_sin12_quarter_u30[1025];

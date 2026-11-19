@@ -110,7 +110,7 @@ __asm__(
 "    mov.l   r12,@(4,r4)\n"
 "    mov.l   r13,@(8,r4)\n"
 "    .endm\n"
-"    .text\n"
+"    .pushsection .text.sh2zi_view_divu_indexed,\"ax\",@progbits\n"
 "    .align 2\n"
 "    .global _sh2zi_view_divu_indexed\n"
 "    .type _sh2zi_view_divu_indexed,@function\n"
@@ -120,6 +120,7 @@ __asm__(
 "    SH2ZI_VI_TRANSFORM\n"
 "    SH2ZI_VD_REST VI\n"
 "    .size _sh2zi_view_divu_indexed,.-_sh2zi_view_divu_indexed\n"
+"    .popsection\n"
 );
 void sh2zi_view_divu_indexed(sh2z_view_vertex_t *out,const divu_block_t *block,
     const uint8_t *index,size_t index_count);
