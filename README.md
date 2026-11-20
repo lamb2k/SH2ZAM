@@ -321,6 +321,17 @@ and returns the runs furthest first, ready for painter-order drawing. Integer ar
 no float, libc or allocation. Host-exact tested against an independent oracle with mutation
 controls (no console run). See [the segmesh guide](saturn/SEGMESH.md).
 
+## Sprite slot cache
+
+[`sh2zam/sprite_cache_experimental.h`](saturn/include/sh2zam/sprite_cache_experimental.h)
+(contract tag `sprite-cache-1`) streams pre-rendered sprite cells into a fixed pool of VDP1
+VRAM slots. Least-recently-used replacement never replaces a slot VDP1 may still read (one or
+two command banks), requests run a frame ahead, and mirrored cells draw from one slot with the
+VDP1 flip bit. cell4z, a 4-bit cell codec on vlc-2 symbols, decodes straight into a slot at
+0.37 to 0.44 of raw size and about 29 modelled cycles per pixel. Portable C, no libc or
+allocation. Host-tested against a reference model with one negative control per rule (no
+console run). See [the sprite cache guide](saturn/SPRITE_CACHE.md).
+
 ## Link only what you call
 
 From contract tag `sections-1`, every hand-written SH-2 entry and every read-only table has its
