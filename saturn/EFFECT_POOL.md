@@ -29,6 +29,12 @@ world-pose path (rows Q1.14, eye Q16, focal Q16, centre, near depth) plus a guar
 `sh2z_ep_project` gives a Q16 screen position and Q14 depth with the on-chip divider, and
 `sh2z_ep_pixels` the screen size of a world length there.
 
+For billboards a whole-pixel position is enough. `sh2z_ep_spot` takes one division instead of
+three: it divides `focal_x` by the depth once and reaches the vertical scale through
+`sh2z_ep_ratio` (`focal_y / focal_x`, once per view). The position is within one pixel of
+`sh2z_ep_project`'s and `sh2z_ep_spot_pixels` within one pixel of `sh2z_ep_pixels`.
+`sh2z_ep_depth` gives the depth alone, with no division, for distance tests before projecting.
+
 | Call | VDP1 command |
 | --- | --- |
 | `sh2z_ep_emit_diamond` | A distorted sprite whose texture corners sit at the centre plus (r,0), (0,r), (-r,0), (0,-r): a texture turned 45 degrees, as many N64 effect quads are drawn. |
@@ -54,16 +60,17 @@ sh2z_ep_step(&pool);
 /* each frame */
 for(uint32_t k = 0; k < pool.count; k++) {
     const sh2z_ep_particle_t *e = sh2z_ep_at(&pool, k);
-    sh2z_ep_point_t pt;
-    if(!sh2z_ep_project(&view, e->pos, &pt)) continue;
-    const int32_t r = sh2z_ep_pixels(&view, e->scale, pt.depth) >> 16;
-    sh2z_ep_emit_diamond(cmd, pt.x >> 16, pt.y >> 16, r, frame_vram, 32u, 32u, clut_vram, pmod);
+    sh2z_ep_spot_t s;                       /* ratio = sh2z_ep_ratio(&view), once a frame */
+    if(!sh2z_ep_spot(&view, ratio, e->pos, &s)) continue;
+    const int32_t r = sh2z_ep_spot_pixels(&s, e->scale);
+    sh2z_ep_emit_diamond(cmd, s.x, s.y, r, frame_vram, 32u, 32u, clut_vram, pmod);
 }
 ```
 
 ## Determinism and cost
 
 Integer only, allocation-free, no libc. The step is two Q16 products per axis and one for the
-scale; projection is three 32x16 dot products and two divisions on the on-chip divider. The SH-2
+scale; projection is three 32x16 dot products and two divisions on the on-chip divider (a spot: one,
+pixel size included). The SH-2
 object is about 3 KB (`-O2`) and needs `sh2z_divu_div64` and the trig12 table. See the
 [validation record](validation/effect-pool-1.md).

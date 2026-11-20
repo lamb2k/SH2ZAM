@@ -130,6 +130,47 @@ int32_t sh2z_ep_pixels(const sh2z_ep_view_t *v, int32_t length, int32_t depth) {
     return sh2z_divu_div64((int64_t)v->focal_y * (length >> 2), depth, NULL);
 }
 
+int32_t sh2z_ep_ratio(const sh2z_ep_view_t *v) {
+    if(!v || v->focal_x <= 0) return 0;
+    return sh2z_divu_div64((int64_t)v->focal_y * 65536, v->focal_x, NULL);
+}
+
+int32_t sh2z_ep_depth(const sh2z_ep_view_t *v, const int32_t pos[3]) {
+    int32_t d[3];
+    if(!v || !pos) return 0;
+    d[0] = (int32_t)((uint32_t)pos[0] - (uint32_t)v->eye[0]);
+    d[1] = (int32_t)((uint32_t)pos[1] - (uint32_t)v->eye[1]);
+    d[2] = (int32_t)((uint32_t)pos[2] - (uint32_t)v->eye[2]);
+    return ep_dot16(v->r[2], d);
+}
+
+bool sh2z_ep_spot(const sh2z_ep_view_t *v, int32_t ratio, const int32_t pos[3], sh2z_ep_spot_t *out) {
+    int32_t d[3], tz, s, sy;
+    int64_t x, y;
+    if(!v || !pos || !out) return false;
+    d[0] = (int32_t)((uint32_t)pos[0] - (uint32_t)v->eye[0]);
+    d[1] = (int32_t)((uint32_t)pos[1] - (uint32_t)v->eye[1]);
+    d[2] = (int32_t)((uint32_t)pos[2] - (uint32_t)v->eye[2]);
+    tz = ep_dot16(v->r[2], d);
+    if(tz <= v->near_z || tz <= 0) return false;
+    s = sh2z_divu_div64((int64_t)v->focal_x * 65536, tz, NULL);
+    sy = (int32_t)(((int64_t)s * ratio) >> 16);
+    x = (int64_t)v->center_x + (((int64_t)ep_dot16(v->r[0], d) * s) >> 32);
+    y = (int64_t)v->center_y + ((-(int64_t)ep_dot16(v->r[1], d) * sy) >> 32);
+    if(x < -(int64_t)v->guard || x >= (int64_t)v->width + v->guard) return false;
+    if(y < -(int64_t)v->guard || y >= (int64_t)v->height + v->guard) return false;
+    out->x = (int32_t)x;
+    out->y = (int32_t)y;
+    out->depth = tz;
+    out->scale = sy;
+    return true;
+}
+
+int32_t sh2z_ep_spot_pixels(const sh2z_ep_spot_t *s, int32_t length) {
+    if(!s || length <= 0 || s->scale <= 0) return 0;
+    return (int32_t)(((int64_t)(length >> 2) * s->scale) >> 32);
+}
+
 static bool ep_in(int32_t c) { return c >= -1024 && c <= 1023; }
 
 static void ep_words(uint16_t cmd[16], uint16_t ctrl, uint16_t pmod, uint16_t colr, uint16_t srca, uint16_t size,

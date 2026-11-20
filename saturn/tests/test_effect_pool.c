@@ -253,6 +253,73 @@ static void test_project(void) {
     printf("effect_pool: projection %u points shown, exact; mirror control %u\n", shown, mism_sign);
 }
 
+/* The spot (one divide) against the exact projection: within one pixel, the
+ * same decisions away from the guard edges, sizes within one pixel. Control:
+ * the spot without its vertical ratio (focal_x for both axes) is off by more
+ * than a pixel on most points away from the centre line. */
+static void test_spot(void) {
+    sh2z_ep_view_t v;
+    int32_t ratio = 0;
+    unsigned i, shown = 0, edge = 0, ctl = 0, worst = 0;
+    for(i = 0; i < 200000u; i++) {
+        int32_t pos[3];
+        sh2z_ep_point_t pt;
+        sh2z_ep_spot_t sp;
+        int ok, sok;
+        if(i % 1000u == 0u) {
+            const double yaw = (rnd() % 6283u) / 1000.0;
+            const double pitch = ((rnd() % 600u) - 300.0) / 1000.0;
+            make_view(&v, yaw, pitch);
+            ratio = sh2z_ep_ratio(&v);
+            CHECK(ratio == (int32_t)floor(v.focal_y * 65536.0 / v.focal_x));
+        }
+        pos[0] = v.eye[0] + rnd_range(-Q16(3000.0), Q16(3000.0));
+        pos[1] = v.eye[1] + rnd_range(-Q16(800.0), Q16(800.0));
+        pos[2] = v.eye[2] + rnd_range(-Q16(3000.0), Q16(3000.0));
+        ok = sh2z_ep_project(&v, pos, &pt);
+        sok = sh2z_ep_spot(&v, ratio, pos, &sp);
+        {
+            double x, y, z;
+            if(oproject(&v, pos, 1, &x, &y, &z)) CHECK(sh2z_ep_depth(&v, pos) == (int32_t)z);
+        }
+        if(ok != sok) {
+            /* only at the guard edge: the exact centre within a pixel of it */
+            const int32_t px = pt.x >> 16, py = pt.y >> 16;
+            if(ok) {
+                CHECK(px <= -v.guard || px >= v.width + v.guard - 1 || py <= -v.guard || py >= v.height + v.guard - 1);
+            } else {
+                CHECK(sp.x <= -v.guard || sp.x >= v.width + v.guard - 1 || sp.y <= -v.guard || sp.y >= v.height + v.guard - 1);
+            }
+            ++edge;
+            continue;
+        }
+        if(!ok) continue;
+        ++shown;
+        {
+            const int32_t dx = sp.x - (pt.x >> 16), dy = sp.y - (pt.y >> 16);
+            const unsigned e = (unsigned)((dx < 0 ? -dx : dx) > (dy < 0 ? -dy : dy) ? (dx < 0 ? -dx : dx) : (dy < 0 ? -dy : dy));
+            CHECK(e <= 1u);
+            if(e > worst) worst = e;
+            CHECK(sp.depth == pt.depth);
+        }
+        {
+            const int32_t len = rnd_range(1, Q16(200.0));
+            const int32_t a = sh2z_ep_spot_pixels(&sp, len), b = sh2z_ep_pixels(&v, len, pt.depth) >> 16;
+            CHECK(a - b <= 1 && b - a <= 1);
+        }
+        {
+            /* Control: no vertical ratio. */
+            sh2z_ep_spot_t c;
+            if(sh2z_ep_spot(&v, 65536, pos, &c) && (c.y - (pt.y >> 16) > 1 || (pt.y >> 16) - c.y > 1)) ++ctl;
+        }
+    }
+    CHECK(shown > 20000u);
+    CHECK(edge < shown / 100u);
+    CHECK(ctl > shown / 2u);
+    CHECK(sh2z_ep_spot_pixels(NULL, 100) == 0);
+    printf("effect_pool: spot %u points within %u pixel, %u guard-edge decisions; no-ratio control %u\n", shown, worst, edge, ctl);
+}
+
 /* ---- Commands ------------------------------------------------------------- */
 
 static void test_emit(void) {
@@ -348,6 +415,7 @@ static void test_sort(void) {
 int main(void) {
     test_pool();
     test_project();
+    test_spot();
     test_emit();
     test_spin();
     test_sort();

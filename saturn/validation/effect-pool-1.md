@@ -5,7 +5,7 @@ them per tick, projects them as billboards and writes VDP1 commands. It is integ
 promises identical host and SH-2 bits. **No console run was done in this repository.** Evidence
 by tier:
 
-- **HOST:** `effect_pool_exact` passes 292,210 checks under GCC and Clang Release with
+- **HOST:** `effect_pool_exact` passes 454,070 checks under GCC and Clang Release with
   `SH2Z_STRICT=ON` and under Clang ASan/UBSan:
   - the step against an independent double-precision transcription of the contract on the pool's
     own Q16 constants (growth 1.05, damping 0.98, an acceleration), random spawns over 4,000 ticks
@@ -17,6 +17,9 @@ by tier:
   - 200,000 projections from 200 random cameras against the double transcription: equal in
     every visibility decision and bit-exact in position, depth and pixel size (about 40,000 on
     screen);
+  - 200,000 spots (`sh2z_ep_spot`, one division) against `sh2z_ep_project`: within one pixel,
+    the same visibility decisions except at the guard edge (one pixel from it), the depth equal,
+    sizes within one pixel; `sh2z_ep_depth` equal to the oracle's depth;
   - every emitted command decoded word by word (diamond corner order, sizes, addresses, Gouraud
     table, line words), and each refusal writing nothing;
   - the spin of 100,000 random bases within 1 Q14 LSB of the exact rotation;
@@ -24,7 +27,8 @@ by tier:
 
   Controls: the oracle with one rule changed must disagree with the library, and does, for each of
   growth 1.02, no damping, the acceleration's sign, position before velocity, and life 15; a
-  mirrored projection disagrees on every off-centre point, and a reversed spin on most rows.
+  mirrored projection disagrees on every off-centre point, a spot without its vertical ratio is
+  off by more than a pixel on most points, and a reversed spin on most rows.
 - **SH-2 build:** the source compiles with the CI flags (`-m2 -mb -O2 -Werror`, plus
   `-ffunction-sections -fdata-sections`). The object is 3,092 bytes of text and no data. It needs
   `sh2z_divu_div64` and `sh2z_sin12_quarter_u30`; `nm -u` lists no `memcpy`, `memset` or `memmove`.

@@ -120,6 +120,35 @@ bool sh2z_ep_project(const sh2z_ep_view_t *v, const int32_t pos[3], sh2z_ep_poin
 /** Q16 pixels of a world length (Q16, >= 0) at a projected depth (> 0). */
 int32_t sh2z_ep_pixels(const sh2z_ep_view_t *v, int32_t length, int32_t depth);
 
+/** A spot: a whole-pixel screen position, the Q14 depth and the point's
+ *  vertical scale (focal_y * 2^16 / depth, through the view's ratio), from
+ *  one divide (sh2z_ep_spot). */
+typedef struct {
+    int32_t x, y;            /**< whole pixels */
+    int32_t depth;           /**< Q14 */
+    int32_t scale;           /**< focal_y (Q16) * 2^16 / depth, approximately */
+} sh2z_ep_spot_t;
+
+/** focal_y / focal_x in Q16, once per view, for sh2z_ep_spot. */
+int32_t sh2z_ep_ratio(const sh2z_ep_view_t *v);
+
+/** The view depth of pos (Q14, the projection's t.z) with no divide. */
+int32_t sh2z_ep_depth(const sh2z_ep_view_t *v, const int32_t pos[3]);
+
+/** One-divide projection for billboards. With the projection's t (Q14):
+ *     s = Q(focal_x * 2^16, t.z),  scale = floor(s * ratio / 2^16)
+ *     x = center_x + floor(t.x * s / 2^32),  y = center_y + floor(-t.y * scale / 2^32)
+ *  The position is within one pixel of sh2z_ep_project's (its Q16 result
+ *  rounded down to whole pixels); the near and guard rules are the same, the
+ *  guard applied to the whole-pixel position. Returns false (out unchanged)
+ *  as sh2z_ep_project does. */
+bool sh2z_ep_spot(const sh2z_ep_view_t *v, int32_t ratio, const int32_t pos[3], sh2z_ep_spot_t *out);
+
+/** Whole pixels of a world half size (Q16, >= 0) at a spot:
+ *  floor(floor(length / 4) * scale / 2^32); within one pixel of
+ *  sh2z_ep_pixels(v, length, depth) >> 16. */
+int32_t sh2z_ep_spot_pixels(const sh2z_ep_spot_t *s, int32_t length);
+
 /** VDP1 command codes used here (CMDCTRL bits 3..0). */
 #define SH2Z_EP_DISTORTED 2u
 #define SH2Z_EP_POLYGON   4u
