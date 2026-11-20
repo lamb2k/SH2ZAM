@@ -156,6 +156,8 @@ static int32_t rspr3_axis(int32_t e,int32_t scale,uint32_t frac) {
 bool sh2z_rspr_emit_cell(uint16_t command[16],const sh2z_rspr_cell_t *cell,uint32_t mirror,
                          const sh2z_rspr_place_t *place,uint16_t pmod,uint16_t colr,uint16_t srca) {
     if(!command||!cell||!place||mirror>1u)return false;
+    /* Lookup-table mode: the table address must be a multiple of 32 bytes. */
+    if(((pmod>>3)&7u)==1u&&(colr&3u))return false;
     const int32_t scale=place->scale;
     if(scale<1||scale>(1<<24))return false;
     int32_t l=-(int32_t)cell->origin_x,r=(int32_t)cell->width-cell->origin_x;

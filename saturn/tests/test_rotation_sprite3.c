@@ -7,7 +7,9 @@
  *  - sh2z_rspr_pose_terms against sh2z_rspr_pose over random poses, with and
  *    without the climb, rejections included;
  *  - sh2z_rspr_emit_cell against sh2z_rspr_emit_valid plus the caller's
- *    COLR/SRCA over random cells and places, rejections included.
+ *    COLR/SRCA over random cells and places, rejections included;
+ *  - rotation-sprites-4: emit_cell refuses a lookup-table COLR that is not a
+ *    32-byte address, in every colour mode.
  *
  * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
  * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
@@ -244,7 +246,7 @@ static void test_emit_cell(void) {
         uint8_t pixels[SW*SH/2];
     } emit_set_t;
     static emit_set_t s;
-    unsigned same=0,rejected=0;
+    unsigned same=0,rejected=0,clut_refused=0;
     for(unsigned i=0;i<400000u;++i) {
         memset(&s,0,sizeof(s));
         s.header.magic=SH2Z_RSPR_MAGIC;s.header.bytes=(uint32_t)sizeof(s);s.header.yaw_count=2;s.header.pitch_count=1;
@@ -267,14 +269,40 @@ static void test_emit_cell(void) {
         const bool a1=sh2z_rspr_emit_valid(c1,&s.header,&pick,&pl,vram,pmod);
         if(a1){c1[3]=colr;c1[4]=srca;}
         const bool a2=sh2z_rspr_emit_cell(c2,&s.cells[1],pick.mirror,&pl,pmod,colr,srca);
+        if(((pmod>>3)&7u)==1u&&(colr&3u)) {
+            /* rotation-sprites-4: a misaligned lookup-table COLR is refused, writing nothing. */
+            uint16_t untouched[16];memset(untouched,0x5a,sizeof(untouched));
+            CHECK(!a2);CHECK(memcmp(c2,untouched,sizeof(c2))==0);++clut_refused;
+            continue;
+        }
         CHECK(a1==a2);CHECK(memcmp(c1,c2,sizeof(c1))==0);
         if(a1)++same;else ++rejected;
     }
     uint16_t c[16];sh2z_rspr_place_t pl={.x=0,.y=0,.scale=65536,.up={0,-16384},.frac={0,0}};
     CHECK(!sh2z_rspr_emit_cell(c,&s.cells[1],2u,&pl,0,0,0));
     CHECK(!sh2z_rspr_emit_cell(NULL,&s.cells[1],0u,&pl,0,0,0));
-    CHECK(same>100000u&&rejected>10000u);
-    printf("emit_cell: %u commands and %u rejections as sh2z_rspr_emit_valid\n",same,rejected);
+    CHECK(same>100000u&&rejected>10000u&&clut_refused>10000u);
+    printf("emit_cell: %u commands and %u rejections as sh2z_rspr_emit_valid, %u misaligned lookup tables refused\n",
+           same,rejected,clut_refused);
+}
+
+/* rotation-sprites-4: every colour mode and COLR low-bit pattern on one placement that is
+ * otherwise accepted. Only lookup-table mode (1) with COLR & 3 nonzero is refused; colour-bank
+ * modes keep their low COLR bits (they are part of the bank code). */
+static void test_emit_cell_clut_alignment(void) {
+    const sh2z_rspr_cell_t cell={.width=16,.height=8,.origin_x=8,.origin_y=4,.pixel_offset=64,.clut=0};
+    const sh2z_rspr_place_t pl={.x=100,.y=80,.scale=65536,.up={0,-16384},.frac={0,0}};
+    unsigned refused=0,accepted=0;
+    for(unsigned mode=0;mode<8u;++mode) for(unsigned low=0;low<4u;++low) {
+        uint16_t c[16];
+        const uint16_t pmod=(uint16_t)(0x0400u|(mode<<3)|4u),colr=(uint16_t)(0x1230u|low);
+        const bool ok=sh2z_rspr_emit_cell(c,&cell,0u,&pl,pmod,colr,0x0100u);
+        const bool want=!(mode==1u&&low);
+        CHECK(ok==want);
+        if(ok){CHECK(c[3]==colr);++accepted;}else ++refused;
+    }
+    CHECK(refused==3u&&accepted==29u);
+    printf("emit_cell lookup-table alignment: %u accepted, %u refused\n",accepted,refused);
 }
 
 int main(void) {
@@ -282,6 +310,7 @@ int main(void) {
     test_climb();
     test_pose_terms();
     test_emit_cell();
+    test_emit_cell_clut_alignment();
     if(failures){fprintf(stderr,"rotation_sprite3: %u failures\n",failures);return 1;}
     puts("rotation_sprite3: all checks passed");
     return 0;
