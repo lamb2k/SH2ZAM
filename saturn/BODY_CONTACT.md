@@ -1,4 +1,4 @@
-# Body contact (experimental, contract tags `body-contact-1` and `vehicle-dynamics-2`)
+# Body contact (experimental, contract tags `body-contact-1` and `vehicle-dynamics-3`)
 
 [`body_contact_experimental.h`](include/sh2zam/body_contact_experimental.h) resolves contact
 between bodies that touch as spheres of one reach. It is meant for racing games where vehicles
@@ -7,7 +7,7 @@ and state, and gets back the push, the damage and who touched whom. What damage 
 knocked out and who earns credit stay with the caller.
 
 [`vehicle_dynamics_experimental.h`](include/sh2zam/vehicle_dynamics_experimental.h) gains
-`sh2z_vd_step_contact` (`vehicle-dynamics-2`), which feeds one tick's contact into the
+`sh2z_vd_step_contact` (`vehicle-dynamics-3`), which feeds one tick's contact into the
 track-bound vehicle step at the place a contact force belongs.
 
 Nothing selects either by default. The tags are experimental: their numeric definitions may

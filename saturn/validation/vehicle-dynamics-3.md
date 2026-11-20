@@ -1,4 +1,4 @@
-# Validation record — 2026-11-19 (vehicle dynamics with contact, vehicle-dynamics-2)
+# Validation record — 2026-11-19 (vehicle dynamics with contact, vehicle-dynamics-3)
 
 `sh2z_vd_step_contact` in `sh2zam/vehicle_dynamics_experimental.h` ([guide](../BODY_CONTACT.md))
 feeds one tick's contact (push, damage, regain, hit) into the vehicle-dynamics-1 tick.

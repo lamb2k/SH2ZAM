@@ -10,7 +10,7 @@
 
 #define ONE30 INT32_C(0x40000000)
 #define ONE16 INT32_C(0x10000)
-/* vehicle-dynamics-2: sh2zam_vehicle_contact.c builds this file a second time
+/* vehicle-dynamics-3: sh2zam_vehicle_contact.c builds this file a second time
  * with VD_CONTACT set to apply a contact at the start of the tick. Here it
  * expands to no tokens at all, so sh2z_vd_step keeps its vehicle-dynamics-1
  * code, under LTO too. */

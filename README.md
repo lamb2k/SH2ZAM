@@ -419,7 +419,7 @@ float references and the general forms (no console run). See
   A host build and an SH-2 build give the same bits.
 - [`sh2zam/body_contact_experimental.h`](saturn/include/sh2zam/body_contact_experimental.h)
   (`body-contact-1`) resolves contact between vehicles that touch as spheres: shared impact damage,
-  a push while they close, attackers and contact credit. `vehicle-dynamics-2` feeds it into the
+  a push while they close, attackers and contact credit. `vehicle-dynamics-3` feeds it into the
   vehicle step (`sh2z_vd_step_contact`).
 
 All four are integer only and deterministic. See [the line guide](saturn/LINE_FOLLOWER.md),

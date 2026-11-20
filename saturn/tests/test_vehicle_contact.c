@@ -1,4 +1,4 @@
-/* Host tests for vehicle-dynamics-2 (sh2z_vd_step_contact) on the
+/* Host tests for vehicle-dynamics-3 (sh2z_vd_step_contact) on the
  * vehicle-dynamics-1 test oval: with a zero contact it is sh2z_vd_step bit
  * for bit; a push lands in the tick's velocity and position; damage marks
  * the tick, empties into the spin-out before the pad is read, and a hit
@@ -305,6 +305,6 @@ int main(void) {
     const int c1 = contact_claims(PLACE_PUSH_BEFORE), c2 = contact_claims(PLACE_DAMAGE_BEFORE);
     printf("controls: push before the tick fails claim %d, damage before the tick fails claim %d\n", c1, c2);
     check(c1 != 0 && c2 != 0, "both wrong placements are rejected");
-    printf("vehicle-dynamics-2: %u checks passed\n", checks);
+    printf("vehicle-dynamics-3: %u checks passed\n", checks);
     return 0;
 }

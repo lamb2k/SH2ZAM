@@ -300,7 +300,7 @@ void sh2z_vd_apply_kick(sh2z_vd_body_t *b, int32_t kick_lat, int32_t kick_speed)
 /** Spline point (Q16) and tangent (Q16 units per unit t) of node n at t (Q30). */
 void sh2z_vd_spline(const sh2z_vd_track_t *track, uint32_t n, int32_t t, int32_t pos[3], int32_t fwd[3]);
 
-/* ---- Contract tag vehicle-dynamics-2 ------------------------------------ */
+/* ---- Contract tag vehicle-dynamics-3 ------------------------------------ */
 
 /** Contact from other bodies for one tick (for example from
  *  body_contact_experimental.h). */
