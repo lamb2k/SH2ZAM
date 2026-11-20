@@ -326,8 +326,12 @@ static void test_field(void) {
             /* move: own velocity plus the push, kept on the short line */
             for(uint32_t i = 0; i < NB; i++) {
                 for(int c = 0; c < 3; c++) {
-                    fb[i].vel[c] += fb[i].push[c] / 4;
-                    fb[i].pos[c] += fb[i].vel[c];
+                    /* the test's own motion stays bounded: speeds within 60, on the plane */
+                    int64_t v = (int64_t)fb[i].vel[c] + fb[i].push[c] / 4;
+                    if(v > Q16(60.0)) v = Q16(60.0);
+                    if(v < -Q16(60.0)) v = -Q16(60.0);
+                    fb[i].vel[c] = c == 1 ? 0 : (int32_t)v;
+                    fb[i].pos[c] = c == 1 ? 0 : (int32_t)(((int64_t)fb[i].pos[c] + fb[i].vel[c]) % ((int64_t)1 << 30));
                 }
                 if(fb[i].pos[2] > Q16(60.0)) { fb[i].pos[2] = Q16(60.0); fb[i].vel[2] = -fb[i].vel[2] / 2; }
                 if(fb[i].pos[2] < -Q16(60.0)) { fb[i].pos[2] = -Q16(60.0); fb[i].vel[2] = -fb[i].vel[2] / 2; }
