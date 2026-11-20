@@ -72,10 +72,20 @@ int32_t sh2z_ep_spawn(sh2z_ep_pool_t *p, const int32_t pos[3], const int32_t vel
     return (int32_t)slot;
 }
 
+/* a + b, saturated (32-bit, no 64-bit arithmetic). */
+static int32_t ep_add(int32_t a, int32_t b) {
+    const int32_t r = (int32_t)((uint32_t)a + (uint32_t)b);
+    if(((a ^ r) & (b ^ r)) < 0) return a < 0 ? INT32_MIN : INT32_MAX;
+    return r;
+}
+
 void sh2z_ep_step(sh2z_ep_pool_t *p) {
     uint32_t k, n;
+    bool plain;
     if(!p) return;
     n = p->count;
+    /* damp 1.0 leaves the velocity unchanged (ep_m16(v, 65536) == v); acceleration 0 adds nothing */
+    plain = p->damp == 65536 && p->accel[0] == 0 && p->accel[1] == 0 && p->accel[2] == 0;
     for(k = 0; k < n; k++) {
         sh2z_ep_particle_t *e = &p->items[(p->head - 1u - k) & p->mask];
         uint32_t t = (uint32_t)e->timer + 1u;
@@ -87,9 +97,14 @@ void sh2z_ep_step(sh2z_ep_pool_t *p) {
             continue;
         }
         e->scale = ep_m16(e->scale, p->growth);
+        if(plain) {
+            for(i = 0; i < 3; i++) e->pos[i] = ep_add(e->pos[i], e->vel[i]);
+            continue;
+        }
         for(i = 0; i < 3; i++) {
-            e->vel[i] = ep_sat((int64_t)ep_m16(e->vel[i], p->damp) + p->accel[i]);
-            e->pos[i] = ep_sat((int64_t)e->pos[i] + e->vel[i]);
+            const int32_t v = p->damp == 65536 ? e->vel[i] : ep_m16(e->vel[i], p->damp);
+            e->vel[i] = ep_add(v, p->accel[i]);
+            e->pos[i] = ep_add(e->pos[i], e->vel[i]);
         }
     }
 }
