@@ -7,10 +7,12 @@ a record, run `python3 saturn/tools/validation_index.py --write`; host CI runs
 and scope.
 
 - [dsp-1](validation/dsp-1.md): 2026-11-19 (SCU DSP access, affine transform, Q16 outer product, dsp-1)
+- [dual-claim-1](validation/dual-claim-1.md): 2026-11-19 (two-CPU try-claim, dual-claim-1)
 - [fixed-unit-1](validation/fixed-unit-1.md): 2026-11-17 (Q2.30 unit vectors, fixed-unit-1)
 - [foundation-2026-11-13](validation/foundation-2026-11-13.md): 2026-11-13
 - [integer-kernels-1](validation/integer-kernels-1.md): 2026-11-15 (integer kernels)
 - [line-field-1](validation/line-field-1.md): 2026-11-19 (line field, line-field-1)
+- [line-field-2](validation/line-field-2.md): 2026-11-20 (line field second-lap re-target, line-field-2)
 - [line-follower-1](validation/line-follower-1.md): 2026-11-19 (racing-line follower, line-follower-1)
 - [memo-1](validation/memo-1.md): 2026-11-17 (block memo kernels, memo-1)
 - [pose-1](validation/pose-1.md): 2026-11-17 (model pose from binary32 state, pose-1)
