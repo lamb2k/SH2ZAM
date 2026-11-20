@@ -43,11 +43,12 @@ The workload suite uses `3374d77` as its prior baseline; the historical
 One line per guide, sorted by guide file name; a kernel lane adds its own line
 (its guide, then its instruction model).
 
+- [Experimental body contact: sphere contact with shared damage, pushes, attackers and credit; vehicle step with contact](BODY_CONTACT.md)
 - [Experimental explicit SH-2 divider](DIVU.md)
 - [Experimental SCU DSP access, batched affine transform, Q16 outer product](DSP.md)
 - [Experimental two-CPU try-claim for an optional job](DUAL_CLAIM.md)
-- [Integer kernels: 68000 arithmetic, 2D box overlap, 16x16 cell placement](INTEGER_KERNELS.md); [Integer-kernel instruction model](benchmarks/integer-model/README.md)
 - [Experimental effect pool: particle rings, billboard projection, VDP1 effect commands](EFFECT_POOL.md)
+- [Integer kernels: 68000 arithmetic, 2D box overlap, 16x16 cell placement](INTEGER_KERNELS.md); [Integer-kernel instruction model](benchmarks/integer-model/README.md)
 - [Experimental racing-line follower and line field](LINE_FOLLOWER.md)
 - [Experimental model pose from binary32 state, with no floating-point arithmetic](POSE.md); [pose instruction model](benchmarks/pose-model/README.md)
 - [Experimental block memo kernels: block compare-and-copy, keyed write-through, copy until a marker, run diff](MEMO.md); [memo instruction model](benchmarks/memo-model/README.md)
@@ -61,7 +62,6 @@ One line per guide, sorted by guide file name; a kernel lane adds its own line
 - [Experimental 12-bit-angle sin/cos/tan and inline divider quotients](TRIG12.md); [trig12 instruction model](benchmarks/trig12-model/README.md)
 - [Experimental Q2.30 unit vectors: inline multiply, dot and cross, reciprocal square root, normalisation, basis orthonormalisation](UNIT30.md); [unit30 instruction model](benchmarks/unit30-model/README.md)
 - [Experimental VDP1 double-bank bookkeeping](VDP1_BANKS.md)
-- [Experimental body contact: sphere contact with shared damage, pushes, attackers and credit; vehicle step with contact](BODY_CONTACT.md)
 - [Experimental track-bound vehicle dynamics: one hovering vehicle on a spline road, stepped in integers](VEHICLE_DYNAMICS.md); [Vehicle-dynamics instruction model](benchmarks/vehicle-dynamics-model/README.md)
 - [Experimental vehicle kernels: screen facing, indexed light and view batch, approximate Gouraud](VEHICLE_KERNELS.md); [Vehicle-kernel instruction model](benchmarks/vehicle-model/README.md)
 - [Experimental view batch: transform, project, clip codes, guard clip, texture-merge planners, final-coordinate truncation, source-order guard clip, fractional centre](VIEW_BATCH.md); [Merge-planner instruction model](benchmarks/merge-model/README.md)

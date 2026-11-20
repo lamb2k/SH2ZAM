@@ -3,6 +3,7 @@
  * as camera-facing billboards and written as VDP1 commands. Not selected by
  * any default dispatch. Game-neutral: what a particle looks like, when it is
  * spawned and which art it draws with are the caller's.
+ *
  * Contract tag effect-pool-1 (experimental: the numeric definitions may still
  * change until the tag is published).
  *
@@ -31,9 +32,11 @@
  *   Q16    growth and damping factors (65536 = 1.0)
  *   Q1.14  camera rows and spin rows (int16_t)
  *   angle12  one turn = 4096 (trig12_experimental.h)
+ *
  * Determinism. Integer only, allocation-free, no libc; host and SH-2 builds
  * give identical bits. Projection uses the on-chip divider; the caller keeps
  * the divider promise of divu_experimental.h.
+ *
  * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
  * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
  */
@@ -54,7 +57,8 @@ typedef struct {
     int32_t vel[3];          /**< Q16 per tick */
     int32_t scale;           /**< Q16 world half size */
     uint16_t timer;          /**< ticks lived, 0 at spawn and when ended */
-    uint8_t user, seed;
+    uint8_t user;            /**< the caller's */
+    uint8_t seed;            /**< the caller's */
 } sh2z_ep_particle_t;
 
 /** A ring of particles with shared rules. */
@@ -109,8 +113,8 @@ typedef struct {
 
 /** A projected point: Q16 screen position and Q14 depth. */
 typedef struct {
-    int32_t x, y;
-    int32_t depth;
+    int32_t x, y;            /**< Q16 pixels */
+    int32_t depth;           /**< Q14 */
 } sh2z_ep_point_t;
 
 /** Projects pos. Returns false for a depth at or below near_z, a centre

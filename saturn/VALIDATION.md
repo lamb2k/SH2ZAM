@@ -22,6 +22,7 @@ and scope.
 - [pose-1](validation/pose-1.md): 2026-11-17 (model pose from binary32 state, pose-1)
 - [rotation-sprites-2](validation/rotation-sprites-2.md): 2026-11-19 (rotation sprite sets: select, place, emit, world pose, rotation-sprites-2)
 - [rotation-sprites-3](validation/rotation-sprites-3.md): 2026-11-19 (rotation sprites: yaw climb, pose from terms, one-cell emission, rotation-sprites-3)
+- [rotation-sprites-4](validation/rotation-sprites-4.md): 2026-11-20 (rotation sprites: lookup-table COLR alignment in one-cell emission, rotation-sprites-4)
 - [scene-1](validation/scene-1.md): 2026-11-19 (scene sequencing, scene-1)
 - [sections-1](validation/sections-1.md): 2026-11-18 (one section per hand-written entry and table, sections-1)
 - [segmesh-1](validation/segmesh-1.md): 2026-11-19 (segmented strip mesh visibility pick, segmesh-1)
