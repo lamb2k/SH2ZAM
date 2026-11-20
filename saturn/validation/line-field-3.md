@@ -9,6 +9,7 @@ chasing agent holds its target speed to it until its first lap is done. 0 = no c
   its first lap and does from its second; the no-cap control passes the cap on the first lap, and a
   tightened assertion (cap minus one unit) fails, as it must. The line-field-1 pinned hashes and the
   line-field-2 re-target checks are unchanged.
-- **Consumer:** F Zero S rival bands (6 seeds, original code against the native field) pass on four
-  courses where native first-lap chasers had run about 11% fast.
+- **Consumer (not this repository):** a Saturn racing engine's rival bands (6 seeds, its original
+  code against the native field) pass on four courses where native first-lap chasers had run about
+  11% fast.
 - **Not done:** an instruction-model capture, console execution and any frame measurement.
