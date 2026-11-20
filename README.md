@@ -311,6 +311,19 @@ and upload. Portable C, no libc. Host-tested against a frame model with negative
 held bank must conflict, a changed guard bit must fail). See
 [the VDP1 banks guide](saturn/VDP1_BANKS.md).
 
+## Two-CPU try-claim
+
+[`sh2zam/dual_claim_experimental.h`](saturn/include/sh2zam/dual_claim_experimental.h)
+(contract tag `dual-claim-1`) shares an optional job between the two SH-2s so that exactly one
+runs it:
+- no atomic instruction: two claim words and a decision word in cache-through memory;
+- side A (the master) may wait a few instructions for B's decision; side B (the slave)
+  never waits;
+- a new tag for every job, so the record needs no reset.
+
+Host-tested over every interleaving of the two sides' operations, with four broken
+protocols as negative controls. See [the try-claim guide](saturn/DUAL_CLAIM.md).
+
 ## Segmented strip meshes
 
 [`sh2zam/segmesh_experimental.h`](saturn/include/sh2zam/segmesh_experimental.h)
