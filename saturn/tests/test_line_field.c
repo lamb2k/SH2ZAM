@@ -1,8 +1,12 @@
-/* Line field (contract tag line-field-1) checks. MIT; SH2ZAM Contributors.
+/* Line field (contract tag line-field-1) checks.
  * Invariants over long random races, an independent grid formula, exact
  * contact arithmetic on hand-placed pairs, determinism, level of detail, and
  * a control for every behavioural claim (the same scene with the feature off
- * must fail the claim). */
+ * must fail the claim).
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam/line_field_experimental.h"
 #include <inttypes.h>
 #include <stdio.h>

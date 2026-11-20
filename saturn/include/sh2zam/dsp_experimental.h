@@ -84,13 +84,13 @@ extern "C" {
 /** Stop the DSP and copy words (at most 256) into program RAM from address
  *  0. Returns false, writing nothing, in portable builds, when words is
  *  null with words > 0, or when words > 256. */
-bool sh2z_dsp_load(const uint32_t *program,uint32_t words);
+bool sh2z_dsp_load(const uint32_t *program, uint32_t words);
 /** Copy count words into data RAM bank (0..3) from index (0..63). The DSP
  *  must be stopped. False, writing nothing, when the range leaves the bank,
  *  an argument is invalid, or in portable builds. */
-bool sh2z_dsp_data_write(uint32_t bank,uint32_t index,const uint32_t *words,uint32_t count);
+bool sh2z_dsp_data_write(uint32_t bank, uint32_t index, const uint32_t *words, uint32_t count);
 /** Read count words of data RAM into words; the same rules. */
-bool sh2z_dsp_data_read(uint32_t bank,uint32_t index,uint32_t *words,uint32_t count);
+bool sh2z_dsp_data_read(uint32_t bank, uint32_t index, uint32_t *words, uint32_t count);
 /** Start execution at pc (0..255). No-op in portable builds. */
 void sh2z_dsp_start(uint32_t pc);
 /** True while the DSP executes. Always false in portable builds. */
@@ -109,7 +109,7 @@ static inline uint32_t sh2z_dsp_d0(const void *p) {
 }
 /** Purge the SH-2 cache lines covering [p, p + bytes) so the next reads
  *  fetch what the DSP wrote. No-op in portable builds. */
-void sh2z_dsp_purge(const void *p,uint32_t bytes);
+void sh2z_dsp_purge(const void *p, uint32_t bytes);
 
 /* ---- C. Affine job ---- */
 
@@ -133,7 +133,7 @@ static inline uint32_t sh2z_dsp_xform_padded(uint32_t count) {
     return (count+SH2Z_DSP_XFORM_BATCH-1u)/SH2Z_DSP_XFORM_BATCH*SH2Z_DSP_XFORM_BATCH;
 }
 /** Output word index of row r (0..2) of vector k. */
-static inline uint32_t sh2z_dsp_xform_at(uint32_t k,uint32_t r) {
+static inline uint32_t sh2z_dsp_xform_at(uint32_t k, uint32_t r) {
     return k/SH2Z_DSP_XFORM_BATCH*(3u*SH2Z_DSP_XFORM_BATCH)+r*SH2Z_DSP_XFORM_BATCH+k%SH2Z_DSP_XFORM_BATCH;
 }
 
@@ -152,17 +152,17 @@ bool sh2z_dsp_xform_load(void);
  *  out. in holds sh2z_dsp_xform_padded(count) * 3 words, out the same
  *  number; both 4-byte aligned, not overlapping. False, job unchanged, on
  *  a bad argument. */
-bool sh2z_dsp_xform_prepare(sh2z_dsp_xform_t *job,const int32_t m[3][4],
-    const int32_t *in,int32_t *out,uint32_t count);
+bool sh2z_dsp_xform_prepare(sh2z_dsp_xform_t *job, const int32_t m[3][4],
+    const int32_t *in, int32_t *out, uint32_t count);
 /** Start the job. SH-2: the kernel must be loaded and the DSP idle; the
  *  call writes one data word and starts the DSP, then returns. Portable:
  *  computes the result on the CPU. */
 void sh2z_dsp_xform_start(const sh2z_dsp_xform_t *job);
 /** Wait for the job (at most polls reads of PPAF, 0: no limit), then purge
  *  the output's cache lines. True when the results are in out. */
-bool sh2z_dsp_xform_finish(const sh2z_dsp_xform_t *job,uint32_t polls);
+bool sh2z_dsp_xform_finish(const sh2z_dsp_xform_t *job, uint32_t polls);
 /** The same results computed on the calling CPU, for the padded count. */
-void sh2z_dsp_xform_cpu(const int32_t m[3][4],const int32_t *in,int32_t *out,uint32_t count);
+void sh2z_dsp_xform_cpu(const int32_t m[3][4], const int32_t *in, int32_t *out, uint32_t count);
 
 /* ---- D. Q16 outer product ---- */
 
@@ -173,7 +173,7 @@ void sh2z_dsp_xform_cpu(const int32_t m[3][4],const int32_t *in,int32_t *out,uin
 typedef struct {
     uint32_t b_d0;      /* D0 word address of b (filled by prepare) */
     uint32_t out_d0;    /* D0 word address of the output */
-    uint32_t n,m;
+    uint32_t n, m;
     int32_t a[SH2Z_DSP_SCALE16_MAX];
     int32_t b[SH2Z_DSP_SCALE16_MAX];
     int32_t *out;       /* CPU side only */
@@ -191,15 +191,15 @@ bool sh2z_dsp_scale16_load(void);
  *  words, 4-byte aligned, not overlapping job. False, job unchanged, when
  *  n or m is 0 or above SH2Z_DSP_SCALE16_MAX, a pointer is null, out is
  *  misaligned, or some |a[i] * b[k]| >= 2^47. */
-bool sh2z_dsp_scale16_prepare(sh2z_dsp_scale16_t *job,const int32_t *a,uint32_t n,
-    const int32_t *b,uint32_t m,int32_t *out);
+bool sh2z_dsp_scale16_prepare(sh2z_dsp_scale16_t *job, const int32_t *a, uint32_t n,
+    const int32_t *b, uint32_t m, int32_t *out);
 /** Start the job (SH-2: kernel loaded, DSP idle; portable: computes it). */
 void sh2z_dsp_scale16_start(const sh2z_dsp_scale16_t *job);
 /** Wait (at most polls reads, 0: no limit) and purge the output's cache
  *  lines. True when the results are in out. */
-bool sh2z_dsp_scale16_finish(const sh2z_dsp_scale16_t *job,uint32_t polls);
+bool sh2z_dsp_scale16_finish(const sh2z_dsp_scale16_t *job, uint32_t polls);
 /** The same results on the calling CPU. */
-void sh2z_dsp_scale16_cpu(const int32_t *a,uint32_t n,const int32_t *b,uint32_t m,int32_t *out);
+void sh2z_dsp_scale16_cpu(const int32_t *a, uint32_t n, const int32_t *b, uint32_t m, int32_t *out);
 
 #ifdef __cplusplus
 }

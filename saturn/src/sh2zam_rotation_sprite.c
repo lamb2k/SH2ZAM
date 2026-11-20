@@ -194,7 +194,8 @@ bool sh2z_rspr_pose(sh2z_rspr_pick_t *pick,sh2z_rspr_place_t *place,int32_t *dep
     const int32_t ux=(int32_t)(ux64>>14),uy=(int32_t)(uy64>>14);
     const uint32_t len=rspr_isqrt32((uint32_t)(ux*ux)+(uint32_t)(uy*uy));
     if(len==0)return false;
-    *pick=chosen;
+    /* Field by field: GCC turns this 2-byte-aligned struct assignment into a memcpy call. */
+    pick->cell=chosen.cell;pick->mirror=chosen.mirror;pick->reserved=chosen.reserved;
     place->x=(int16_t)x;place->y=(int16_t)y;place->scale=scale;
     place->frac[0]=(uint16_t)(ax&0xffff);place->frac[1]=(uint16_t)(ay&0xffff);
     place->up[0]=(int16_t)sh2z_divu_div64((int64_t)16384*ux,(int32_t)len,NULL);

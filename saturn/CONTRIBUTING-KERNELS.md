@@ -66,6 +66,16 @@ explicitly:
   links one-entry programs with `--gc-sections`; add a probe there for a new
   contract (`benchmarks/gc-probe/README.md`).
 
+## No libc calls in library objects
+
+Library sources include no libc header, and no library object may reference
+`memcpy`, `memset` or `memmove`, not even through code the compiler writes for
+them. GCC for SH-2 turns some struct assignments (for example a 4-byte struct
+with 2-byte alignment) into a `memcpy` call. Copy such structs field by field.
+The SH-2 cross workflow scans `nm -u libsh2zam.a` and fails on any of the
+three names. libgcc helpers (`___divdi3`, `___movmem`, `___ashlsi3_r0`, ...)
+are allowed.
+
 ## Single lines you touch
 
 | File | Line |

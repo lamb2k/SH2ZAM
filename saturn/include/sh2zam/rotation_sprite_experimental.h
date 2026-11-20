@@ -66,10 +66,10 @@ extern "C" {
  *  clut             CLUT index; the CLUT is at clut_offset + clut*32.
  */
 typedef struct {
-    uint16_t width,height;
-    int16_t origin_x,origin_y;
+    uint16_t width, height;
+    int16_t origin_x, origin_y;
     uint32_t pixel_offset;
-    uint16_t clut,reserved;
+    uint16_t clut, reserved;
 } sh2z_rspr_cell_t;
 
 /** Set header, followed directly by the cells.
@@ -86,8 +86,8 @@ typedef struct {
  *  pitch            bin centre direction {sin, cos} of each pitch, Q1.14.
  */
 typedef struct {
-    uint32_t magic,bytes;
-    uint16_t yaw_count,pitch_count,flags,clut_count;
+    uint32_t magic, bytes;
+    uint16_t yaw_count, pitch_count, flags, clut_count;
     uint32_t clut_offset;
     int32_t pixels_per_unit;
     int16_t yaw[SH2Z_RSPR_MAX_YAW][2];
@@ -97,7 +97,7 @@ typedef struct {
 /** The chosen cell: index into the cell array and whether to mirror it. */
 typedef struct {
     uint16_t cell;
-    uint8_t mirror,reserved;
+    uint8_t mirror, reserved;
 } sh2z_rspr_pick_t;
 
 /** Where and how large to draw a cell.
@@ -112,7 +112,7 @@ typedef struct {
  *           y pointing down the screen ({0, -16384} is upright).
  */
 typedef struct {
-    int16_t x,y;
+    int16_t x, y;
     int32_t scale;
     int16_t up[2];
     uint16_t frac[2];
@@ -140,8 +140,8 @@ static inline const sh2z_rspr_cell_t *sh2z_rspr_cells(const sh2z_rspr_set_t *set
  *  horizontal length seen through the chosen yaw bin, so no square root is
  *  needed. Returns false, leaving *out unchanged, for an invalid set, a zero
  *  direction or a null pointer. */
-bool sh2z_rspr_select(sh2z_rspr_pick_t *out,const sh2z_rspr_set_t *set,
-                      int32_t x,int32_t y,int32_t z);
+bool sh2z_rspr_select(sh2z_rspr_pick_t *out, const sh2z_rspr_set_t *set,
+                      int32_t x, int32_t y, int32_t z);
 
 /** Place a set drawn for model view v (v->r includes the object's model
  *  scale; v->t is the object origin in view space; see sh2z_view_t):
@@ -157,7 +157,7 @@ bool sh2z_rspr_select(sh2z_rspr_pick_t *out,const sh2z_rspr_set_t *set,
  *  t.z <= v->near_z, when the origin's screen position or scale does not fit
  *  (|x|,|y| > 1023 or scale outside 1..2^24), when the up axis points along
  *  the view direction (|U| == 0), or for null pointers. */
-bool sh2z_rspr_place(sh2z_rspr_place_t *out,const sh2z_view_t *v,const sh2z_rspr_set_t *set);
+bool sh2z_rspr_place(sh2z_rspr_place_t *out, const sh2z_view_t *v, const sh2z_rspr_set_t *set);
 
 /** Write one VDP1 distorted sprite command for the picked cell as sixteen
  *  16-bit words in VDP1 order (CTRL, LINK, PMOD, COLR, SRCA, SIZE, XA, YA,
@@ -179,14 +179,14 @@ bool sh2z_rspr_place(sh2z_rspr_place_t *out,const sh2z_view_t *v,const sh2z_rspr
  *  (width / 8) << 8 | height. Returns false, writing nothing, for a bad pick,
  *  a vram address that is misaligned or puts the cell outside VDP1 VRAM, a
  *  corner outside -1024..1023, or null pointers. */
-bool sh2z_rspr_emit(uint16_t command[16],const sh2z_rspr_set_t *set,const sh2z_rspr_pick_t *pick,
-                    const sh2z_rspr_place_t *place,uint32_t vram,uint16_t pmod);
+bool sh2z_rspr_emit(uint16_t command[16], const sh2z_rspr_set_t *set, const sh2z_rspr_pick_t *pick,
+                    const sh2z_rspr_place_t *place, uint32_t vram, uint16_t pmod);
 
 /** sh2z_rspr_emit for a set the caller has already accepted with
  *  sh2z_rspr_valid (once, at load): identical output and rejections except
  *  that the set itself is not re-checked on each call. */
-bool sh2z_rspr_emit_valid(uint16_t command[16],const sh2z_rspr_set_t *set,const sh2z_rspr_pick_t *pick,
-                          const sh2z_rspr_place_t *place,uint32_t vram,uint16_t pmod);
+bool sh2z_rspr_emit_valid(uint16_t command[16], const sh2z_rspr_set_t *set, const sh2z_rspr_pick_t *pick,
+                          const sh2z_rspr_place_t *place, uint32_t vram, uint16_t pmod);
 
 /* ---- World-pose fast path (same contract tag) ----
  *
@@ -206,8 +206,8 @@ bool sh2z_rspr_emit_valid(uint16_t command[16],const sh2z_rspr_set_t *set,const 
 typedef struct {
     int16_t r[3][3];
     int32_t eye[3];
-    int32_t focal_x,focal_y;
-    int16_t center_x,center_y;
+    int32_t focal_x, focal_y;
+    int16_t center_x, center_y;
     int32_t near_z;
     int64_t scale_num;
 } sh2z_rspr_camera_t;
@@ -218,7 +218,7 @@ typedef struct {
  *  so that scale = trunc(scale_num / t.z) matches sh2z_rspr_place for a
  *  model unit of the same length. Once per frame and set (64-bit division).
  *  Returns false for null pointers, an invalid set or unit_q14 <= 0. */
-bool sh2z_rspr_camera_scale(sh2z_rspr_camera_t *c,const sh2z_rspr_set_t *set,int32_t unit_q14);
+bool sh2z_rspr_camera_scale(sh2z_rspr_camera_t *c, const sh2z_rspr_set_t *set, int32_t unit_q14);
 
 /** Pick and place one object from its world pose. The set must already have
  *  been accepted by sh2z_rspr_valid; it is not re-checked per call.
@@ -243,9 +243,9 @@ bool sh2z_rspr_camera_scale(sh2z_rspr_camera_t *c,const sh2z_rspr_set_t *set,int
  *  overflow) and *depth = t.z. Returns false, leaving the outputs
  *  unchanged, for t.z <= near_z, |x| or |y| > 1023, scale outside 1..2^24,
  *  |U| == 0, a selection failure or null pointers. */
-bool sh2z_rspr_pose(sh2z_rspr_pick_t *pick,sh2z_rspr_place_t *place,int32_t *depth,
-                    const sh2z_rspr_camera_t *c,const sh2z_rspr_set_t *set,
-                    const int32_t pos[3],const int16_t basis[9]);
+bool sh2z_rspr_pose(sh2z_rspr_pick_t *pick, sh2z_rspr_place_t *place, int32_t *depth,
+                    const sh2z_rspr_camera_t *c, const sh2z_rspr_set_t *set,
+                    const int32_t pos[3], const int16_t basis[9]);
 
 /* ---- Contract tag rotation-sprites-3 ----
  *
@@ -272,7 +272,7 @@ bool sh2z_rspr_yaw_convex(const sh2z_rspr_set_t *set);
  *  sh2z_rspr_yaw_convex; otherwise the result is unspecified. A caller that
  *  passes the object's previous bin usually evaluates three bins, not
  *  yaw_count. */
-unsigned sh2z_rspr_yaw_climb(const sh2z_rspr_set_t *set,unsigned start,int32_t x,int32_t z,int32_t *best);
+unsigned sh2z_rspr_yaw_climb(const sh2z_rspr_set_t *set, unsigned start, int32_t x, int32_t z, int32_t *best);
 
 /** An object's camera-space terms for sh2z_rspr_pose_terms, as sh2z_rspr_pose
  *  computes them from pos (a culling pass usually has them already):
@@ -283,7 +283,7 @@ unsigned sh2z_rspr_yaw_climb(const sh2z_rspr_set_t *set,unsigned start,int32_t x
 typedef struct {
     int32_t d[3];
     int32_t tz;
-    int64_t nx,ny;
+    int64_t nx, ny;
 } sh2z_rspr_terms_t;
 
 /** sh2z_rspr_pose from terms t (as sh2z_rspr_terms_t states them for the
@@ -296,9 +296,9 @@ typedef struct {
  *  sh2z_rspr_yaw_climb from *yaw_hint and the chosen bin is written back;
  *  pass it only for a set accepted by sh2z_rspr_yaw_convex. The set must
  *  already have been accepted by sh2z_rspr_valid. */
-bool sh2z_rspr_pose_terms(sh2z_rspr_pick_t *pick,sh2z_rspr_place_t *place,int32_t *depth,
-                          const sh2z_rspr_camera_t *c,const sh2z_rspr_set_t *set,
-                          const sh2z_rspr_terms_t *t,const int16_t basis[9],uint8_t *yaw_hint);
+bool sh2z_rspr_pose_terms(sh2z_rspr_pick_t *pick, sh2z_rspr_place_t *place, int32_t *depth,
+                          const sh2z_rspr_camera_t *c, const sh2z_rspr_set_t *set,
+                          const sh2z_rspr_terms_t *t, const int16_t basis[9], uint8_t *yaw_hint);
 
 /** sh2z_rspr_emit_valid for one cell, with the COLR and SRCA words given by
  *  the caller (a cell held in a slot pool, a CLUT kept elsewhere): the same
@@ -311,8 +311,8 @@ bool sh2z_rspr_pose_terms(sh2z_rspr_pick_t *pick,sh2z_rspr_place_t *place,int32_
  *  multiply; the rounding is the same. Returns false, writing nothing, for a
  *  scale outside 1..2^24, mirror > 1, a corner outside -1024..1023 or null
  *  pointers. */
-bool sh2z_rspr_emit_cell(uint16_t command[16],const sh2z_rspr_cell_t *cell,uint32_t mirror,
-                         const sh2z_rspr_place_t *place,uint16_t pmod,uint16_t colr,uint16_t srca);
+bool sh2z_rspr_emit_cell(uint16_t command[16], const sh2z_rspr_cell_t *cell, uint32_t mirror,
+                         const sh2z_rspr_place_t *place, uint16_t pmod, uint16_t colr, uint16_t srca);
 
 #ifdef __cplusplus
 }

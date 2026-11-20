@@ -63,22 +63,22 @@ extern "C" {
 #define SH2Z_SCACHE_LIVE_MAX  4u
 
 typedef struct {
-    uint32_t key;       /* caller key, SH2Z_SCACHE_NO_KEY when free */
-    uint32_t last_use;  /* frame of the last reference */
-    uint32_t addr;      /* fixed address of the slot (caller units, 8-aligned in bytes) */
-    uint32_t bytes;     /* capacity */
-    uint32_t state;     /* SH2Z_SCACHE_FREE, _FILLING or _READY */
+    uint32_t key;       /**< caller key, SH2Z_SCACHE_NO_KEY when free */
+    uint32_t last_use;  /**< frame of the last reference */
+    uint32_t addr;      /**< fixed address of the slot (caller units, 8-aligned in bytes) */
+    uint32_t bytes;     /**< capacity */
+    uint32_t state;     /**< SH2Z_SCACHE_FREE, _FILLING or _READY */
 } sh2z_scache_slot_t;
 
 typedef struct {
     sh2z_scache_slot_t *slots;
     uint32_t count;
-    uint32_t frame;     /* the frame being built; starts at live, so stamp 0 is never live */
-    uint32_t live;      /* 1..SH2Z_SCACHE_LIVE_MAX */
+    uint32_t frame;     /**< the frame being built; starts at live, so stamp 0 is never live */
+    uint32_t live;      /**< 1..SH2Z_SCACHE_LIVE_MAX */
     uint32_t hits, misses, evictions, refused;
 } sh2z_scache_t;
 
-/* Lays out slots from base: counts[c] slots of sizes[c] bytes for each class
+/** Lays out slots from base: counts[c] slots of sizes[c] bytes for each class
  * c < classes, each at the next 8-byte boundary, into slots[0..max). Every
  * slot starts FREE. Returns the slot count, or 0 (nothing written) if a size
  * is 0, the layout passes base + limit, or there are more than max slots.
@@ -87,20 +87,20 @@ uint32_t sh2z_scache_layout(sh2z_scache_slot_t *slots, uint32_t max, uint32_t ba
                             const uint32_t *sizes, const uint32_t *counts, uint32_t classes,
                             uint32_t *end);
 
-/* live: frames a reference stays protected (1..SH2Z_SCACHE_LIVE_MAX); false
+/** live: frames a reference stays protected (1..SH2Z_SCACHE_LIVE_MAX); false
  * and nothing changed if out of range or count is 0. */
 bool sh2z_scache_init(sh2z_scache_t *c, sh2z_scache_slot_t *slots, uint32_t count, uint32_t live);
 
-/* Start building the next frame. */
+/** Start building the next frame. */
 static inline void sh2z_scache_frame(sh2z_scache_t *c) { c->frame += 1u; }
 
 /* ---- B. Lookup and replacement ---- */
-#define SH2Z_SCACHE_HIT      0  /* slot is READY: draw from it */
-#define SH2Z_SCACHE_PENDING  1  /* slot is FILLING: not drawable yet */
-#define SH2Z_SCACHE_MISS     2  /* slot claimed for key, now FILLING: fill it, then ready() */
-#define SH2Z_SCACHE_REFUSED  3  /* no slot of at least `bytes` is free or replaceable */
+#define SH2Z_SCACHE_HIT      0  /**< slot is READY: draw from it */
+#define SH2Z_SCACHE_PENDING  1  /**< slot is FILLING: not drawable yet */
+#define SH2Z_SCACHE_MISS     2  /**< slot claimed for key, now FILLING: fill it, then ready() */
+#define SH2Z_SCACHE_REFUSED  3  /**< no slot of at least `bytes` is free or replaceable */
 
-/* Reference key for the frame being built (prefetch false) or for the next
+/** Reference key for the frame being built (prefetch false) or for the next
  * frame (prefetch true; the reference counts from the next frame, and the
  * slot is protected from now on). bytes is the cell's size; a slot is
  * reused for a key only if it is at least that large. *slot receives the
@@ -108,13 +108,13 @@ static inline void sh2z_scache_frame(sh2z_scache_t *c) { c->frame += 1u; }
  * SH2Z_SCACHE_NO_KEY. */
 int sh2z_scache_get(sh2z_scache_t *c, uint32_t key, uint32_t bytes, bool prefetch, uint32_t *slot);
 
-/* Mark a FILLING slot READY; false if it is not FILLING. */
+/** Mark a FILLING slot READY; false if it is not FILLING. */
 bool sh2z_scache_ready(sh2z_scache_t *c, uint32_t slot);
-/* Drop a FILLING slot's claim (a failed fill): the slot becomes FREE. */
+/** Drop a FILLING slot's claim (a failed fill): the slot becomes FREE. */
 bool sh2z_scache_abandon(sh2z_scache_t *c, uint32_t slot);
-/* Forget every key (for example at a race change). Stamps stay. */
+/** Forget every key (for example at a race change). Stamps stay. */
 void sh2z_scache_clear(sh2z_scache_t *c);
-/* true while slot may still be read by VDP1. */
+/** true while slot may still be read by VDP1. */
 bool sh2z_scache_live(const sh2z_scache_t *c, uint32_t slot);
 
 /* ---- C. Aliases ----
@@ -128,31 +128,31 @@ static inline uint32_t sh2z_scache_alias(const uint16_t *map, uint32_t cell, uin
 }
 
 /* ---- D. Cell stream (cell4z) ---- */
-#define SH2Z_CELL4Z_W        6u   /* vlc-2 window of every context table */
-#define SH2Z_CELL4Z_SYMBOLS  30u  /* 16 pixels + 14 run lengths */
+#define SH2Z_CELL4Z_W        6u   /**< vlc-2 window of every context table */
+#define SH2Z_CELL4Z_SYMBOLS  30u  /**< 16 pixels + 14 run lengths */
 #define SH2Z_CELL4Z_CONTEXTS 16u
 #define SH2Z_CELL4Z_WMAX     504u
 #define SH2Z_CELL4Z_HMAX     255u
-extern const uint8_t sh2z_cell4z_runs[SH2Z_CELL4Z_SYMBOLS - 16u]; /* 2,3,4,5,6,8,10,12,16,20,24,32,48,64 */
+extern const uint8_t sh2z_cell4z_runs[SH2Z_CELL4Z_SYMBOLS - 16u]; /**< 2,3,4,5,6,8,10,12,16,20,24,32,48,64 */
 
 typedef struct {
-    uint16_t offset[SH2Z_CELL4Z_CONTEXTS]; /* table of context k at arena + offset[k] */
+    uint16_t offset[SH2Z_CELL4Z_CONTEXTS]; /**< table of context k at arena + offset[k] */
     uint16_t size[SH2Z_CELL4Z_CONTEXTS];
-    uint32_t lmax;                         /* longest code of any table */
+    uint32_t lmax;                         /**< longest code of any table */
 } sh2z_cell4z_tables_t;
 
-/* Build the 16 context tables from code lengths into arena[0..capacity).
+/** Build the 16 context tables from code lengths into arena[0..capacity).
  * len holds SH2Z_CELL4Z_CONTEXTS rows of SH2Z_CELL4Z_SYMBOLS lengths, row k
  * (context k) at len + k * SH2Z_CELL4Z_SYMBOLS; each row is a complete prefix
  * code with lengths <= SH2Z_VLC2_LMAX. Returns the arena bytes used, or 0
  * (with *t unchanged) if a table is refused or the arena is too small. */
 size_t sh2z_cell4z_build(uint8_t *arena, size_t capacity, const uint8_t *len, sh2z_cell4z_tables_t *t);
 
-/* Readable bytes a w-pixel-wide row may need past any point of a stream:
+/** Readable bytes a w-pixel-wide row may need past any point of a stream:
  * the slack a pack must carry after its last cell stream. */
 #define SH2Z_CELL4Z_SLACK(w, lmax) ((((uint32_t)(w) * (uint32_t)(lmax) + 31u) >> 4) * 2u)
 
-/* Decode one w x h cell whose stream starts at stream[0] (2-byte aligned),
+/** Decode one w x h cell whose stream starts at stream[0] (2-byte aligned),
  * writing w / 4 words per row to dst. readable is the number of bytes that
  * may be read from stream[0] on: the cell's own stream and whatever follows
  * it in the same buffer (for example the rest of a pack). Before each row

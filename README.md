@@ -333,7 +333,9 @@ circuit built from strips. `sh2z_segmesh_pick` tests one anchor point per segmen
 fixed-point clip rows without dividing, groups the visible segments into runs of similar depth
 and returns the runs furthest first, ready for painter-order drawing. Integer arithmetic only,
 no float, libc or allocation. Host-exact tested against an independent oracle with mutation
-controls (no console run). See [the segmesh guide](saturn/SEGMESH.md).
+controls (no console run). Contract tag `segmesh-2` adds `sh2z_segmesh_cull`, which drops whole
+clusters of faces by a baked sphere and normal cone. It is an approximation: it can skip a face a
+pixel wide that the per-face path would draw. See [the segmesh guide](saturn/SEGMESH.md).
 
 ## Sprite slot cache
 
@@ -376,6 +378,34 @@ Host-tested against an independent timeline model with a negative control per ru
 
 Register bases are the caller's, so it is host-tested against reference models with negative
 controls (no console run). See [the sound guide](saturn/SND.md).
+
+## Rotation sprites
+
+[`sh2zam/rotation_sprite_experimental.h`](saturn/include/sh2zam/rotation_sprite_experimental.h)
+(contract tags `rotation-sprites-2` and `rotation-sprites-3`) draws a 3D object as one VDP1
+distorted sprite, using a cell from a set baked over a grid of viewing directions:
+- picks the cell nearest the viewing direction, by dot products, with mirrored sets;
+- places the object's origin with sub-pixel precision and its on-screen up axis;
+- emits one command that scales the cell with depth and rotates it with the object's roll.
+
+The `-3` forms give identical output faster: a yaw climb from the last cell, the pose from a
+camera's own terms, and emission of one cell. Integer only, with no libc. Host-tested against
+float references and the general forms (no console run). See
+[the rotation sprite guide](saturn/ROTATION_SPRITES.md).
+
+## Racing lines and vehicle dynamics
+
+- [`sh2zam/line_follower_experimental.h`](saturn/include/sh2zam/line_follower_experimental.h)
+  (`line-follower-1`) moves a vehicle along a baked closed line, as a distance plus a lateral
+  offset, with speed and steering limits.
+- [`sh2zam/line_field_experimental.h`](saturn/include/sh2zam/line_field_experimental.h)
+  (`line-field-1`) runs up to 255 such vehicles, with contact, rank and level of detail.
+- [`sh2zam/vehicle_dynamics_experimental.h`](saturn/include/sh2zam/vehicle_dynamics_experimental.h)
+  (`vehicle-dynamics-1`) steps one hovering vehicle on a spline road, one fixed tick at a time.
+  A host build and an SH-2 build give the same bits.
+
+All three are integer only and deterministic. See [the line guide](saturn/LINE_FOLLOWER.md) and
+[the vehicle dynamics guide](saturn/VEHICLE_DYNAMICS.md).
 
 ## Link only what you call
 

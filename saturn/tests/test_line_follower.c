@@ -1,6 +1,10 @@
-/* Racing-line follower (contract tag line-follower-1) oracles. MIT; SH2ZAM Contributors.
+/* Racing-line follower (contract tag line-follower-1) oracles.
  * Oracles use int64 arithmetic on the documented formulas and brute-force
- * searches; the library never divides at run time. */
+ * searches; the library never divides at run time.
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam/line_follower_experimental.h"
 #include <inttypes.h>
 #include <stdio.h>

@@ -1,7 +1,10 @@
 /* Host tests for vehicle-dynamics-1 on a synthetic oval: spline identities, the
  * closest-point search, launch, steering, grip, a signed wall response, surface
  * zones, lap counting and a golden state hash, each with a negative control.
- * MIT; SH2ZAM Contributors. */
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
+ */
 #include "sh2zam/vehicle_dynamics_experimental.h"
 #include "sh2zam/unit30_experimental.h"
 #include <math.h>
