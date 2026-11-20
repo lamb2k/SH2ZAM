@@ -1,4 +1,4 @@
-/* Line field (contract tags line-field-1, line-field-2 and line-field-3) checks.
+/* Line field (contract tags line-field-1 to line-field-4) checks.
  * Invariants over long random races, an independent grid formula, exact
  * contact arithmetic on hand-placed pairs, determinism, level of detail, and
  * a control for every behavioural claim (the same scene with the feature off
@@ -319,6 +319,221 @@ static void test_first_lap_cap(void) {
     params();
 }
 
+/* line-field-4: an empty surface, or a surface whose zones and tubes nobody reaches, is line-field-3. */
+static sh2z_field_zone_t zone_buf[8];
+static sh2z_field_surface_t surf;
+static void surface_reset(void) {
+    memset(&surf, 0, sizeof surf);
+    surf.zones = zone_buf; surf.plate_ticks = 60; surf.slip_steer = 16384; surf.rough_keep = 58982; surf.recharge = 512;
+}
+static void test_surface_identity(void) {
+    static const uint32_t lf1[6] = { 0x7c56497eu, 0x9c2d952fu, 0x12afee5bu, 0xccfb9880u, 0x080ae758u, 0x244b0332u };
+    params();
+    surface_reset();
+    P.surface = &surf;                                              /* no zones, no tubes */
+    for(uint32_t seed = 1; seed <= 6; ++seed) CHECK(race(24, seed, 0, 5000, 1) == lf1[seed - 1u]);
+    surf.wrap_mask = 0x0180u; surf.wrap_value = 0x0080u;            /* tubes that no node is */
+    zone_buf[0] = (sh2z_field_zone_t){ U(100), U(200), U(5000), U(6000), SH2Z_FIELD_ZONE_BOOST };   /* out of reach sideways */
+    surf.zone_count = 1;
+    for(uint32_t seed = 1; seed <= 6; ++seed) CHECK(race(24, seed, 0, 5000, 1) == lf1[seed - 1u]);
+    params();
+}
+
+/* One agent, alone, from distance `at` and lateral `lat` with lateral target `want`, for `ticks`. */
+static void lone(int32_t at, int32_t lat, int32_t lap_ticks) {
+    rng = 5u;
+    vehicle(0, 0, lap_ticks);
+    brain[0].lane = 0;
+    veh[0].t.dist = at; veh[0].t.lap = 0; veh[0].t.lateral = lat; veh[0].t.speed = U(20);
+    veh[0].t.node = sh2z_line_locate(&line, at, 0);
+    field(1, 3u);
+    sh2z_field_start(&F);
+}
+
+/* A plate starts a free boost for agents inside its band only. */
+static int plate_scene(int32_t lat_lo, int32_t lat_hi, int32_t *energy_lost) {
+    params(); surface_reset(); P.surface = &surf;
+    zone_buf[0] = (sh2z_field_zone_t){ U(4000), U(4200), lat_lo, lat_hi, SH2Z_FIELD_ZONE_BOOST };
+    surf.zone_count = 1;
+    lone(U(3800), 0, 2000);
+    const int32_t e0 = veh[0].energy;
+    int boosted = 0;
+    for(uint32_t t = 0; t < 40; ++t) {
+        sh2z_field_step(&F);
+        if(veh[0].flags & SH2Z_VEH_BOOST) { boosted = 1; CHECK(veh[0].boost_ticks <= surf.plate_ticks); }
+    }
+    *energy_lost = e0 - veh[0].energy;
+    return boosted;
+}
+static void test_plate(void) {
+    int32_t lost;
+    CHECK(plate_scene(-U(400), U(400), &lost) == 1 && lost == 0);   /* a free boost */
+    CHECK(plate_scene(U(300), U(400), &lost) == 0);                 /* control: the band misses the agent */
+    params();
+}
+
+/* Rough ground damps the target speed unless boosting; low grip slows the lateral correction;
+ * a recharge strip refills energy. Each against the same scene without the zone. */
+static int32_t speed_after(uint32_t kind, int boost) {
+    params(); surface_reset(); P.surface = &surf;
+    P.pace_gain = 0;                                                /* the target is the pace itself */
+    zone_buf[0] = (sh2z_field_zone_t){ 0, line.length, -U(1000), U(1000), kind };
+    surf.zone_count = kind ? 1u : 0u;
+    lone(U(1000), 0, 900);
+    veh[0].t.speed = U(40);
+    if(boost) { veh[0].flags |= SH2Z_VEH_BOOST; veh[0].boost_ticks = 30000; P.boost_speed = 0; }
+    for(uint32_t t = 0; t < 300; ++t) sh2z_field_step(&F);
+    return veh[0].t.speed;
+}
+static int32_t lateral_after(uint32_t kind) {
+    params(); surface_reset(); P.surface = &surf;
+    zone_buf[0] = (sh2z_field_zone_t){ 0, line.length, -U(1000), U(1000), kind };
+    surf.zone_count = kind ? 1u : 0u;
+    for(uint32_t i = 0; i < NODES; ++i) nodes[i].lateral = 0;
+    lone(U(1000), U(150), 2000);
+    for(uint32_t t = 0; t < 12; ++t) sh2z_field_step(&F);
+    make_line();
+    return veh[0].t.lateral;
+}
+static void test_zones(void) {
+    const int32_t free_run = speed_after(0u, 0), rough = speed_after(SH2Z_FIELD_ZONE_ROUGH, 0);
+    CHECK(rough < free_run);                                        /* damped */
+    CHECK(abs(rough - (int32_t)(((int64_t)free_run * surf.rough_keep) >> 16)) <= U(1));   /* by rough_keep */
+    CHECK(speed_after(SH2Z_FIELD_ZONE_ROUGH, 1) == speed_after(0u, 1));                    /* not while boosting */
+    const int32_t grip = lateral_after(0u), slip = lateral_after(SH2Z_FIELD_ZONE_SLIP);
+    CHECK(grip < U(150) && slip < U(150));                          /* both steer back toward the line */
+    CHECK(slip > grip);                                             /* low grip steers back more slowly */
+    /* Recharge: energy refills by recharge per tick, up to the maximum; control: no zone, no refill. */
+    for(int on = 0; on < 2; ++on) {
+        params(); surface_reset(); P.surface = &surf;
+        zone_buf[0] = (sh2z_field_zone_t){ 0, line.length, -U(1000), U(1000), SH2Z_FIELD_ZONE_RECHARGE };
+        surf.zone_count = (uint32_t)on;
+        lone(U(1000), 0, 2000);
+        veh[0].energy = U(100);
+        sh2z_field_step(&F);
+        CHECK(veh[0].energy == (on ? U(100) + surf.recharge : U(100)));
+        for(uint32_t t = 0; t < 400; ++t) sh2z_field_step(&F);
+        CHECK(veh[0].energy == (on ? veh[0].max_energy : U(100)));
+    }
+    params();
+}
+
+/* Tubes: nodes 20..59 are a tube of radius 100 (flags 0x80). An agent asked to run 250 units off the line
+ * there is never charged at an edge on a step from a tube node (leaving it included), goes round past the
+ * radius and keeps within half the round; the control (no wrap mask) never passes the half width. */
+static int tube_line(void) {
+    for(uint32_t i = 20; i < 60; ++i) { nodes[i].flags = 0x0080u; nodes[i].half_width = 100; nodes[i].lateral = 250; }
+    nodes[60].half_width = 120;                                     /* a narrow road after it: it leaves wide */
+    return 1;
+}
+/* Within half the round of a tube whose half width (radius) is hw here: [-c/2, c - c/2). */
+static int in_round(int32_t lat, int32_t hw) {
+    const int32_t c = (int32_t)(((int64_t)hw * 411775) >> 16);
+    return lat >= -(c >> 1) && lat < c - (c >> 1);
+}
+static int32_t tube_scene(int wrap, int32_t *walls) {
+    params(); surface_reset();
+    if(wrap) { surf.wrap_mask = 0x0180u; surf.wrap_value = 0x0080u; }
+    P.surface = &surf;
+    P.boost_from_lap = 4;                                           /* energy moves by the edge only */
+    make_line(); (void)tube_line();
+    lone(U(200 * 19), U(90), 1000);
+    *walls = 0;
+    int32_t widest = INT32_MIN;   /* most past the half width on a tube node */
+    for(uint32_t t = 0; t < 1200; ++t) {
+        sh2z_line_sample_t from;
+        sh2z_line_sample(&line, veh[0].t.node, veh[0].t.dist, &from);
+        sh2z_field_step(&F);
+        sh2z_line_sample_t at;
+        sh2z_line_sample(&line, veh[0].t.node, veh[0].t.dist, &at);
+        if((veh[0].flags & SH2Z_VEH_WALL) && (from.flags & 0x0080u)) ++*walls;   /* steps from a tube node */
+        if(at.flags & 0x0080u) {
+            if(wrap) CHECK(in_round(veh[0].t.lateral, at.half_width));
+            if(abs(veh[0].t.lateral) - at.half_width > widest) widest = abs(veh[0].t.lateral) - at.half_width;
+        } else CHECK(veh[0].t.lateral >= -at.half_width && veh[0].t.lateral <= at.half_width);
+    }
+    make_line();
+    return widest;
+}
+static void test_tubes(void) {
+    int32_t walls_wrap, walls_edge;
+    const int32_t e0 = U(160);
+    const int32_t widest = tube_scene(1, &walls_wrap);
+    CHECK(walls_wrap == 0 && veh[0].energy == e0);                  /* no edge in the tube, none on leaving it */
+    CHECK(widest > U(50));                                          /* well past the radius: round the tube */
+    const int32_t widest_edge = tube_scene(0, &walls_edge);
+    CHECK(widest_edge <= 0);                                        /* control: with edges it cannot go round */
+    /* The short way round: from just left of the seam to a target just right of it, the agent crosses
+     * the seam instead of sweeping back through 0. */
+    params(); surface_reset(); surf.wrap_mask = 0x0180u; surf.wrap_value = 0x0080u; P.surface = &surf;
+    make_line(); (void)tube_line();
+    const int32_t round = (int32_t)(((int64_t)U(100) * 411775) >> 16), h = round >> 1;
+    for(uint32_t i = 20; i < 60; ++i) nodes[i].lateral = (int16_t)(-(h >> 8) + 10);   /* just right of the seam */
+    lone(U(200 * 25), round - h - U(20), 2000);                  /* just left of it */
+    int crossed = 0, through_middle = 0;
+    for(uint32_t t = 0; t < 40; ++t) {
+        sh2z_field_step(&F);
+        if(veh[0].t.lateral < 0) crossed = 1;
+        if(abs(veh[0].t.lateral) < U(100)) through_middle = 1;
+    }
+    CHECK(crossed && !through_middle);
+    make_line();
+    /* Random races with tubes and level of detail: tube laterals stay within half the round, road
+     * laterals within the half width, energies in range, every vehicle ranked once. */
+    for(uint32_t seed = 1; seed <= 4; ++seed) {
+        params(); surface_reset(); surf.wrap_mask = 0x0180u; surf.wrap_value = 0x0080u; P.surface = &surf;
+        make_line(); (void)tube_line();
+        P.lod_near[0] = U(1500); P.lod_near[1] = U(4000); P.lod_near[2] = U(8000);
+        rng = seed * UINT32_C(2654435761) + 1u;
+        for(uint32_t i = 0; i < 30; ++i) vehicle(i, i, 1500 + (int32_t)i * 20);
+        for(uint32_t i = 4; i < 30; i += 5) { brain[i].chase = (int16_t)(i - 1u); brain[i].chase_lead = 30; brain[i].aggression = 60; }
+        field(30, seed);
+        for(uint32_t t = 0; t < 4000; ++t) {
+            if(t == 60) sh2z_field_start(&F);
+            sh2z_field_step(&F);
+            uint32_t seen = 0;
+            for(uint32_t i = 0; i < 30; ++i) {
+                sh2z_line_sample_t at;
+                sh2z_line_sample(&line, veh[i].t.node, veh[i].t.dist, &at);
+                if(at.flags & 0x0080u) CHECK(in_round(veh[i].t.lateral, at.half_width));
+                else CHECK(veh[i].t.lateral >= -at.half_width && veh[i].t.lateral <= at.half_width);
+                CHECK(veh[i].energy >= 0 && veh[i].energy <= veh[i].max_energy);
+                seen |= UINT32_C(1) << veh[i].rank;
+            }
+            CHECK(seen == (UINT32_C(1) << 30) - 1u);
+        }
+        CHECK(F.finished + F.retired > 0u);
+    }
+    make_line();
+    params();
+}
+
+/* The final dash: from dash_from on the final lap an agent targets at least dash_pace of its pace and
+ * boosts on energy. The laps before are unchanged; the control (dash_from 0) runs the last lap as before. */
+static int32_t dash_race(int32_t from, int32_t *lap2) {
+    params();
+    P.laps = 3; P.dash_from = from; P.dash_pace = 78643;            /* 1.2 */
+    rng = 7u;
+    vehicle(0, 0, 1500);
+    brain[0].lane = 0;
+    field(1, 3u);
+    for(uint32_t t = 0; t < 9000 && !(veh[0].flags & SH2Z_VEH_FINISHED); ++t) {
+        if(t == 60) sh2z_field_start(&F);
+        sh2z_field_step(&F);
+    }
+    CHECK(veh[0].flags & SH2Z_VEH_FINISHED);
+    *lap2 = brain[0].lap_tick[1];
+    return brain[0].finish_tick;
+}
+static void test_dash(void) {
+    int32_t lap2_free, lap2_dash;
+    const int32_t free_run = dash_race(0, &lap2_free);
+    const int32_t dash = dash_race(line.length / 2, &lap2_dash);
+    CHECK(lap2_dash == lap2_free);                                  /* nothing changes before the final lap */
+    CHECK(dash < free_run - 100);                                   /* the last half lap is raced */
+    params();
+}
+
 int main(void) {
     make_line();
     params();
@@ -330,6 +545,11 @@ int main(void) {
     test_retire();
     test_retarget();
     test_first_lap_cap();
+    test_surface_identity();
+    test_plate();
+    test_zones();
+    test_tubes();
+    test_dash();
     printf("line field: %" PRIu64 " checks passed\n", checks);
     return 0;
 }
