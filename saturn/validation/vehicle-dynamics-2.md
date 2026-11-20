@@ -24,8 +24,13 @@ in this repository.** Evidence by tier:
   included. `sh2zam_vehicle_dynamics2.o` is 22,168 bytes of text. It needs the
   vehicle-dynamics-1 unit's `sh2z_vd_locate` and `sh2z_vd_lap_distance`, the divider, the
   unit30 helpers and `___ashiftrt_r4_14`; no memcpy or memset.
+- **MODELLED:** the `vehicle-dynamics-model` suite runs `sh2z_vd_step2`'s SH-2 object code in the
+  pinned Yabause interpreter: flat RAM, no caches or wait states, not Saturn timing. It first
+  checks 2,440 ticks against the host build word for word: walled road (also equal to
+  `sh2z_vd_step` on the host), a pipe and a cylinder on three sides each, and a joined-pipe
+  drive. Mean cost: 8,942.8 cycles per tick (median 8,743, max 16,317). The capture is CI run
+  44675995095, ELF SHA-256 `82234b60...`. The vehicle-dynamics-1 rows of the same suite are unchanged.
 - **Caller qualification (recorded by the caller, HOST):** a racing game's pipe and cylinder
   courses against its original code. Reference-seeded windows across every tube span and join,
   and whole races, agree within its bands.
-- **Not done:** an instruction-model capture of `sh2z_vd_step2` (the caller measures it in its
-  image), the half-pipe shape, and console execution.
+- **Not done:** the half-pipe shape, console execution and any frame measurement.

@@ -34,8 +34,8 @@ times anything:
 - 1,366 closest-point searches and 86 that report the target off the line.
 
 Capture: [results.json](benchmarks/vehicle-dynamics-model/results.json), CI run
-[44660318294](https://github.com/lamb2k/SH2ZAM/actions/runs/44660318294), ELF SHA-256
-`72836f49...`.
+[44675995095](https://github.com/lamb2k/SH2ZAM/actions/runs/44675995095), ELF SHA-256
+`82234b60...` (first recorded from run 44660318294, ELF `72836f49...`, with the same values).
 
 | Call | Mean cycles | Median | Max | Mean instructions |
 | --- | ---: | ---: | ---: | ---: |
@@ -46,6 +46,23 @@ Capture: [results.json](benchmarks/vehicle-dynamics-model/results.json), CI run
 
 The step includes its own closest-point search. A tick costs about 9,400 modelled cycles, or about
 0.33 ms at 28.6 MHz before memory waits.
+
+**vehicle-dynamics-2.** The same suite runs `sh2z_vd_step2` on the tube stadium of
+`tests/test_vehicle_dynamics2.c` and checks 2,440 ticks against the host build word for word:
+- walled road, where the host step2 body also equals `sh2z_vd_step`'s on every tick;
+- a pipe and a cylinder, with the body on three sides of each;
+- a drive from road through a joined pipe and out.
+
+Half the ticks run with SR.S set. Same capture; the `sh2z_vd_step` rows above are unchanged value for
+value.
+
+| Call | Mean cycles | Median | Max | Mean instructions |
+| --- | ---: | ---: | ---: | ---: |
+| `sh2z_vd_step2`, one tick (all tube scripts) | 8,942.8 | 8,743 | 16,317 | 7,572 |
+| `sh2z_vd_step2` on the road | 9,294.5 | | | |
+| `sh2z_vd_step2` in a pipe (three sides) | 8,761.2 to 8,797.0 | | | |
+| `sh2z_vd_step2` on a cylinder (three sides) | 8,774.6 to 8,817.1 | | | |
+| `sh2z_vd_step2` through a joined pipe | 8,968.2 | | | |
 
 ## Formats
 
