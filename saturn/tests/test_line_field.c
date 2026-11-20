@@ -1,4 +1,4 @@
-/* Line field (contract tags line-field-1 to line-field-5) checks.
+/* Line field (contract tags line-field-1 to line-field-6) checks.
  * Invariants over long random races, an independent grid formula, exact
  * contact arithmetic on hand-placed pairs, determinism, level of detail, and
  * a control for every behavioural claim (the same scene with the feature off
@@ -832,6 +832,152 @@ static void test_impact(void) {
     CHECK(a > U(50) && b > U(50));                                  /* control: the flat side energy empties both */
 }
 
+/* ---- line-field-6 ---------------------------------------------------------------------------------- */
+static sh2z_field_race_t RC;
+static void race_reset(void) {
+    memset(&RC, 0, sizeof RC);
+    RC.rear_long = U(23); RC.rear_lat = U(138); RC.spin_ticks = 103; RC.rear_ticks = 20;
+}
+
+/* A conduct block nobody can use (no focus, no attack chances, no slip, no after speed) moves nobody differently:
+ * the pinned line-field-1 hashes. */
+static void test_race_identity(void) {
+    static const uint32_t lf1[6] = { 0x7c56497eu, 0x9c2d952fu, 0x12afee5bu, 0xccfb9880u, 0x080ae758u, 0x244b0332u };
+    params(); race_reset();
+    P.race = &RC;
+    for(uint32_t seed = 1; seed <= 6; ++seed) CHECK(race(24, seed, 0, 5000, 1) == lf1[seed - 1u]);
+    RC.after_speed = U(20);                                         /* no focus: the after drive never starts */
+    for(uint32_t seed = 1; seed <= 6; ++seed) CHECK(race(24, seed, 0, 5000, 1) == lf1[seed - 1u]);
+    params();
+}
+
+/* After the focus: an outside vehicle (0) finishes first; the agent (1, slow pace) then targets after_speed with no
+ * boost, whatever its pace. The control (no conduct block) keeps its pace target. */
+static int32_t after_scene(int with, int32_t *boosts) {
+    params(); race_reset();
+    RC.after_speed = U(25);
+    P.race = with ? &RC : 0; P.laps = 1; P.boost_from_lap = 0; P.boost_behind = -U(100000);   /* boost whenever it can */
+    rng = 9u;
+    vehicle(0, 0, 1000);
+    vehicle(1, 2, 4000);
+    brain[1].lane = 0;
+    veh[0].flags |= SH2Z_VEH_EXTERNAL;
+    field(2, 7u);
+    F.focus = 0;
+    sh2z_field_start(&F);
+    int32_t want = 0, home = -1;
+    *boosts = 0;
+    for(uint32_t t = 0; t < 900; ++t) {
+        veh[0].t.speed = U(40);
+        sh2z_track_advance(&line, &veh[0].t, 1);
+        veh[0].kick_lat = veh[0].kick_speed = 0;
+        sh2z_field_step(&F);
+        if((veh[0].flags & SH2Z_VEH_FINISHED) && home < 0) home = (int32_t)t;
+        /* A boost under way when the focus finishes runs out first. */
+        if(home >= 0 && (int32_t)t > home + P.boost_ticks + 4 && brain[1].lap_tick[0] < 0) {
+            want = brain[1].target_speed;
+            if(veh[1].flags & SH2Z_VEH_BOOST) ++*boosts;
+        }
+    }
+    CHECK(home >= 0 && brain[1].lap_tick[0] < 0);   /* the agent is still racing when sampled */
+    CHECK(veh[0].flags & SH2Z_VEH_FINISHED);
+    params();
+    return want;
+}
+static void test_after_focus(void) {
+    int32_t boosts, boosts_free;
+    CHECK(after_scene(1, &boosts) == U(25) && boosts == 0);         /* the plain drive, no boost */
+    const int32_t free_want = after_scene(0, &boosts_free);
+    CHECK(free_want != U(25) && boosts_free > 0);                   /* control: the pace target, and boosts */
+}
+
+/* Finish slip: a lone agent with a finish target over three laps; with finish_slip the target moves that much
+ * later at the end of lap 2 and the finish follows within 1%; the control (no slip) meets the target. */
+static int32_t slip_race(int32_t finish, int32_t slip) {
+    race_reset();
+    RC.finish_slip = slip;
+    P.race = slip ? &RC : 0;
+    const int32_t got = lone_race(finish);
+    CHECK(brain[0].finish_ticks == finish + slip);
+    return got;
+}
+static void test_finish_slip(void) {
+    const int32_t plain = slip_race(4100, 0);
+    const int32_t slipped = slip_race(4100, 300);
+    CHECK(plain * 100 >= 4100 * 99 && plain * 100 <= 4100 * 101);
+    CHECK(slipped * 100 >= 4400 * 99 && slipped * 100 <= 4400 * 101);
+    CHECK(slipped - plain > 200);                                   /* the slip shows */
+    params();
+}
+
+/* Rear attack: agent 0 with agent 1 on its tail. With rear_chance 65535 agent 0 attacks backwards within one
+ * decision; controls: no chance, the tail too far back, and a focus ahead of agent 0 (the gate) each stop it. */
+static int rear_scene(uint16_t chance, int32_t back, int focus_ahead) {
+    params(); race_reset();
+    P.race = &RC;
+    rng = 13u;
+    make_line(); mark(20, 60, 0u, 300);
+    vehicle(0, 0, 1500); vehicle(1, 1, 1500); vehicle(2, 2, 1500);
+    const int32_t at = U(200 * 40);
+    for(uint32_t i = 0; i < 3; ++i) { brain[i].lane = 0; veh[i].t.lap = 0; veh[i].t.lateral = 0; veh[i].t.speed = U(20); }
+    brain[1].lane = U(60); veh[1].t.lateral = U(60);               /* within rear_lat, beyond contact_lat */
+    veh[0].t.dist = at; veh[1].t.dist = at - back; veh[2].t.dist = focus_ahead ? at + U(400) : at - U(2000);
+    veh[2].t.lateral = U(150);
+    for(uint32_t i = 0; i < 3; ++i) veh[i].t.node = sh2z_line_locate(&line, veh[i].t.dist, 0);
+    veh[2].flags |= SH2Z_VEH_EXTERNAL;
+    brain[0].rear_chance = chance;
+    field(3, 3u);
+    F.focus = 2;
+    sh2z_field_start(&F);
+    int hit = 0;
+    for(uint32_t t = 0; t < 8 && !hit; ++t) {
+        veh[2].kick_lat = veh[2].kick_speed = 0;
+        sh2z_field_step(&F);
+        hit = brain[0].attack_ticks && brain[0].attack_target == 1u;
+    }
+    make_line(); params();
+    return hit;
+}
+static void test_rear_attack(void) {
+    CHECK(rear_scene(65535, U(15), 0));                             /* on the tail: attacked */
+    CHECK(!rear_scene(0, U(15), 0));                                /* control: no chance */
+    CHECK(!rear_scene(65535, U(40), 0));                            /* control: beyond rear_long */
+    CHECK(!rear_scene(65535, U(15), 1));                            /* control: the focus is ahead (the gate) */
+}
+
+/* Spin attack: agent 1 alongside the agent it chases (0) spins: attack_target SH2Z_FIELD_SPIN for spin_ticks, and
+ * every vehicle it touches pays the attack while it pays nothing; the control (no chance) attacks nobody. */
+static void spin_scene(uint16_t chance, int32_t *spinner_paid, int32_t *victim_paid, int *spun) {
+    params(); race_reset();
+    P.race = &RC;
+    rng = 17u;
+    make_line(); mark(20, 60, 0u, 300);
+    vehicle(0, 0, 1500); vehicle(1, 1, 1500);
+    const int32_t at = U(200 * 40);
+    veh[0].t.dist = at; veh[1].t.dist = at - U(20);
+    veh[0].t.lateral = 0; veh[1].t.lateral = U(60);               /* alongside, not touching until it moves */
+    for(uint32_t i = 0; i < 2; ++i) { brain[i].lane = 0; veh[i].t.lap = 0; veh[i].t.speed = U(20); veh[i].t.node = sh2z_line_locate(&line, veh[i].t.dist, 0); }
+    brain[1].chase = 0; brain[1].chase_lead = 0; brain[1].spin_chance = chance;
+    field(2, 3u);
+    sh2z_field_start(&F);
+    const int32_t e0 = veh[0].energy, e1 = veh[1].energy;
+    *spun = 0;
+    for(uint32_t t = 0; t < 40; ++t) {
+        sh2z_field_step(&F);
+        if(brain[1].attack_target == SH2Z_FIELD_SPIN && brain[1].attack_ticks) *spun = 1;
+    }
+    *spinner_paid = e1 - veh[1].energy; *victim_paid = e0 - veh[0].energy;
+    make_line(); params();
+}
+static void test_spin_attack(void) {
+    int32_t s_paid, v_paid, s_free, v_free; int spun, spun_free;
+    spin_scene(65535, &s_paid, &v_paid, &spun);
+    CHECK(spun && F.contacts >= 1u);
+    CHECK(s_paid == 0 && v_paid >= P.attack_energy);                /* the spinner pays nothing, its victim the attack */
+    spin_scene(0, &s_free, &v_free, &spun_free);
+    CHECK(!spun_free && v_free < P.attack_energy);                  /* control: no spin, no attack paid */
+}
+
 int main(void) {
     make_line();
     params();
@@ -858,6 +1004,11 @@ int main(void) {
     test_drops();
     test_launch();
     test_impact();
+    test_race_identity();
+    test_after_focus();
+    test_finish_slip();
+    test_rear_attack();
+    test_spin_attack();
     printf("line field: %" PRIu64 " checks passed\n", checks);
     return 0;
 }

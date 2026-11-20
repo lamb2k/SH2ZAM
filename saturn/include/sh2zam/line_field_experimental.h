@@ -6,8 +6,10 @@
  *
  * Contract tags line-field-1, line-field-2 (the second-lap re-target),
  * line-field-3 (the first-lap chase cap), line-field-4 (surface zones and
- * tube nodes) and line-field-5 (tube roll, lateral inertia, falls with a
- * knock-out credit, a near-focus knock-out gate).
+ * tube nodes), line-field-5 (tube roll, lateral inertia, falls with a
+ * knock-out credit, a near-focus knock-out gate) and line-field-6 (race
+ * conduct: the drive after the focus finishes, a finish target that slips
+ * lap by lap, rear and spin attacks).
  *
  * Shared vehicle state. sh2z_vehicle_t is the line-space state of ANY vehicle
  * on the line: agents the field drives, and vehicles driven elsewhere (a
@@ -96,10 +98,33 @@
  *   energy cannot retire an agent farther than ko_near from the focus; its
  *   energy stays at ko_floor.
  *
+ * Race conduct (line-field-6). params->race, when set, adds the conduct
+ * below; NULL is line-field-5 step for step, with its hashes.
+ * - After the focus: once the focus vehicle has finished, every agent still
+ *   racing targets after_speed (at most its top speed) and starts no boost:
+ *   no pace, chase or final dash. Racing games often hand the field one
+ *   plain drive once the player is home.
+ * - Finish slip: an agent with a finish target (line-field-2) moves it
+ *   finish_slip ticks later at each lap it completes after its first, and
+ *   covers the laps left evenly by the new target (one division per lap).
+ *   A target set against the share of the race still to run drifts later
+ *   as that share shrinks; the slip is that drift taken a lap at a time.
+ * - Rear attacks: with rear_chance (per decision, the agent's own), an agent
+ *   with a vehicle on its tail (closer than rear_long behind, within
+ *   rear_lat across) side-attacks it: the attack of line-field-1, aimed back.
+ * - Spin attacks: with spin_chance (per decision, the agent's own), an agent
+ *   alongside the vehicle it chases spins for spin_ticks: an attack on every
+ *   vehicle it touches meanwhile (attack_target SH2Z_FIELD_SPIN), with no
+ *   steering into anyone.
+ * - Both kinds wait while the focus is not more than focus_lead behind the
+ *   agent (no focus: no wait). An attacking agent's victim pays as in
+ *   line-field-1 or line-field-5, so a caller that resolves contact itself
+ *   reads attack_ticks and attack_target as the agent's attack intent.
+ *
  * Determinism. One xorshift32 state in the field drives every random choice;
  * the same initial state and the same external inputs give the same result
  * on every target. One integer division per agent and race (the re-target)
- * and, with contact_norm, one per contact incident; no other division, no floating point, no allocation, no global
+ * and, with contact_norm, one per contact incident; with finish_slip, one more per agent and lap; no other division, no floating point, no allocation, no global
  * state. sh2z_field_step is not reentrant on one field.
  *
  * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
@@ -172,6 +197,8 @@ typedef struct {
     int16_t ko_by;             /**< line-field-5: external vehicle of the last contact incident, -1 none. */
     int16_t ko_credit;         /**< line-field-5: vehicle credited with this agent's fall, -1 none. */
     uint16_t ko_age;           /**< line-field-5: steps since that incident began (saturates at 65535). */
+    uint16_t rear_chance;      /**< line-field-6: Q16 chance per decision of a rear attack (0 = none). Caller's tuning. */
+    uint16_t spin_chance;      /**< line-field-6: Q16 chance per decision of a spin attack beside the chased vehicle (0 = none). Caller's tuning. */
 } sh2z_field_brain_t;
 
 /** Field tuning. */
@@ -211,6 +238,7 @@ typedef struct {
     int32_t dash_from;         /**< line-field-4: Q8 distance into the final lap from which agents race for the line; 0 = never. */
     int32_t dash_pace;         /**< line-field-4: Q16 share of its pace an agent targets at least in the final dash. */
     const struct sh2z_field_behave *behave; /**< line-field-5: tube roll, inertia, falls, knock-out credit; NULL for none. */
+    const struct sh2z_field_race *race;     /**< line-field-6: race conduct; NULL for none. */
 } sh2z_field_params_t;
 
 /** The field. The caller owns every array (count entries each). */
@@ -321,6 +349,21 @@ typedef struct sh2z_field_behave {
     int32_t launch_chance;     /**< Q16 chance that an agent out of a tube beyond the open edge of a drop node is launched off (65536 = always). */
     int32_t contact_norm;      /**< Q16: > 0 charges a contact incident by its closing speed along the line between the two, contact_norm each (twice to an attacker's victim, nothing to the attacker), instead of side_energy, hit_energy and attack_energy. */
 } sh2z_field_behave_t;
+
+/* ---- Contract tag line-field-6 ------------------------------------------ */
+
+#define SH2Z_FIELD_SPIN 0xffu  /**< attack_target of a spin attack: every vehicle touched. */
+
+/** Race conduct (params->race). */
+typedef struct sh2z_field_race {
+    int32_t after_speed;       /**< Q8 per tick an agent targets once the focus has finished; 0 = keep racing. */
+    int32_t finish_slip;       /**< Ticks a finish target moves later at each lap completed after the first; 0 = none. */
+    int32_t rear_long;         /**< Q8 gap behind within which a vehicle is on the agent's tail. */
+    int32_t rear_lat;          /**< Q8 lateral reach of a rear attack. */
+    int32_t focus_lead;        /**< Q8: attacks wait unless the focus is more than this behind the agent (may be < 0). */
+    uint8_t spin_ticks;        /**< Ticks a spin attack lasts (>= 1). */
+    uint8_t rear_ticks;        /**< Ticks a rear attack lasts (>= 1). */
+} sh2z_field_race_t;
 
 #ifdef __cplusplus
 }

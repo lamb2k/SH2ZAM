@@ -1,4 +1,4 @@
-/* Experimental line field (contract tags line-field-1 to line-field-5).
+/* Experimental line field (contract tags line-field-1 to line-field-6).
  *
  * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
  * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
@@ -157,6 +157,12 @@ static int32_t fld_behind(const sh2z_field_t *f, uint32_t i) {
     return -1;
 }
 
+/* line-field-6: attacks wait unless the focus is more than focus_lead behind agent i (no focus: no wait). */
+FLD_INLINE int fld_focus_behind(const sh2z_field_t *f, uint32_t i, int32_t focus_lead) {
+    if(f->focus < 0 || (uint32_t)f->focus >= f->count || (uint32_t)f->focus == i) return 1;
+    return sh2z_track_near_gap(f->line, &f->veh[i].t, &f->veh[f->focus].t) > focus_lead;
+}
+
 static void fld_think(sh2z_field_t *f, uint32_t i, uint32_t due, const sh2z_line_sample_t *at) {
     const sh2z_field_params_t *p = f->params;
     sh2z_vehicle_t *v = &f->veh[i];
@@ -168,6 +174,10 @@ static void fld_think(sh2z_field_t *f, uint32_t i, uint32_t due, const sh2z_line
     if(v->flags & SH2Z_VEH_FINISHED) { b->target_speed = p->cruise; b->target_lat = base_lat; return; }
     /* line-field-4: the final dash. */
     const int dash = p->dash_from > 0 && v->t.lap == (int32_t)p->laps - 1 && v->t.dist >= p->dash_from;
+    /* line-field-6: the drive once the focus has finished. */
+    const sh2z_field_race_t *rc = p->race;
+    const int after = rc && rc->after_speed > 0 && f->focus >= 0 && (uint32_t)f->focus < f->count &&
+                      (f->veh[f->focus].flags & SH2Z_VEH_FINISHED);
 
     /* ---- pace ---- */
     int32_t want;
@@ -181,7 +191,10 @@ static void fld_think(sh2z_field_t *f, uint32_t i, uint32_t due, const sh2z_line
         b->expect = total;
         behind = 0;
     }
-    if(dash) {
+    if(after) {
+        want = rc->after_speed < v->top_speed ? rc->after_speed : v->top_speed;
+        behind = 0;
+    } else if(dash) {
         /* At least dash_pace of its pace, whatever its expectation. */
         want = sh2z_pace_target(b->pace, b->expect, total, p->pace_gain, b->pace >> 1, cap);
         const int32_t floor = fld_mul_q16(b->pace, p->dash_pace);
@@ -199,7 +212,7 @@ static void fld_think(sh2z_field_t *f, uint32_t i, uint32_t due, const sh2z_line
         if(want > v->top_speed) want = v->top_speed;
     }
     /* ---- boost ---- */
-    if(!(v->flags & SH2Z_VEH_BOOST) && v->t.lap >= (int32_t)p->boost_from_lap && (dash || behind > p->boost_behind) &&
+    if(!after && !(v->flags & SH2Z_VEH_BOOST) && v->t.lap >= (int32_t)p->boost_from_lap && (dash || behind > p->boost_behind) &&
        at->speed_cap >= p->boost_min_cap &&
        (int64_t)v->energy * 65536 > (int64_t)v->max_energy * p->boost_min_share && v->energy > p->boost_energy) {
         v->flags |= SH2Z_VEH_BOOST;
@@ -217,7 +230,10 @@ static void fld_think(sh2z_field_t *f, uint32_t i, uint32_t due, const sh2z_line
     int32_t lat = base_lat;
     const int32_t a = fld_ahead(f, i);
     const int32_t r = fld_behind(f, i);
-    if(b->attack_ticks) {
+    if(b->attack_ticks && b->attack_target == SH2Z_FIELD_SPIN) {
+        /* line-field-6: a spin keeps its line and hits whatever it touches. */
+        b->attack_ticks = (uint8_t)(b->attack_ticks > due ? b->attack_ticks - due : 0u);
+    } else if(b->attack_ticks) {
         const sh2z_vehicle_t *t = &f->veh[b->attack_target];
         b->attack_ticks = (uint8_t)(b->attack_ticks > due ? b->attack_ticks - due : 0u);
         if(fld_active(t) && fld_abs(sh2z_track_near_gap(f->line, &t->t, &v->t)) < p->attack_long) lat = t->t.lateral;
@@ -265,6 +281,27 @@ static void fld_think(sh2z_field_t *f, uint32_t i, uint32_t due, const sh2z_line
                 b->attack_ticks = 24u;
                 b->attack_target = (uint8_t)b->chase;
                 lat = c->t.lateral;
+            }
+        }
+        /* line-field-6: spin beside the chased vehicle, or attack one on the tail, with the focus behind. */
+        if(rc && !b->attack_ticks && (b->spin_chance || b->rear_chance) && fld_focus_behind(f, i, rc->focus_lead)) {
+            if(b->spin_chance && chasing) {
+                const sh2z_vehicle_t *c = &f->veh[b->chase];
+                if(fld_active(c) && fld_abs(sh2z_track_near_gap(f->line, &c->t, &v->t)) < p->attack_long &&
+                   fld_abs(c->t.lateral - v->t.lateral) < p->attack_lat && (fld_rand(f) & 0xffffu) < (uint32_t)b->spin_chance) {
+                    b->attack_ticks = rc->spin_ticks ? rc->spin_ticks : 1u;
+                    b->attack_target = SH2Z_FIELD_SPIN;
+                }
+            }
+            if(!b->attack_ticks && b->rear_chance && r >= 0) {
+                const sh2z_vehicle_t *rv = &f->veh[r];
+                const int32_t gap = sh2z_track_near_gap(f->line, &v->t, &rv->t);
+                if(gap > 0 && gap < rc->rear_long && fld_abs(rv->t.lateral - v->t.lateral) < rc->rear_lat &&
+                   (fld_rand(f) & 0xffffu) < (uint32_t)b->rear_chance) {
+                    b->attack_ticks = rc->rear_ticks ? rc->rear_ticks : 1u;
+                    b->attack_target = (uint8_t)r;
+                    lat = rv->t.lateral;
+                }
             }
         }
     }
@@ -436,8 +473,10 @@ static uint32_t fld_contacts(sh2z_field_t *f) {
                 if(b_ext && !a_ext) { f->brain[ia].ko_by = (int16_t)ib; f->brain[ia].ko_age = 1u; }
             }
             const int32_t hit = fresh ? p->side_energy + (closing > 0 ? fld_mul_q16(closing, p->hit_energy) : 0) : 0;
-            const int a_attacks = !a_ext && f->brain[ia].attack_ticks && f->brain[ia].attack_target == ib;
-            const int b_attacks = !b_ext && f->brain[ib].attack_ticks && f->brain[ib].attack_target == ia;
+            const int a_attacks = !a_ext && f->brain[ia].attack_ticks &&
+                                  (f->brain[ia].attack_target == ib || f->brain[ia].attack_target == SH2Z_FIELD_SPIN);
+            const int b_attacks = !b_ext && f->brain[ib].attack_ticks &&
+                                  (f->brain[ib].attack_target == ia || f->brain[ib].attack_target == SH2Z_FIELD_SPIN);
             if(fresh && p->behave && p->behave->contact_norm > 0) {
                 /* line-field-5: the impact is the closing speed along the line between the two (longitudinal gap and
                  * lateral offset; the length by max + min / 2), shared: contact_norm of it each, and the whole
@@ -452,9 +491,9 @@ static uint32_t fld_contacts(sh2z_field_t *f) {
                 fld_damage(f, ia, a_attacks ? 0 : hit + (b_attacks ? p->attack_energy : 0));
                 fld_damage(f, ib, b_attacks ? 0 : hit + (a_attacks ? p->attack_energy : 0));
             }
-            /* An attack that lands is over. */
-            if(a_attacks) f->brain[ia].attack_ticks = 0u;
-            if(b_attacks) f->brain[ib].attack_ticks = 0u;
+            /* An attack that lands is over (a spin runs its course). */
+            if(a_attacks && f->brain[ia].attack_target != SH2Z_FIELD_SPIN) f->brain[ia].attack_ticks = 0u;
+            if(b_attacks && f->brain[ib].attack_target != SH2Z_FIELD_SPIN) f->brain[ib].attack_ticks = 0u;
             f->contacts += (uint32_t)fresh;
             ++pushed;
         }
@@ -476,6 +515,17 @@ static void fld_laps(sh2z_field_t *f, uint32_t i) {
             if(left > 0) {
                 b->pace = ((int32_t)f->params->laps - 1) * f->line->length / left;
                 b->expect = f->line->length;
+            }
+        }
+        /* line-field-6: the finish target slips a lap at a time; the laps left are covered evenly by it. */
+        const sh2z_field_race_t *rc = f->params->race;
+        if(rc && rc->finish_slip && done >= 2 && done < (int32_t)f->params->laps && b->finish_ticks > 0 &&
+           !(v->flags & (SH2Z_VEH_EXTERNAL | SH2Z_VEH_RETIRED))) {
+            b->finish_ticks += rc->finish_slip;
+            const int32_t left = b->finish_ticks - b->lap_tick[done - 1];
+            if(left > 0) {
+                b->pace = ((int32_t)f->params->laps - done) * f->line->length / left;
+                b->expect = done * f->line->length;
             }
         }
         if(done == (int32_t)f->params->laps && !(v->flags & (SH2Z_VEH_FINISHED | SH2Z_VEH_RETIRED))) {
