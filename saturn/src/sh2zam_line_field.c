@@ -438,7 +438,17 @@ static uint32_t fld_contacts(sh2z_field_t *f) {
             const int32_t hit = fresh ? p->side_energy + (closing > 0 ? fld_mul_q16(closing, p->hit_energy) : 0) : 0;
             const int a_attacks = !a_ext && f->brain[ia].attack_ticks && f->brain[ia].attack_target == ib;
             const int b_attacks = !b_ext && f->brain[ib].attack_ticks && f->brain[ib].attack_target == ia;
-            if(fresh) {
+            if(fresh && p->behave && p->behave->contact_norm > 0) {
+                /* line-field-5: the impact is the closing speed along the line between the two (longitudinal gap and
+                 * lateral offset; the length by max + min / 2), shared: contact_norm of it each, and the whole
+                 * 2 x contact_norm to an attacker's victim (the attacker pays nothing). */
+                const int32_t ax = fld_abs(gap), ay = adl, len = (ax > ay ? ax + (ay >> 1) : ay + (ax >> 1));
+                const int64_t dot = (int64_t)closing * gap + (int64_t)(b->t.lat_vel - a->t.lat_vel) * dl;
+                const int32_t norm = len > 0 ? (int32_t)((dot < 0 ? -dot : dot) / len) : fld_abs(closing);
+                const int32_t share = fld_mul_q16(norm, p->behave->contact_norm);
+                fld_damage(f, ia, a_attacks ? 0 : (b_attacks ? share * 2 : share));
+                fld_damage(f, ib, b_attacks ? 0 : (a_attacks ? share * 2 : share));
+            } else if(fresh) {
                 fld_damage(f, ia, a_attacks ? 0 : hit + (b_attacks ? p->attack_energy : 0));
                 fld_damage(f, ib, b_attacks ? 0 : hit + (a_attacks ? p->attack_energy : 0));
             }

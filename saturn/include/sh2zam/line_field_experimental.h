@@ -84,6 +84,9 @@
  *   leaves the line the same way, and an agent on a drop tube that is also a hold tube (an outside surface)
  *   more than drop_lat of the radius round from the line drops off with drop_chance per step (one draw per
  *   step while beyond). Falls and drops share the knock-out credit below.
+ * - Impact damage: with contact_norm > 0 a contact incident costs each vehicle contact_norm of the closing
+ *   speed along the line between them (gap and lateral offset, the length taken as max + min / 2; one integer
+ *   division per incident), an attacker's victim twice that and the attacker nothing.
  * - Knock-out credit: an agent's ko_age counts its steps since a contact
  *   incident began with an external vehicle (1 on the contact's own tick,
  *   ko_by that vehicle). When it starts to fall with ko_age <= ko_window and
@@ -316,6 +319,7 @@ typedef struct sh2z_field_behave {
     int32_t drop_lat;          /**< Q16 of the radius: round a drop tube beyond this, an agent may drop off. */
     int32_t drop_chance;       /**< Q16 chance per step that an agent beyond drop_lat drops off (0 = never). */
     int32_t launch_chance;     /**< Q16 chance that an agent out of a tube beyond the open edge of a drop node is launched off (65536 = always). */
+    int32_t contact_norm;      /**< Q16: > 0 charges a contact incident by its closing speed along the line between the two, contact_norm each (twice to an attacker's victim, nothing to the attacker), instead of side_energy, hit_energy and attack_energy. */
 } sh2z_field_behave_t;
 
 #ifdef __cplusplus

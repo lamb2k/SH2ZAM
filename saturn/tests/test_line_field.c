@@ -750,6 +750,88 @@ static void test_ko_near(void) {
     params();
 }
 
+/* Drops off an outside tube: a held agent round a drop cylinder (radius 100) beyond drop_lat drops off with
+ * drop_chance; controls: not beyond drop_lat, no drop flag, a pipe (not a hold tube), drop_chance 0. */
+static int drop_scene(uint16_t flags, int32_t start_lat, int32_t chance) {
+    params(); behave_reset(); surface_reset();
+    surf.wrap_mask = 0x0180u; surf.wrap_value = 0x0080u; P.surface = &surf;
+    B.hold_mask = 0x01c0u; B.hold_value = 0x00c0u;
+    B.drop_mask = 0x0200u; B.drop_value = 0x0200u; B.drop_lat = 117965; B.drop_chance = chance;
+    P.behave = &B; P.boost_from_lap = 4;
+    make_line(); mark(10, 90, flags, 100);
+    lone(U(200 * 11), start_lat, 3000);
+    brain[0].lane = start_lat;
+    int fell = 0;
+    for(uint32_t t = 0; t < 300 && !fell; ++t) { sh2z_field_step(&F); fell = (veh[0].flags & SH2Z_VEH_FALLING) != 0; }
+    if(fell) CHECK(F.falls == 1u && brain[0].fall_tick >= 0);
+    make_line(); params();
+    return fell;
+}
+static void test_drops(void) {
+    CHECK(drop_scene(0x02c0u, U(200), 65536) == 1);                 /* 2.0 of the radius round: drops off */
+    CHECK(drop_scene(0x02c0u, U(150), 65536) == 0);                 /* control: 1.5, inside drop_lat */
+    CHECK(drop_scene(0x00c0u, U(200), 65536) == 0);                 /* control: not a drop node */
+    CHECK(drop_scene(0x0280u, U(200), 65536) == 0);                 /* control: a pipe (inside surface) */
+    CHECK(drop_scene(0x02c0u, U(200), 0) == 0);                     /* control: no chance */
+    CHECK(drop_scene(0x02c0u, U(200), 1) == 0);                     /* 1 / 65536 a step: not within 300 steps here */
+}
+
+/* Launch out of a pipe (radius 100, nodes 10..39) onto an open drop road (half width 60): beyond the edge plus
+ * fall_margin the agent leaves the line with launch_chance; controls: launch_chance 0, no drop flag, inside the edge. */
+static int launch_scene(uint16_t road, int32_t lane, int32_t chance) {
+    params(); behave_reset(); surface_reset();
+    surf.wrap_mask = 0x0180u; surf.wrap_value = 0x0080u; P.surface = &surf;
+    B.open_mask = 0x01c0u; B.open_value = 0x0000u; B.fall_margin = U(10);
+    B.drop_mask = 0x0200u; B.drop_value = 0x0200u; B.launch_chance = chance;
+    P.behave = &B; P.boost_from_lap = 4;
+    make_line(); mark(10, 40, 0x0080u, 100); mark(40, NODES, road, 60);
+    lone(U(200 * 30), lane, 3000);
+    brain[0].lane = lane;
+    int fell = 0;
+    for(uint32_t t = 0; t < 600 && !fell; ++t) { sh2z_field_step(&F); fell = (veh[0].flags & SH2Z_VEH_FALLING) != 0; }
+    if(!fell) CHECK(abs(veh[0].t.lateral) <= U(60));                /* landed on the road */
+    make_line(); params();
+    return fell;
+}
+static void test_launch(void) {
+    CHECK(launch_scene(0x0200u, U(150), 65536) == 1);
+    CHECK(launch_scene(0x0200u, U(150), 0) == 0);                   /* control: no chance */
+    CHECK(launch_scene(0x0000u, U(150), 65536) == 0);               /* control: not a drop node */
+    CHECK(launch_scene(0x0200u, U(40), 65536) == 0);                /* control: inside the edge */
+}
+
+/* Impact damage (contact_norm): both pay contact_norm of the closing speed along the line between them, no flat
+ * side energy; an attacker's victim pays twice and the attacker nothing. Control: contact_norm 0 charges side_energy. */
+static void impact_scene(int32_t norm, int attack, int32_t *l0, int32_t *l1) {
+    params(); behave_reset(); B.contact_norm = norm; P.behave = &B;
+    P.side_energy = U(500); P.attack_energy = U(500);
+    rng = 9u;
+    vehicle(0, 0, 2000); vehicle(1, 1, 2000);
+    veh[0].t.dist = U(5000); veh[0].t.lateral = U(10); veh[0].t.speed = U(30);
+    veh[1].t.dist = U(5000) - U(20); veh[1].t.lateral = -U(10); veh[1].t.speed = U(34);
+    veh[0].t.node = sh2z_line_locate(&line, veh[0].t.dist, 0); veh[1].t.node = sh2z_line_locate(&line, veh[1].t.dist, 0);
+    field(2, 1u);
+    sh2z_field_start(&F);
+    veh[0].accel = veh[1].accel = 0; veh[0].brake = veh[1].brake = 0; veh[0].grip = veh[1].grip = 0;
+    brain[0].pace = brain[1].pace = 0;
+    if(attack) { brain[1].attack_ticks = 30; brain[1].attack_target = 0; }
+    const int32_t e0 = veh[0].energy, e1 = veh[1].energy;
+    sh2z_field_step(&F);
+    CHECK(F.contacts == 1u);
+    *l0 = e0 - veh[0].energy; *l1 = e1 - veh[1].energy;
+    params();
+}
+static void test_impact(void) {
+    int32_t a, b;
+    impact_scene(36045, 0, &a, &b);
+    CHECK(a == b && a > 0 && a < U(4));                             /* 0.55 of a closing speed under 4: no flat term */
+    const int32_t share = a;
+    impact_scene(36045, 1, &a, &b);
+    CHECK(b == 0 && a >= 2 * share - 1 && a <= 2 * share + 1);      /* the victim pays the whole, the attacker nothing */
+    impact_scene(0, 0, &a, &b);
+    CHECK(a > U(50) && b > U(50));                                  /* control: the flat side energy empties both */
+}
+
 int main(void) {
     make_line();
     params();
@@ -773,6 +855,9 @@ int main(void) {
     test_falls();
     test_ko_credit();
     test_ko_near();
+    test_drops();
+    test_launch();
+    test_impact();
     printf("line field: %" PRIu64 " checks passed\n", checks);
     return 0;
 }
