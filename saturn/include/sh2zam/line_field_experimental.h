@@ -98,8 +98,8 @@
  *
  * Determinism. One xorshift32 state in the field drives every random choice;
  * the same initial state and the same external inputs give the same result
- * on every target. One integer division per agent and race (the re-target);
- * no other division, no floating point, no allocation, no global
+ * on every target. One integer division per agent and race (the re-target)
+ * and, with contact_norm, one per contact incident; no other division, no floating point, no allocation, no global
  * state. sh2z_field_step is not reentrant on one field.
  *
  * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
