@@ -11,6 +11,7 @@
 #include "sh2zam/contracts/pose_1.h"
 #include "sh2zam/divu_experimental.h"
 #include "sh2zam/dsp_experimental.h"
+#include "sh2zam/dual_claim_experimental.h"
 #include "sh2zam/m68k.h"
 #include "sh2zam/memo_experimental.h"
 #include "sh2zam/reuse_experimental.h"
