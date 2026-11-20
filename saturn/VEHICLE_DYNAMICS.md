@@ -19,8 +19,33 @@ the tag is published.
   the closest-point search, launch and the force/damping balance, steering (dead zone, linearity,
   saturation, lean), a signed wall response, surface zones, laps and the race clock, the line-space
   view and a golden state hash, each with a negative control.
-- Evidence tiers: HOST only in this library. Callers record their own qualification against a
-  reference and their own SH-2 model runs.
+- Evidence tiers: HOST and MODELLED (below). Callers record their own qualification against a
+  reference.
+
+## MODELLED cost
+
+The [instruction model](benchmarks/vehicle-dynamics-model/README.md) runs the SH-2 object code in
+the pinned Yabause interpreter: flat RAM, no caches, no wait states. Its figures are not Saturn
+timing. It checks every tick and every probe against the host build, word for word, before it
+times anything:
+
+- 5,808 ticks over five input scripts (straight, steering and boost, a wall, airborne, a three-lap
+  race), half of them with SR.S set;
+- 1,366 closest-point searches and 86 that report the target off the line.
+
+Capture: [results.json](benchmarks/vehicle-dynamics-model/results.json), CI run
+[44660318294](https://github.com/lamb2k/SH2ZAM/actions/runs/44660318294), ELF SHA-256
+`72836f49...`.
+
+| Call | Mean cycles | Median | Max | Mean instructions |
+| --- | ---: | ---: | ---: | ---: |
+| `sh2z_vd_step`, one tick (all scripts) | 9,420.7 | 9,045 | 16,187 | 7,991 |
+| `sh2z_vd_locate`, 100 iterations, 2^32 tolerance, target within 600 units | 6,411.8 | 5,870 | 92,046 | 5,433 |
+| `sh2z_vd_locate`, target off the line | 872.3 | 342 | 14,499 | 711 |
+| `sh2z_vd_lap_distance` | 394.7 | 387 | 468 | 325 |
+
+The step includes its own closest-point search. A tick costs about 9,400 modelled cycles, or about
+0.33 ms at 28.6 MHz before memory waits.
 
 ## Formats
 
@@ -72,4 +97,4 @@ the next step.
 
 - Pipe, cylinder and half-pipe road shapes are treated as an open road.
 - Vehicle-to-vehicle contact inside the model; the line-space field resolves contact and passes kicks.
-- An SH-2 instruction-model capture in this library's CI (callers measure in their own images).
+- Real memory timing (cache, SDRAM, bus contention) and a whole-frame measurement on hardware.
