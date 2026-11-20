@@ -1,5 +1,11 @@
-/* Track-bound vehicle dynamics (contract tag vehicle-dynamics-1). Integer only;
- * see vehicle_dynamics_experimental.h and VEHICLE_DYNAMICS.md.
+/* Track-bound vehicle dynamics (contract tags vehicle-dynamics-1 and -2).
+ * Integer only; see vehicle_dynamics_experimental.h and VEHICLE_DYNAMICS.md.
+ *
+ * This file is the vehicle-dynamics-1 unit. sh2zam_vehicle_dynamics2.c builds
+ * it a second time with SH2Z_VD_TUBES set: that unit holds only sh2z_vd_step2,
+ * which adds the pipe and cylinder shapes and calls this unit's search. The
+ * tube code below is preprocessed out of this unit, so vehicle-dynamics-1's
+ * object code does not depend on it.
  *
  * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
  * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
@@ -7,6 +13,10 @@
 #include "sh2zam/vehicle_dynamics_experimental.h"
 #include "sh2zam/divu_experimental.h"
 #include "sh2zam/unit30_experimental.h"
+
+#ifndef SH2Z_VD_TUBES
+#define SH2Z_VD_TUBES 0
+#endif
 
 #define ONE30 INT32_C(0x40000000)
 #define ONE16 INT32_C(0x10000)
@@ -85,6 +95,7 @@ static uint32_t wrap(const sh2z_vd_track_t *k, uint32_t n) {
 
 static const sh2z_vd_node_t *node_at(const sh2z_vd_track_t *k, uint32_t n) { return &k->nodes[wrap(k, n)]; }
 
+#if !SH2Z_VD_TUBES
 void sh2z_vd_spline(const sh2z_vd_track_t *k, uint32_t n, int32_t t32, int32_t pos[3], int32_t fwd[3]) {
     const sh2z_vd_node_t *p0 = node_at(k, n + k->count - 1u), *p1 = node_at(k, n);
     const sh2z_vd_node_t *p2 = node_at(k, n + 1u), *p3 = node_at(k, n + 2u);
@@ -180,6 +191,7 @@ int32_t sh2z_vd_lap_distance(sh2z_vd_body_t *b, const sh2z_vd_track_t *k) {
     b->prop = vd_divq(len, n->length, 30);
     return n->start + len;
 }
+#endif
 
 /* ---- Contact ------------------------------------------------------------ */
 
@@ -325,6 +337,161 @@ static void shape_road(sh2z_vd_body_t *b, const sh2z_vd_rules_t *r, int32_t air)
     else if(side > b->half_left) hit_wall(b, r, dotu(b->road[2], b->vel), 1, side - b->half_left);
 }
 
+#if SH2Z_VD_TUBES
+/* ---- Tubes (vehicle-dynamics-2) ----------------------------------------- */
+
+/* Where the span joins a neighbour: the join share (Q30, 0 at the seam's far
+ * end, 1 where the tube is whole) and the side of the seam (+1 previous, -1
+ * next, 0 outside the joins). */
+static int join_at(const sh2z_vd_body_t *b, const sh2z_vd_track2_t *k2, int32_t *share) {
+    const sh2z_vd_join_t *j;
+    *share = ONE30;
+    if(!k2->joins) return 0;
+    j = &k2->joins[b->node];
+    if(b->t < j->prev_end) {
+        *share = vd_divq(b->prop, j->scale, 30);
+        return 1;
+    }
+    if(j->next_start < b->t) {
+        *share = vd_divq(ONE30 - b->prop, j->scale, 30);
+        return -1;
+    }
+    return 0;
+}
+
+/* Contact on the tube's round surface: the body is put back on the radius r
+ * along the radial direction and loses its speed into the surface. */
+static void radial_clamp(sh2z_vd_body_t *b, int32_t dist, int32_t radius) {
+    const int32_t s = vd_divq(radius, dist, 30);
+    int32_t vn;
+    int i;
+    for(i = 0; i < 3; i++) {
+        b->disp[i] = mu(b->disp[i], s);
+        b->pos[i] = b->ground[i] = b->disp[i] + b->spos[i];
+    }
+    b->height = 0;
+    vn = dotu(b->ground_up, b->vel);
+    if(vn < 0) for(i = 0; i < 3; i++) b->vel[i] -= mu(vn, b->ground_up[i]);
+}
+
+/* Airborne above the ground band, in contact at or below it. */
+static void tube_band(sh2z_vd_body_t *b, const sh2z_vd_rules_t *r) {
+    if(b->height <= r->ground_band) b->flags &= ~SH2Z_VD_AIRBORNE;
+    else b->flags |= SH2Z_VD_AIRBORNE;
+}
+
+static void leave_surface(sh2z_vd_body_t *b, const sh2z_vd_rules_t *r) {
+    b->flags |= SH2Z_VD_OFF_ROAD | SH2Z_VD_AIRBORNE;
+    airborne_up(b, r);
+}
+
+/* Inside a pipe: the ground is the circle of radius half_left round the
+ * line; up points to the axis. In a join the road plane (lifted by the
+ * remaining radius) takes over toward the seam. No walls. */
+static void shape_pipe(sh2z_vd_body_t *b, const sh2z_vd_track2_t *k2, const sh2z_vd_rules_t *r) {
+    const int32_t radius = b->half_left;
+    int32_t share, floor_r, dist = vlen(b->disp);
+    const int side = join_at(b, k2, &share);
+    int i;
+    floor_r = side ? mu(radius, share) : radius;
+    b->height = radius - dist;
+    if(dist > k2->tube.min_dist) {
+        int32_t u[3];
+        if(normalize(u, b->disp)) for(i = 0; i < 3; i++) b->ground_up[i] = -u[i];
+    }
+    if(side) {
+        const int32_t above = dotu(b->road[1], b->disp) - k2->tube.pipe_rim;
+        if(b->flags & SH2Z_VD_OFF_ROAD) {
+            if(above >= 0 || radius < dist) { airborne_up(b, r); return; }
+            b->flags &= ~SH2Z_VD_OFF_ROAD;
+        } else if(above >= 0) {
+            leave_surface(b, r);
+            return;
+        }
+    } else if(b->flags & SH2Z_VD_OFF_ROAD) {
+        if(radius < dist) { airborne_up(b, r); return; }
+        b->flags &= ~SH2Z_VD_OFF_ROAD;
+    }
+    if(side) {
+        const int32_t lean = side > 0 ? radius : -radius;
+        const int32_t plane = floor_r + dotu(b->road[1], b->disp);
+        int32_t v[3];
+        if(plane < b->height) {
+            b->height = plane;
+            vcopy(b->ground_up, b->road[1]);
+            for(i = 0; i < 3; i++) v[i] = mu(k2->tube.join_lever, b->road[1][i]) + mu(lean, b->road[0][i]);
+            if(normalize(v, v)) vcopy(b->tilt_up, v);
+            if(b->height < 0) {
+                int32_t vn;
+                move_by(b, b->height, b->road[1]);
+                dist = vlen(b->disp);
+                b->height = 0;
+                vn = dotu(b->road[1], b->vel);
+                if(vn < 0) for(i = 0; i < 3; i++) b->vel[i] -= mu(vn, b->road[1][i]);
+            }
+        } else {
+            vcopy(b->tilt_up, b->ground_up);
+        }
+        for(i = 0; i < 3; i++) v[i] = sh2z_u30_mul(b->tilt_up[i] - b->road[1][i], share) + b->road[1][i];
+        if(vlen(v) > k2->tube.min_unit && normalize(v, v)) vcopy(b->tilt_up, v);
+        for(i = 0; i < 3; i++) b->gravity_up[i] = sh2z_u30_mul(b->ground_up[i] - b->road[1][i], share) + b->road[1][i];
+    } else {
+        vcopy(b->gravity_up, b->ground_up);
+        vcopy(b->tilt_up, b->ground_up);
+    }
+    if(radius < dist) radial_clamp(b, dist, radius);
+    tube_band(b, r);
+}
+
+/* Outside a cylinder: the ground is the circle of radius half_left (tapered
+ * to the line in a join); up points away from the axis. Beyond the radius
+ * plus tube.cyl_reach the body has left the surface. */
+static void shape_cylinder(sh2z_vd_body_t *b, const sh2z_vd_track2_t *k2, const sh2z_vd_rules_t *r) {
+    const int32_t radius = b->half_left;
+    int32_t share, cyl_r, dist = vlen(b->disp);
+    const int side = join_at(b, k2, &share);
+    int i;
+    cyl_r = side ? mu(radius, share) : radius;
+    b->height = dist - cyl_r;
+    if(dist > k2->tube.min_dist) {
+        int32_t u[3];
+        if(normalize(u, b->disp)) vcopy(b->ground_up, u);
+    }
+    if(b->flags & SH2Z_VD_OFF_ROAD) {
+        if(radius + k2->tube.cyl_reach < dist) { airborne_up(b, r); return; }
+        b->flags &= ~SH2Z_VD_OFF_ROAD;
+    } else if(radius + k2->tube.cyl_reach < dist) {
+        leave_surface(b, r);
+        return;
+    }
+    if(side) {
+        const int32_t rest = ONE30 - share, rest2 = sh2z_u30_mul(rest, rest);
+        int32_t v[3], plane;
+        for(i = 0; i < 3; i++) v[i] = sh2z_u30_mul(b->ground_up[i] - b->road[1][i], share) + b->road[1][i];
+        if(vlen(v) > k2->tube.min_unit && normalize(v, v)) vcopy(b->tilt_up, v);
+        for(i = 0; i < 3; i++) {
+            const int32_t base = sh2z_u30_mul(b->road[1][i], rest2);
+            b->gravity_up[i] = sh2z_u30_mul(b->ground_up[i] - base, share) + base;
+        }
+        plane = mu(k2->tube.cyl_lift, share) + cyl_r + dotu(b->road[1], b->disp);
+        if(plane < b->height) {
+            b->height = plane;
+            vcopy(b->ground_up, b->road[1]);
+            if(b->height < 0) {
+                move_by(b, b->height, b->road[1]);
+                dist = vlen(b->disp);
+                b->height = 0;
+            }
+        }
+    } else {
+        vcopy(b->gravity_up, b->ground_up);
+        vcopy(b->tilt_up, b->ground_up);
+    }
+    if(dist < cyl_r && dist > 0) radial_clamp(b, dist, cyl_r);
+    tube_band(b, r);
+}
+#endif
+
 static void road_contact(sh2z_vd_body_t *b, const sh2z_vd_track_t *k, const sh2z_vd_rules_t *r, int shape) {
     (void)k;
     switch(shape) {
@@ -332,6 +499,11 @@ static void road_contact(sh2z_vd_body_t *b, const sh2z_vd_track_t *k, const sh2z
     case SH2Z_VD_SHAPE_TUNNEL: shape_road(b, r, r->air_tunnel); break;
     case SH2Z_VD_SHAPE_GAP: shape_gap(b, r); break;
     case SH2Z_VD_SHAPE_EDGELESS: shape_edgeless(b, r); break;
+#if SH2Z_VD_TUBES
+    /* k is the base of a sh2z_vd_track2_t (sh2z_vd_step2). */
+    case SH2Z_VD_SHAPE_PIPE: shape_pipe(b, (const sh2z_vd_track2_t *)(const void *)k, r); break;
+    case SH2Z_VD_SHAPE_CYLINDER: shape_cylinder(b, (const sh2z_vd_track2_t *)(const void *)k, r); break;
+#endif
     default: shape_road(b, r, r->air_road); break;
     }
 }
@@ -697,6 +869,7 @@ static void attack_motion(sh2z_vd_body_t *b, const sh2z_vd_rules_t *r) {
     }
 }
 
+#if !SH2Z_VD_TUBES
 /* ---- Line-space view ---------------------------------------------------- */
 
 int32_t sh2z_vd_body_lateral(const sh2z_vd_body_t *b) { return dotu(b->road[2], b->disp); }
@@ -717,11 +890,18 @@ void sh2z_vd_apply_kick(sh2z_vd_body_t *b, int32_t kick_lat, int32_t kick_speed)
     for(i = 0; i < 3; i++)
         b->vel[i] += mu(-kick_lat * 256, b->road[2][i]) + mu(kick_speed * 256, b->body[0][i]);
 }
+#endif
 
 /* ---- The tick ----------------------------------------------------------- */
 
+#if SH2Z_VD_TUBES
+void sh2z_vd_step2(sh2z_vd_body_t *b, const sh2z_vd_track2_t *track2, const sh2z_vd_vehicle_t *v,
+                   const sh2z_vd_rules_t *r, const sh2z_vd_input_t *in) {
+    const sh2z_vd_track_t *const k = &track2->base;
+#else
 void sh2z_vd_step(sh2z_vd_body_t *b, const sh2z_vd_track_t *k, const sh2z_vd_vehicle_t *v,
                   const sh2z_vd_rules_t *r, const sh2z_vd_input_t *in) {
+#endif
     uint16_t held, pressed, released;
     int32_t stick, change, saved[3][3], before[3];
     int i;
