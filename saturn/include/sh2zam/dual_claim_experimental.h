@@ -48,21 +48,22 @@ extern "C" {
 
 /* ---- Contract tag dual-claim-1 ------------------------------------------- */
 
+/** Largest job tag. */
 #define SH2Z_CLAIM_TAG_MAX UINT32_C(0x7fffffff)
 
 typedef struct {
-    volatile uint32_t want_a; /* written by A only: the tag A claims */
-    volatile uint32_t want_b; /* written by B only: the tag B claims */
-    volatile uint32_t decide; /* written by B only: tag * 2 + 1 B owns, tag * 2 B backed off */
+    volatile uint32_t want_a; /**< written by A only: the tag A claims */
+    volatile uint32_t want_b; /**< written by B only: the tag B claims */
+    volatile uint32_t decide; /**< written by B only: tag * 2 + 1 B owns, tag * 2 B backed off */
 } sh2z_claim_t;
 
-/* All words zero (tag 0 is never used). */
+/** All words zero (tag 0 is never used). */
 void sh2z_claim_init(sh2z_claim_t *c);
-/* Side A claims job `tag`; true when A owns it. May spin for B's decision. */
+/** Side A claims job `tag`; true when A owns it. May spin for B's decision. */
 bool sh2z_claim_a(sh2z_claim_t *c, uint32_t tag);
-/* Side B claims job `tag`; true when B owns it. Never waits. */
+/** Side B claims job `tag`; true when B owns it. Never waits. */
 bool sh2z_claim_b(sh2z_claim_t *c, uint32_t tag);
-/* Side B declines job `tag` (for example its deadline has passed): A's claim
+/** Side B declines job `tag` (for example its deadline has passed): A's claim
  * on the tag then returns true without waiting, whatever the order. */
 void sh2z_claim_b_decline(sh2z_claim_t *c, uint32_t tag);
 
