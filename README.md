@@ -332,6 +332,23 @@ VDP1 flip bit. cell4z, a 4-bit cell codec on vlc-2 symbols, decodes straight int
 allocation. Host-tested against a reference model with one negative control per rule (no
 console run). See [the sprite cache guide](saturn/SPRITE_CACHE.md).
 
+## Scene sequencing
+
+[`sh2zam/scene_experimental.h`](saturn/include/sh2zam/scene_experimental.h)
+(contract tag `scene-1`) runs a fixed table of scenes, such as title, menus, loading, game and
+results:
+- fades in and out, with an interrupted fade turning around from the level it reached;
+- requests by rank, so a reset can still redirect a transition that has begun;
+- release only after the caller confirms that the last displayed frame of the leaving scene
+  has been replaced (elapsed frames alone prove nothing);
+- bounded preload chunks before a scene is entered;
+- bump arenas with a high-water mark, reset when their scene is released;
+- press edges that a transition consumes, with directional auto-repeat.
+
+Pure bookkeeping: the caller reads the pad, draws, fades and waits. Portable C, no libc.
+Host-tested against an independent timeline model with a negative control per rule. See
+[the scene guide](saturn/SCENE.md).
+
 ## Link only what you call
 
 From contract tag `sections-1`, every hand-written SH-2 entry and every read-only table has its
