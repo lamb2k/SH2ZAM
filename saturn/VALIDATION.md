@@ -6,6 +6,7 @@ a record, run `python3 saturn/tools/validation_index.py --write`; host CI runs
 `--check`. Records are listed by file name; each line gives the record's date
 and scope.
 
+- [dual-claim-1](validation/dual-claim-1.md): 2026-11-19 (two-CPU try-claim, dual-claim-1)
 - [fixed-unit-1](validation/fixed-unit-1.md): 2026-11-17 (Q2.30 unit vectors, fixed-unit-1)
 - [foundation-2026-11-13](validation/foundation-2026-11-13.md): 2026-11-13
 - [integer-kernels-1](validation/integer-kernels-1.md): 2026-11-15 (integer kernels)
