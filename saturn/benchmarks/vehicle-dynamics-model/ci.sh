@@ -1,21 +1,22 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (c) 2026 SH2ZAM Contributors.
-# Vehicle dynamics (vehicle-dynamics-1) for the executed-instruction model. The
-# library object must not need memcpy/memset and must define the step, the
-# closest-point search and the lap distance.
+# Vehicle dynamics (vehicle-dynamics-1 and -2) for the executed-instruction
+# model. The library objects must not need memcpy/memset and must define the
+# step, the closest-point search, the lap distance and the tube-shape step.
 # Phases and environment: saturn/benchmarks/ci/suites.sh and ci/lib.sh.
 source "$(dirname "$0")/../ci/lib.sh"
 case "${1:?usage: ci.sh phases|build|model}" in
   phases) echo build model ;;
   build)
     sh2z_bridge saturn/benchmarks/vehicle-dynamics-model/bridge.c build/sh2/vehicle-dynamics-bridge.o
-    "$SH2Z_OBJDUMP" -dr build/sh2/sh2zam_vehicle_dynamics.o > sh2-vehicle-dynamics-disassembly.txt
-    "$SH2Z_NM" -u build/sh2/sh2zam_vehicle_dynamics.o | tee sh2-vehicle-dynamics-undefined.txt
+    "$SH2Z_OBJDUMP" -dr build/sh2/sh2zam_vehicle_dynamics.o build/sh2/sh2zam_vehicle_dynamics2.o > sh2-vehicle-dynamics-disassembly.txt
+    "$SH2Z_NM" -u build/sh2/sh2zam_vehicle_dynamics.o build/sh2/sh2zam_vehicle_dynamics2.o | tee sh2-vehicle-dynamics-undefined.txt
     sh2z_require_no_mem_calls sh2-vehicle-dynamics-undefined.txt
     grep -q "<_sh2z_vd_step>:" sh2-vehicle-dynamics-disassembly.txt
     grep -q "<_sh2z_vd_locate>:" sh2-vehicle-dynamics-disassembly.txt
     grep -q "<_sh2z_vd_lap_distance>:" sh2-vehicle-dynamics-disassembly.txt
+    grep -q "<_sh2z_vd_step2>:" sh2-vehicle-dynamics-disassembly.txt
     sh2z_model_elf build/sh2/vehicle-dynamics-bridge.o build/sh2/vehicle-dynamics-model.elf
     ;;
   model)

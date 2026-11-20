@@ -2,7 +2,7 @@
 
 Executes the compiled big-endian SH-2 object code of `sh2z_vd_step`, `sh2z_vd_locate` and
 `sh2z_vd_lap_distance` ([`vehicle_dynamics_experimental.h`](../../include/sh2zam/vehicle_dynamics_experimental.h),
-contract tag `vehicle-dynamics-1`) in the same unmodified Yabause SH-2 interpreter as
+contract tag `vehicle-dynamics-1`) and of `sh2z_vd_step2` (contract tag `vehicle-dynamics-2`) in the same unmodified Yabause SH-2 interpreter as
 [`sh2-model`](../sh2-model/README.md) (pinned commit `7e38821dbac265490f115e163c523a939acda759`,
 flat RAM, no caches, no wait states, no bus contention, the divider model of
 `sh2-model/divider_model.h`). **Cycle numbers are MODELLED. They are not Saturn measurements, not
@@ -39,6 +39,18 @@ functions has been done.
   that were airborne, on a wall, launched, mine-hit, plate-boosted, boosting, recharging,
   spinning out or falling, and the race's finishing tick. Any mismatch exits non-zero before any
   timing is printed.
+- **vehicle-dynamics-2.** After those scripts, the bridge's `set_track2` and `step2` entries run
+  `sh2z_vd_step2` on the stadium of `tests/test_vehicle_dynamics2.c` (300-unit tubes):
+  - `road`: the walled stadium for 600 ticks with boosts, lean bursts and a stick sweep. The host
+    step2 body must also equal `sh2z_vd_step`'s on every tick.
+  - `pipe_bottom`, `pipe_wall`, `pipe_ceiling`: a pipe on spans 0-3, 240 ticks of ACCEL on each side.
+  - `cylinder_top`, `cylinder_side`, `cylinder_bottom`: the same on a cylinder.
+  - `pipe_join`: a pipe on spans 1-2 that joins road at both ends, 400 ticks from the road through
+    the pipe and out.
+
+  Every other tick runs with SR.S set. Every tick's return and all 99 body words must equal the
+  host build's. `step2Verified` counts the checks, `step2Rows` splits the cost by script and
+  `step2` is every step2 tick's whole-call cycles.
 - **Cost.** `step` is every tick's whole-call cycles across all scripts; `rows` splits them by
   script. `locate` covers searches that succeed; `locateOffLine` covers searches that report the
   target off the line; `lapDistance` is one call after each successful search.
