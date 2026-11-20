@@ -428,8 +428,8 @@ Integer only, with no libc. Host-tested (no console run). See
   (`line-field-1`) runs up to 255 such vehicles, with contact, rank and level of detail;
   `line-field-2` adds a per-vehicle finish-time re-target from the second lap,
   `line-field-3` a first-lap cap on chasing vehicles, `line-field-4` surface zones,
-  tube nodes and a final dash, and `line-field-5` tube roll, lateral inertia, falls and drops
-  with a knock-out credit, a near-focus knock-out gate and impact damage.
+  tube nodes and a final dash, and `line-field-5` tube roll, lateral inertia, falls and
+  drops with a knock-out credit, a near-focus knock-out gate and impact damage.
 - [`sh2zam/vehicle_dynamics_experimental.h`](saturn/include/sh2zam/vehicle_dynamics_experimental.h)
   (`vehicle-dynamics-1`) steps one hovering vehicle on a spline road, one fixed tick at a time.
   A host build and an SH-2 build give the same bits. `vehicle-dynamics-2` adds pipes (inside a

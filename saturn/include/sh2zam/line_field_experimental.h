@@ -6,8 +6,8 @@
  *
  * Contract tags line-field-1, line-field-2 (the second-lap re-target),
  * line-field-3 (the first-lap chase cap), line-field-4 (surface zones and
- * tube nodes) and line-field-5 (tube roll, lateral inertia, falls with a
- * knock-out credit, a near-focus knock-out gate).
+ * tube nodes) and line-field-5 (tube roll, lateral inertia, falls and drops
+ * with a knock-out credit, a near-focus knock-out gate and impact damage).
  *
  * Shared vehicle state. sh2z_vehicle_t is the line-space state of ANY vehicle
  * on the line: agents the field drives, and vehicles driven elsewhere (a
@@ -61,32 +61,37 @@
  * below; NULL is line-field-4 step for step, with its hashes.
  * - Tube roll: on a tube node an agent decides now and then (roll_chance per
  *   decision) to roll round the tube, moving round it by roll_lead of its
- *   speed. A roll either lasts roll_min .. roll_min + roll_span - 1
- *   decisions or, for roll_latch of the rolls, holds until the agent reaches
- *   an exit stretch: a node matching the exit mask whose node roll_exit_ahead
- *   ahead is not a tube. There the roll ends and the agent steers back to
- *   its line. Not rolling, an agent on a node matching the hold mask keeps
- *   its angle round the tube (drifting by hold_lead) instead of steering back. On other tubes, with
- *   roll_well > 0, a rolling agent instead settles roll_well of the radius
- *   round from its line (a tube that pulls back toward its line).
+ *   speed. A roll either lasts roll_min .. roll_min + roll_span - 1 decisions
+ *   or, for roll_latch of the rolls, holds until the agent reaches an exit
+ *   stretch: a node matching the exit mask whose node roll_exit_ahead ahead
+ *   is not a tube. There the roll ends and the agent steers back to its line.
+ *   Not rolling, an agent on a node matching the hold mask keeps its angle
+ *   round the tube (drifting by hold_lead) instead of steering back. On other
+ *   tubes, with roll_well > 0, a rolling agent instead settles roll_well of
+ *   the radius round from its line (a tube that pulls back toward its line).
  * - Lateral inertia: with lat_accel > 0 the lateral velocity changes by at
  *   most lat_accel per tick toward the steering demand, and the agent may
- *   reach the edge (the margin bounds its target, not its position). An
- *   agent on the edge is charged as at a wall and its lateral velocity
- *   reverses at half its size.
+ *   reach the edge (the margin bounds its target, not its position). An agent
+ *   on the edge is charged as at a wall and its lateral velocity reverses at
+ *   half its size.
  * - Air and falls: on a node matching the air mask an agent does not steer;
  *   it keeps its lateral velocity plus a drift drawn at take-off, uniform in
  *   +-air_spread of its speed. An agent in the air that is beyond the half
- *   width plus fall_margin of a node matching the open mask leaves the line: SH2Z_VEH_FALLING, out of contact, no laps. fall_ticks
- *   later it retires with energy exactly 0 (retire_tick that tick).
- * - Drops: on a node matching the drop mask, an agent that comes out of a tube beyond the half width plus
- *   fall_margin of an open-edge node is launched (launch_chance; otherwise it lands on the edge as before) and
- *   leaves the line the same way, and an agent on a drop tube that is also a hold tube (an outside surface)
- *   more than drop_lat of the radius round from the line drops off with drop_chance per step (one draw per
- *   step while beyond). Falls and drops share the knock-out credit below.
- * - Impact damage: with contact_norm > 0 a contact incident costs each vehicle contact_norm of the closing
- *   speed along the line between them (gap and lateral offset, the length taken as max + min / 2; one integer
- *   division per incident), an attacker's victim twice that and the attacker nothing.
+ *   width plus fall_margin of a node matching the open mask leaves the line:
+ *   SH2Z_VEH_FALLING, out of contact, no laps. fall_ticks later it retires
+ *   with energy exactly 0 (retire_tick that tick).
+ * - Drops: on a node matching the drop mask, an agent that comes out of a
+ *   tube beyond the half width plus fall_margin of an open-edge node is
+ *   launched (launch_chance; otherwise it lands on the edge as before) and
+ *   leaves the line the same way, and an agent on a drop tube that is also a
+ *   hold tube (an outside surface) more than drop_lat of the radius round
+ *   from the line drops off with drop_chance per step (one draw per step
+ *   while beyond). Falls and drops share the knock-out credit below.
+ * - Impact damage: with contact_norm > 0 a contact incident costs each
+ *   vehicle contact_norm of the closing speed along the line between them
+ *   (gap and lateral offset, the length taken as max + min / 2; one integer
+ *   division per incident), an attacker's victim twice that and the attacker
+ *   nothing.
  * - Knock-out credit: an agent's ko_age counts its steps since a contact
  *   incident began with an external vehicle (1 on the contact's own tick,
  *   ko_by that vehicle). When it starts to fall with ko_age <= ko_window and
@@ -97,10 +102,11 @@
  *   energy stays at ko_floor.
  *
  * Determinism. One xorshift32 state in the field drives every random choice;
- * the same initial state and the same external inputs give the same result
- * on every target. One integer division per agent and race (the re-target)
- * and, with contact_norm, one per contact incident; no other division, no floating point, no allocation, no global
- * state. sh2z_field_step is not reentrant on one field.
+ * the same initial state and the same external inputs give the same result on
+ * every target. One integer division per agent and race (the re-target) and,
+ * with contact_norm, one per contact incident; no other division, no floating
+ * point, no allocation, no global state. sh2z_field_step is not reentrant on
+ * one field.
  *
  * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
  * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
