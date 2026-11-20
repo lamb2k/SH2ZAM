@@ -1,4 +1,4 @@
-/* Experimental line field (contract tag line-field-1).
+/* Experimental line field (contract tags line-field-1 and line-field-2).
  *
  * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
  * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
@@ -382,6 +382,14 @@ static void fld_laps(sh2z_field_t *f, uint32_t i) {
         b->laps_seen = (int16_t)(b->laps_seen + 1);
         const int32_t done = (int32_t)b->laps_seen;          /* laps completed */
         if(done >= 1 && done <= 4) b->lap_tick[done - 1] = (int32_t)(f->tick - f->start_tick);
+        if(done == 1 && b->finish_ticks > 0 && f->params->laps > 1u && !(v->flags & (SH2Z_VEH_EXTERNAL | SH2Z_VEH_RETIRED))) {
+            /* line-field-2: cover the remaining laps evenly by the finish target, expecting one lap now. */
+            const int32_t left = b->finish_ticks - b->lap_tick[0];
+            if(left > 0) {
+                b->pace = ((int32_t)f->params->laps - 1) * f->line->length / left;
+                b->expect = f->line->length;
+            }
+        }
         if(done == (int32_t)f->params->laps && !(v->flags & (SH2Z_VEH_FINISHED | SH2Z_VEH_RETIRED))) {
             v->flags |= SH2Z_VEH_FINISHED;
             v->flags &= (uint16_t)~SH2Z_VEH_BOOST;
@@ -476,6 +484,7 @@ uint32_t sh2z_field_hash(const sh2z_field_t *f) {
         FLD_MIX(v->energy); FLD_MIX(v->flags); FLD_MIX(v->boost_ticks); FLD_MIX(v->rank); FLD_MIX(v->kick_lat); FLD_MIX(v->kick_speed);
         FLD_MIX(b->expect); FLD_MIX(b->target_lat); FLD_MIX(b->target_speed); FLD_MIX(b->finish_tick); FLD_MIX(b->retire_tick);
         FLD_MIX(b->pass_ticks); FLD_MIX(b->attack_ticks); FLD_MIX(f->rank_order[i]);
+        if(b->finish_ticks) FLD_MIX(b->finish_ticks); /* line-field-1 states hash as before */
     }
     return h;
 }
