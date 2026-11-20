@@ -84,3 +84,9 @@ conservative cos and sin) holding every face normal.
 Measured use (emulator, modelled timing): on a road with about eight faces per
 segment the clusters hold about two faces each, and the per-cluster test cost
 more than the per-face work it skipped. It pays only where clusters are large.
+
+**Not exact.** The cluster path approximates the per-face path. Its facing test
+holds only up to the projection's rounding of corners, so a culled cluster can
+still hold a face the per-face path would draw. On one instrumented road
+renderer it skipped 0.08 such faces per frame, so that renderer keeps cluster
+culling off and calls `sh2z_segmesh_pick` alone.

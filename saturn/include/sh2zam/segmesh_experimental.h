@@ -182,7 +182,15 @@ bool sh2z_segmesh_cull_prepare(sh2z_segmesh_cull_t *out, const sh2z_view_center_
  * Integer arithmetic, every rounding against culling: the cone test runs in
  * 1/16-unit steps; no float and no divide. Bits n..31 are zero; a null
  * pointer or n > SH2Z_SEGMESH_CULL_MAX gives all n low bits set (nothing
- * culled). */
+ * culled).
+ *
+ * \warning Not exact. The cluster path is an approximation of the per-face
+ * path: the facing test holds only up to the projection's rounding of
+ * corners, so a culled bound can still hold a face that the per-face path
+ * would draw (a near edge-on face a pixel wide). On one instrumented road
+ * renderer it skipped 0.08 such faces per frame. Callers that need the
+ * per-face result exactly keep cluster culling off and use sh2z_segmesh_pick
+ * alone. */
 uint32_t sh2z_segmesh_cull(const sh2z_segmesh_cull_t *cull, const sh2z_segmesh_bound_t *bounds,
                            uint32_t n);
 
