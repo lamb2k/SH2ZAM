@@ -311,6 +311,20 @@ and upload. Portable C, no libc. Host-tested against a frame model with negative
 held bank must conflict, a changed guard bit must fail). See
 [the VDP1 banks guide](saturn/VDP1_BANKS.md).
 
+## SCU DSP
+
+[`sh2zam/dsp_experimental.h`](saturn/include/sh2zam/dsp_experimental.h) (contract tag `dsp-1`)
+drives the Saturn's SCU DSP, a fixed-point coprocessor that runs while the SH-2s do other work:
+- program and data RAM access, start, poll and wait;
+- D0-bus addresses and cache purge for the DSP's own DMA;
+- a batched affine transform (three rows of coefficients and a translation, exact modulo 2^32);
+- a Q16 outer product, `floor(a[i] * b[k] / 65536)` from the exact 48-bit product.
+
+Kernels are DSP assembly in `saturn/src/dsp/`, assembled by `saturn/tools/sh2z_dspasm.py` (MIT)
+and committed as data; CI checks them against their sources. Host tests run the committed words
+on a reference DSP simulator against the CPU form, with mutation controls. Portable builds run
+the CPU form. See [the DSP guide](saturn/DSP.md).
+
 ## Segmented strip meshes
 
 [`sh2zam/segmesh_experimental.h`](saturn/include/sh2zam/segmesh_experimental.h)
