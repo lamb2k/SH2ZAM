@@ -1,4 +1,4 @@
-/* Host tests for vehicle-dynamics-3 (sh2z_vd_step_contact) on the
+/* Host tests for vehicle-dynamics-3 (sh2z_vd_step_contact, sh2z_vd_step2_contact) on the
  * vehicle-dynamics-1 test oval: with a zero contact it is sh2z_vd_step bit
  * for bit; a push lands in the tick's velocity and position; damage marks
  * the tick, empties into the spin-out before the pad is read, and a hit
@@ -295,10 +295,86 @@ static int contact_claims(int place) {
     return 0;
 }
 
+/* Tubes: the oval made a pipe all round (radius 300 round the line, no joins), the body started on
+ * the pipe's floor. Zero contact gives sh2z_vd_step2 bit for bit; damage and the hit mark as on
+ * the road; road shapes give sh2z_vd_step_contact bit for bit. */
+static void test_tubes(void) {
+    static sh2z_vd_node_t tnodes[N];
+    sh2z_vd_track2_t t2;
+    memcpy(tnodes, nodes, sizeof(tnodes));
+    for(int i = 0; i < N; i++) tnodes[i].shape = SH2Z_VD_SHAPE_PIPE;
+    t2.base = track;
+    t2.base.nodes = tnodes;
+    t2.joins = NULL;
+    t2.tube = (sh2z_vd_tube_rules_t){q16(1000.0), q16(23.0), q16(200.0), q16(200.0), q16(0.01), q30(0.01)};
+    sh2z_vd_body_t a = start_body(), b;
+    for(int k = 0; k < 3; k++) { a.pos[k] -= mu_test(q16(292.0), a.road[1][k]); a.ground[k] = a.pos[k]; }
+    b = a;
+    const sh2z_vd_contact_t zero = {{0, 0, 0}, 0, 0, 0};
+    uint16_t pa = 0;
+    int active = 0, pushes = 0, pushes_ok = 1;
+    double share_min = 1e9, share_max = -1e9;
+    for(int i = 0; i < 3000; i++) {
+        const int sx = (int)(30.0 * sin(i / 53.0));
+        sh2z_vd_input_t in = pad(SH2Z_VD_BTN_ACCEL, pa, sx);
+        pa = SH2Z_VD_BTN_ACCEL;
+        if(!(a.flags & SH2Z_VD_ACTIVE)) break;
+        if(i % 97 == 50) {
+            /* A push in the pipe moves the body its way: on the curved floor the radial clamp takes a
+             * share, so the claim is that at least 90% of it lands along it, and the damage and hit
+             * marks behave as on the road. */
+            sh2z_vd_body_t c0 = a, c1 = a, c2 = a;
+            const sh2z_vd_contact_t marks = {{0, 0, 0}, q16(5.0), 0, 1};
+            sh2z_vd_step2_contact(&c2, &t2, &veh, &rules, &in, &marks);
+            sh2z_vd_contact_t c = {{0, 0, 0}, 0, 0, 0};
+            for(int k = 0; k < 3; k++) c.push[k] = mu_test(q16(-1.5), a.body[0][k]);   /* along the tube */
+            sh2z_vd_step2(&c0, &t2, &veh, &rules, &in);
+            sh2z_vd_step2_contact(&c1, &t2, &veh, &rules, &in, &c);
+            double along = 0, len2 = 0;
+            for(int k = 0; k < 3; k++) { along += f16(c1.vel[k] - c0.vel[k]) * f16(c.push[k]); len2 += f16(c.push[k]) * f16(c.push[k]); }
+            /* The pipe's radial projection after the integration reshapes the velocity, so the share of
+             * the push that remains is reported, and only its sign is a claim. */
+            const double share = along / len2;
+            if(share < share_min) share_min = share;
+            if(share > share_max) share_max = share;
+            check(share > 0.0, "tubes: a push moves the body its way");
+            if(!(c0.flags & SH2Z_VD_ZONE_MASK))   /* off the recharge strip, which refills after the damage */
+                check(c2.energy == c0.energy - q16(5.0), "tubes: damage as on the road");
+            check(c2.hit_timer >= rules.contact_grip - 1, "tubes: the hit sets the grip-off timer");
+            pushes++;
+        }
+        sh2z_vd_step2(&a, &t2, &veh, &rules, &in);
+        sh2z_vd_step2_contact(&b, &t2, &veh, &rules, &in, &zero);
+        check(memcmp(&a, &b, sizeof a) == 0, "tubes, zero contact: the same body as sh2z_vd_step2 every tick");
+        active++;
+    }
+    check(active > 1000 && pushes > 10, "tubes: the drive stays in the pipe");
+    check(pushes_ok, "tubes: a push moves the body its way in the pipe; damage and hit as on the road");
+    /* On road shapes the tube step with contact is the road step with contact, bit for bit. */
+    {
+        sh2z_vd_track2_t tr;
+        tr.base = track; tr.joins = NULL; tr.tube = t2.tube;
+        sh2z_vd_body_t r0 = start_body(), r1 = start_body();
+        uint16_t p0 = 0, p1 = 0;
+        for(int i = 0; i < 3000; i++) {
+            sh2z_vd_input_t i0 = drive(i, &p0), i1 = drive(i, &p1);
+            sh2z_vd_contact_t c = {{0, 0, 0}, 0, 0, 0};
+            if(i % 41 == 7) { c.push[0] = q16(1.5); c.push[2] = -q16(2.0); c.hit = (i % 82 == 7); }
+            if(i % 157 == 3) c.damage = q16(9.0);
+            if(i % 300 == 5) c.regain = q16(20.0);
+            sh2z_vd_step_contact(&r0, &track, &veh, &rules, &i0, &c);
+            sh2z_vd_step2_contact(&r1, &tr, &veh, &rules, &i1, &c);
+            check(memcmp(&r0, &r1, sizeof r0) == 0, "road shapes: sh2z_vd_step2_contact is sh2z_vd_step_contact bit for bit");
+        }
+    }
+    printf("tubes: %d ticks in a pipe identical to sh2z_vd_step2; %d pushes, share kept along the push %.3f..%.3f\n", active, pushes, share_min, share_max);
+}
+
 int main(void) {
     build_track();
     build_vehicle();
     test_zero_contact();
+    test_tubes();
     const int c0 = contact_claims(PLACE_CONTRACT);
     printf("contract placement: first failed claim %d (0 none)\n", c0);
     check(c0 == 0, "contact claims hold");

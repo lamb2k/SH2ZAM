@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (c) 2026 SH2ZAM Contributors.
-# Executes the vehicle-dynamics-1 bridge ELF in the pinned Yabause SH-2
+# Executes the vehicle-dynamics-1 and -2 bridge ELF in the pinned Yabause SH-2
 # interpreter: every tick and probe against the host build of the same source
 # first (any mismatch exits non-zero), then the cycle model.
 set -euo pipefail
@@ -34,7 +34,7 @@ src="$project_root/saturn/src"
 "${CC:-cc}" -O2 -fwrapv -fno-strict-aliasing -ffunction-sections -fdata-sections \
   -DHAVE_STDINT_H -I"$model_core/yabause/src" -I"$project_root/saturn/include" -Wl,--gc-sections \
   "$project_root/saturn/benchmarks/sh2-model/vehicle_dynamics_harness.c" \
-  "$src/sh2zam_vehicle_dynamics.c" "$src/sh2zam_unit30.c" "$src/sh2zam_divu.c" \
+  "$src/sh2zam_vehicle_dynamics.c" "$src/sh2zam_vehicle_dynamics2.c" "$src/sh2zam_unit30.c" "$src/sh2zam_divu.c" \
   -lm -o "$model_build/vehicle-dynamics-harness"
 "$model_build/vehicle-dynamics-harness" "$model_elf" "$locate_every" > "$model_build/vehicle-dynamics-raw.json"
 MODEL_ELF="$model_elf" MODEL_RAW="$model_build/vehicle-dynamics-raw.json" MODEL_OUT="$model_output" \

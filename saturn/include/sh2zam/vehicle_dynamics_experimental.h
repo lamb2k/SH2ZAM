@@ -5,7 +5,9 @@
  * caller.
  *
  * Contract tag vehicle-dynamics-1 (experimental: the numeric definitions may
- * still change until the tag is published).
+ * still change until the tag is published). Contract tag vehicle-dynamics-2
+ * adds sh2z_vd_step2: the same tick with pipe and cylinder road shapes and the
+ * joins that taper them into their neighbours.
  *
  * Model. Each tick (sh2z_vd_step) runs, in order: the pad, the surface zone
  * under the vehicle, steering, body-frame damping, boost, mines and launch
@@ -45,8 +47,8 @@ extern "C" {
 enum {
     SH2Z_VD_SHAPE_ROAD = 0,       /**< open road; airborne above rules.air_road */
     SH2Z_VD_SHAPE_WALLED = 1,     /**< walled road; airborne above rules.air_walled */
-    SH2Z_VD_SHAPE_PIPE = 2,       /**< not modelled: treated as SH2Z_VD_SHAPE_ROAD */
-    SH2Z_VD_SHAPE_CYLINDER = 3,   /**< not modelled: treated as SH2Z_VD_SHAPE_ROAD */
+    SH2Z_VD_SHAPE_PIPE = 2,       /**< inside a tube (vehicle-dynamics-2); road in sh2z_vd_step */
+    SH2Z_VD_SHAPE_CYLINDER = 3,   /**< outside a tube (vehicle-dynamics-2); road in sh2z_vd_step */
     SH2Z_VD_SHAPE_HALF_PIPE = 4,  /**< not modelled: treated as SH2Z_VD_SHAPE_ROAD */
     SH2Z_VD_SHAPE_TUNNEL = 5,     /**< tunnel; airborne above rules.air_tunnel */
     SH2Z_VD_SHAPE_GAP = 6,        /**< no road: always airborne */
@@ -300,6 +302,53 @@ void sh2z_vd_apply_kick(sh2z_vd_body_t *b, int32_t kick_lat, int32_t kick_speed)
 /** Spline point (Q16) and tangent (Q16 units per unit t) of node n at t (Q30). */
 void sh2z_vd_spline(const sh2z_vd_track_t *track, uint32_t n, int32_t t, int32_t pos[3], int32_t fwd[3]);
 
+/* ---- Contract tag vehicle-dynamics-2 ------------------------------------ */
+
+/** Joins of a span (one record per node). A tube span tapers into an open
+ *  neighbour over a join: below t = prev_end the span joins the previous span,
+ *  above t = next_start the next one. Over a join the share
+ *  s = prop / scale (or (1 - prop) / scale at the far end) runs from 0 at the
+ *  seam to 1 where the tube is whole. A span without joins has prev_end <= 0
+ *  and next_start >= 1 (Q30). */
+typedef struct {
+    int32_t prev_end;        /**< Q30 t where the join with the previous span ends */
+    int32_t next_start;      /**< Q30 t where the join with the next span starts */
+    int32_t scale;           /**< Q30 share of the span's arc length one join covers, > 0 */
+} sh2z_vd_join_t;
+
+/** Rule constants of the tube shapes (Q16 unless stated). */
+typedef struct {
+    int32_t join_lever;      /**< pipe join: up-vector lever of the road plane against the seam */
+    int32_t pipe_rim;        /**< pipe join: off the surface at this height above the line */
+    int32_t cyl_reach;       /**< cylinder: off the surface beyond radius + cyl_reach */
+    int32_t cyl_lift;        /**< cylinder join: road plane lift per unit of join share */
+    int32_t min_dist;        /**< radial direction kept below this distance from the line */
+    int32_t min_unit;        /**< Q30 blended up vectors shorter than this are not renormalised */
+} sh2z_vd_tube_rules_t;
+
+/** A track with tube shapes: the vehicle-dynamics-1 track (first member), its
+ *  joins (one per node, or NULL for none) and the tube rules. */
+typedef struct {
+    sh2z_vd_track_t base;
+    const sh2z_vd_join_t *joins;
+    sh2z_vd_tube_rules_t tube;
+} sh2z_vd_track2_t;
+
+/** One tick, as sh2z_vd_step, with the pipe and cylinder shapes:
+ *  - SH2Z_VD_SHAPE_PIPE: the ground is the inside of the circle of radius
+ *    half_left round the line. Height is the radius less the distance from
+ *    the line; the up vector points to the line; gravity and the hover act
+ *    along it. There are no walls: past the radius the body is put back on
+ *    it. Over a join, the road plane lifted by the tapered radius takes over
+ *    toward the seam, and the up vectors blend toward the road's.
+ *  - SH2Z_VD_SHAPE_CYLINDER: the ground is the outside of that circle, the
+ *    radius tapering to the line over a join. Height is the distance less the
+ *    radius; the up vector points away from the line. Beyond radius plus
+ *    tube.cyl_reach the body has left the surface (it falls).
+ *  Road shapes give the same bits as sh2z_vd_step. */
+void sh2z_vd_step2(sh2z_vd_body_t *b, const sh2z_vd_track2_t *track, const sh2z_vd_vehicle_t *v,
+                   const sh2z_vd_rules_t *r, const sh2z_vd_input_t *in);
+
 /* ---- Contract tag vehicle-dynamics-3 ------------------------------------ */
 
 /** Contact from other bodies for one tick (for example from
@@ -319,6 +368,12 @@ typedef struct {
  *  static); see BODY_CONTACT.md. */
 void sh2z_vd_step_contact(sh2z_vd_body_t *b, const sh2z_vd_track_t *track, const sh2z_vd_vehicle_t *v,
                           const sh2z_vd_rules_t *r, const sh2z_vd_input_t *in, const sh2z_vd_contact_t *c);
+
+/** sh2z_vd_step2 with contact (the tube shapes of vehicle-dynamics-2), the
+ *  contact placed as in sh2z_vd_step_contact. With a zero contact it is
+ *  sh2z_vd_step2, bit for bit. One call at a time per CPU. */
+void sh2z_vd_step2_contact(sh2z_vd_body_t *b, const sh2z_vd_track2_t *track, const sh2z_vd_vehicle_t *v,
+                           const sh2z_vd_rules_t *r, const sh2z_vd_input_t *in, const sh2z_vd_contact_t *c);
 
 #ifdef __cplusplus
 }

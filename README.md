@@ -417,7 +417,8 @@ float references and the general forms (no console run). See
   `line-field-3` a first-lap cap on chasing vehicles.
 - [`sh2zam/vehicle_dynamics_experimental.h`](saturn/include/sh2zam/vehicle_dynamics_experimental.h)
   (`vehicle-dynamics-1`) steps one hovering vehicle on a spline road, one fixed tick at a time.
-  A host build and an SH-2 build give the same bits.
+  A host build and an SH-2 build give the same bits. `vehicle-dynamics-2` adds pipes (inside a
+  tube) and cylinders (outside one), with joins into open road.
 - [`sh2zam/body_contact_experimental.h`](saturn/include/sh2zam/body_contact_experimental.h)
   (`body-contact-1`) resolves contact between vehicles that touch as spheres: shared impact damage,
   a push while they close, attackers and contact credit. `vehicle-dynamics-3` feeds it into the

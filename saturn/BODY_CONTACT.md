@@ -55,6 +55,9 @@ sh2z_vd_contact_t c = { { b->push[0], b->push[1], b->push[2] }, b->damage, regai
 sh2z_vd_step_contact(&vehicle, &track, &constants, &rules, &pad, &c);
 ```
 
+On a track with tube shapes (`vehicle-dynamics-2`), `sh2z_vd_step2_contact` takes the same contact
+with the `sh2z_vd_track2_t`; on road shapes it gives `sh2z_vd_step_contact`'s bits.
+
 The contact lands after the tick's resets and before the pad is read: the push is the tick's first
 acceleration (integrated with the vehicle's own forces), damage marks the tick (no grip) and, past
 zero energy, starts the spin-out before the pad is read; `hit` takes grip away for
