@@ -59,7 +59,7 @@ One line per guide, sorted by guide file name; a kernel lane adds its own line
 - [Experimental 12-bit-angle sin/cos/tan and inline divider quotients](TRIG12.md); [trig12 instruction model](benchmarks/trig12-model/README.md)
 - [Experimental Q2.30 unit vectors: inline multiply, dot and cross, reciprocal square root, normalisation, basis orthonormalisation](UNIT30.md); [unit30 instruction model](benchmarks/unit30-model/README.md)
 - [Experimental VDP1 double-bank bookkeeping](VDP1_BANKS.md)
-- [Experimental track-bound vehicle dynamics: one hovering vehicle on a spline road, stepped in integers](VEHICLE_DYNAMICS.md)
+- [Experimental track-bound vehicle dynamics: one hovering vehicle on a spline road, stepped in integers](VEHICLE_DYNAMICS.md); [Vehicle-dynamics instruction model](benchmarks/vehicle-dynamics-model/README.md)
 - [Experimental vehicle kernels: screen facing, indexed light and view batch, approximate Gouraud](VEHICLE_KERNELS.md); [Vehicle-kernel instruction model](benchmarks/vehicle-model/README.md)
 - [Experimental view batch: transform, project, clip codes, guard clip, texture-merge planners, final-coordinate truncation, source-order guard clip, fractional centre](VIEW_BATCH.md); [Merge-planner instruction model](benchmarks/merge-model/README.md)
 - [Experimental strip rails in one call: both rails of a strip quad, view prepared once](VIEW_RAILS.md); [View-rails instruction model](benchmarks/rails-model/README.md)

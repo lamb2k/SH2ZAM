@@ -24,6 +24,7 @@ and scope.
 - [sprite-cache-1](validation/sprite-cache-1.md): 2026-11-19 (sprite slot cache and cell4z decoder, sprite-cache-1)
 - [trig12-1](validation/trig12-1.md): 2026-11-17 (12-bit-angle trig and divider quotients, trig12-1)
 - [vdp1-banks-1](validation/vdp1-banks-1.md): 2026-11-19 (VDP1 double-bank bookkeeping, vdp1-banks-1)
+- [vehicle-dynamics-1](validation/vehicle-dynamics-1.md): 2026-11-19 (track-bound vehicle dynamics, vehicle-dynamics-1)
 - [vehicle-kernels-1](validation/vehicle-kernels-1.md): 2026-11-17 (vehicle kernels, vehicle-kernels-1)
 - [view-camera-1](validation/view-camera-1.md): 2026-11-17 (view from a camera, view-camera-1)
 - [view-merge-2](validation/view-merge-2.md): 2026-11-17 (tier texture-merge planner, view-merge-2)
