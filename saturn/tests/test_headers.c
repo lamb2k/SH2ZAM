@@ -18,6 +18,7 @@
 #include "sh2zam/spatial.h"
 #include "sh2zam/trig12_experimental.h"
 #include "sh2zam/unit30_experimental.h"
+#include "sh2zam/vehicle_dynamics_experimental.h"
 #include "sh2zam/view_experimental.h"
 #include "sh2zam/vlc2_experimental.h"
 #include "sh2zam/vlc_experimental.h"
