@@ -15,6 +15,7 @@ and scope.
 - [sections-1](validation/sections-1.md): 2026-11-18 (one section per hand-written entry and table, sections-1)
 - [segmesh-1](validation/segmesh-1.md): 2026-11-19 (segmented strip mesh visibility pick, segmesh-1)
 - [sprite-cache-1](validation/sprite-cache-1.md): 2026-11-19 (sprite slot cache and cell4z decoder, sprite-cache-1)
+- [snd-1](validation/snd-1.md): 2026-11-19 (sound events and CD audio, snd-1)
 - [trig12-1](validation/trig12-1.md): 2026-11-17 (12-bit-angle trig and divider quotients, trig12-1)
 - [vdp1-banks-1](validation/vdp1-banks-1.md): 2026-11-19 (VDP1 double-bank bookkeeping, vdp1-banks-1)
 - [vehicle-kernels-1](validation/vehicle-kernels-1.md): 2026-11-17 (vehicle kernels, vehicle-kernels-1)
