@@ -12,6 +12,7 @@ and scope.
 - [integer-kernels-1](validation/integer-kernels-1.md): 2026-11-15 (integer kernels)
 - [line-field-1](validation/line-field-1.md): 2026-11-19 (line field, line-field-1)
 - [line-field-2](validation/line-field-2.md): 2026-11-20 (line field second-lap re-target, line-field-2)
+- [line-field-3](validation/line-field-3.md): 2026-11-20 (line field first-lap chase cap, line-field-3)
 - [line-follower-1](validation/line-follower-1.md): 2026-11-19 (racing-line follower, line-follower-1)
 - [memo-1](validation/memo-1.md): 2026-11-17 (block memo kernels, memo-1)
 - [pose-1](validation/pose-1.md): 2026-11-17 (model pose from binary32 state, pose-1)
