@@ -395,16 +395,29 @@ controls (no console run). See [the sound guide](saturn/SND.md).
 ## Rotation sprites
 
 [`sh2zam/rotation_sprite_experimental.h`](saturn/include/sh2zam/rotation_sprite_experimental.h)
-(contract tags `rotation-sprites-2` and `rotation-sprites-3`) draws a 3D object as one VDP1
+(contract tags `rotation-sprites-2` to `rotation-sprites-4`) draws a 3D object as one VDP1
 distorted sprite, using a cell from a set baked over a grid of viewing directions:
 - picks the cell nearest the viewing direction, by dot products, with mirrored sets;
 - places the object's origin with sub-pixel precision and its on-screen up axis;
 - emits one command that scales the cell with depth and rotates it with the object's roll.
 
 The `-3` forms give identical output faster: a yaw climb from the last cell, the pose from a
-camera's own terms, and emission of one cell. Integer only, with no libc. Host-tested against
+camera's own terms, and emission of one cell. `-4` makes the one-cell emission refuse a
+lookup-table colour address that is not a multiple of 32 bytes (VDP1 ignores its low bits).
+Integer only, with no libc. Host-tested against
 float references and the general forms (no console run). See
 [the rotation sprite guide](saturn/ROTATION_SPRITES.md).
+
+## Effect pool
+
+[`sh2zam/effect_pool_experimental.h`](saturn/include/sh2zam/effect_pool_experimental.h)
+(contract tag `effect-pool-1`) runs short-lived world particles (sparks, puffs, smoke, debris):
+- fixed rings of particles that share a lifetime, growth, damping and acceleration;
+- camera-facing billboard projection, with a one-divide form for spots;
+- VDP1 commands for diamonds, quads, untextured polygons and lines, plus a far-to-near sort.
+
+Integer only, with no libc. Host-tested (no console run). See
+[the effect pool guide](saturn/EFFECT_POOL.md).
 
 ## Racing lines and vehicle dynamics
 
@@ -420,9 +433,13 @@ float references and the general forms (no console run). See
   (`vehicle-dynamics-1`) steps one hovering vehicle on a spline road, one fixed tick at a time.
   A host build and an SH-2 build give the same bits. `vehicle-dynamics-2` adds pipes (inside a
   tube) and cylinders (outside one), with joins into open road.
+- [`sh2zam/body_contact_experimental.h`](saturn/include/sh2zam/body_contact_experimental.h)
+  (`body-contact-1`) resolves contact between vehicles that touch as spheres: shared impact damage,
+  a push while they close, attackers and contact credit. `vehicle-dynamics-3` feeds it into the
+  vehicle step (`sh2z_vd_step_contact`).
 
-All three are integer only and deterministic. See [the line guide](saturn/LINE_FOLLOWER.md) and
-[the vehicle dynamics guide](saturn/VEHICLE_DYNAMICS.md).
+All four are integer only and deterministic. See [the line guide](saturn/LINE_FOLLOWER.md),
+[the vehicle dynamics guide](saturn/VEHICLE_DYNAMICS.md) and [the body contact guide](saturn/BODY_CONTACT.md).
 
 ## Link only what you call
 

@@ -51,6 +51,11 @@ every step around the origin for one strict sign and the polar angle for one wra
 
 ## Contract history
 
+- **rotation-sprites-4:** `sh2z_rspr_emit_cell` refuses, writing nothing, a lookup-table colour mode (pmod bits
+  5..3 = 1) with `colr & 3` nonzero. VDP1 reads the table from `(COLR & ~3) * 8`, so such a command would draw
+  with the 16 bytes before the table. Colour-bank modes keep their low COLR bits (they are bank code).
+  `sh2z_rspr_emit` and `sh2z_rspr_emit_valid` only document the rule, since callers may emit with vram 0 and
+  write their own COLR. Only `sh2z_rspr_emit_cell`'s object changes.
 - **rotation-sprites-3:** adds the three faster forms above in their own unit (`sh2zam_rotation_sprite3.c`); the
   rotation-sprites-2 functions and objects are unchanged.
 - **rotation-sprites-2:** the sub-pixel origin. rotation-sprites-1 floored the projected origin, then rounded

@@ -43,9 +43,11 @@ The workload suite uses `3374d77` as its prior baseline; the historical
 One line per guide, sorted by guide file name; a kernel lane adds its own line
 (its guide, then its instruction model).
 
+- [Experimental body contact: sphere contact with shared damage, pushes, attackers and credit; vehicle step with contact](BODY_CONTACT.md)
 - [Experimental explicit SH-2 divider](DIVU.md)
 - [Experimental SCU DSP access, batched affine transform, Q16 outer product](DSP.md)
 - [Experimental two-CPU try-claim for an optional job](DUAL_CLAIM.md)
+- [Experimental effect pool: particle rings, billboard projection, VDP1 effect commands](EFFECT_POOL.md)
 - [Integer kernels: 68000 arithmetic, 2D box overlap, 16x16 cell placement](INTEGER_KERNELS.md); [Integer-kernel instruction model](benchmarks/integer-model/README.md)
 - [Experimental racing-line follower and line field](LINE_FOLLOWER.md)
 - [Experimental model pose from binary32 state, with no floating-point arithmetic](POSE.md); [pose instruction model](benchmarks/pose-model/README.md)

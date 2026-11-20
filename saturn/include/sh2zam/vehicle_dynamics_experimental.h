@@ -349,6 +349,32 @@ typedef struct {
 void sh2z_vd_step2(sh2z_vd_body_t *b, const sh2z_vd_track2_t *track, const sh2z_vd_vehicle_t *v,
                    const sh2z_vd_rules_t *r, const sh2z_vd_input_t *in);
 
+/* ---- Contract tag vehicle-dynamics-3 ------------------------------------ */
+
+/** Contact from other bodies for one tick (for example from
+ *  body_contact_experimental.h). */
+typedef struct {
+    int32_t push[3];         /**< Q16 acceleration, integrated with the tick's own forces */
+    int32_t damage;          /**< Q16 energy lost; empties into the spin-out as wall damage does */
+    int32_t regain;          /**< Q16 energy regained first, up to the maximum (not while spinning out or crashed) */
+    int32_t hit;             /**< nonzero: no grip for rules.contact_grip ticks, from this tick */
+} sh2z_vd_contact_t;
+
+/** sh2z_vd_step with contact: after the per-tick resets and before the pad
+ *  (so damage that starts a spin-out takes the pad away this tick), the
+ *  regain, the damage and the grip-off timer; the push starts the tick's
+ *  acceleration. With a zero contact it is sh2z_vd_step, bit for bit. One
+ *  call at a time per CPU (the contact in progress is held in a file
+ *  static); see BODY_CONTACT.md. */
+void sh2z_vd_step_contact(sh2z_vd_body_t *b, const sh2z_vd_track_t *track, const sh2z_vd_vehicle_t *v,
+                          const sh2z_vd_rules_t *r, const sh2z_vd_input_t *in, const sh2z_vd_contact_t *c);
+
+/** sh2z_vd_step2 with contact (the tube shapes of vehicle-dynamics-2), the
+ *  contact placed as in sh2z_vd_step_contact. With a zero contact it is
+ *  sh2z_vd_step2, bit for bit. One call at a time per CPU. */
+void sh2z_vd_step2_contact(sh2z_vd_body_t *b, const sh2z_vd_track2_t *track, const sh2z_vd_vehicle_t *v,
+                           const sh2z_vd_rules_t *r, const sh2z_vd_input_t *in, const sh2z_vd_contact_t *c);
+
 #ifdef __cplusplus
 }
 #endif

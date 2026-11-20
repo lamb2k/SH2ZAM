@@ -11,6 +11,8 @@
  * Contract tag rotation-sprites-3 (at the end) adds faster forms with
  * identical output: a yaw climb for convex tables, the world pose from a
  * caller's camera-space terms and the emission of one cell.
+ * Contract tag rotation-sprites-4: sh2z_rspr_emit_cell refuses a lookup-table
+ * COLR that is not a 32-byte address (VDP1 ignores its two low bits).
  * Every function below is a pure function of
  * its inputs as stated. Selection is exact for the stated rule; placement and
  * emission round as stated (no floating point). Nothing here knows what the
@@ -176,7 +178,11 @@ bool sh2z_rspr_place(sh2z_rspr_place_t *out, const sh2z_view_t *v, const sh2z_rs
  *  and D = (0, height) in column/row pixels. CTRL = 0x0002 (distorted
  *  sprite, next command follows), LINK = 0, GRDA = 0, COLR = (vram +
  *  clut_offset + clut*32) / 8, SRCA = (vram + pixel_offset) / 8 and SIZE =
- *  (width / 8) << 8 | height. Returns false, writing nothing, for a bad pick,
+ *  (width / 8) << 8 | height. VDP1 reads a lookup table from (COLR & ~3) * 8,
+ *  so with a lookup-table colour mode in pmod the caller places the set so
+ *  vram + clut_offset is a multiple of 32 (this form does not check it: a
+ *  caller may emit with vram 0 and write its own COLR afterwards).
+ *  Returns false, writing nothing, for a bad pick,
  *  a vram address that is misaligned or puts the cell outside VDP1 VRAM, a
  *  corner outside -1024..1023, or null pointers. */
 bool sh2z_rspr_emit(uint16_t command[16], const sh2z_rspr_set_t *set, const sh2z_rspr_pick_t *pick,
@@ -309,8 +315,10 @@ bool sh2z_rspr_pose_terms(sh2z_rspr_pick_t *pick, sh2z_rspr_place_t *place, int3
  *  offset px*R - py*up is below 2^26 in magnitude (|px|, |py| <= 504,
  *  |up| <= 2^15), so its product with the scale is one 32 x 32 -> 64-bit
  *  multiply; the rounding is the same. Returns false, writing nothing, for a
- *  scale outside 1..2^24, mirror > 1, a corner outside -1024..1023 or null
- *  pointers. */
+ *  scale outside 1..2^24, mirror > 1, a corner outside -1024..1023, null
+ *  pointers, or (rotation-sprites-4) a lookup-table colour mode (pmod bits
+ *  5..3 = 1) with colr & 3 nonzero: VDP1 ignores those two bits and would
+ *  read the table from the 32-byte address below. */
 bool sh2z_rspr_emit_cell(uint16_t command[16], const sh2z_rspr_cell_t *cell, uint32_t mirror,
                          const sh2z_rspr_place_t *place, uint16_t pmod, uint16_t colr, uint16_t srca);
 
