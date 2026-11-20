@@ -4,7 +4,8 @@
  * retirement, distance level of detail, rank and lap bookkeeping.
  * Game-neutral: the library knows nothing about what a vehicle is.
  *
- * Contract tags line-field-1 and line-field-2 (the second-lap re-target).
+ * Contract tags line-field-1, line-field-2 (the second-lap re-target) and
+ * line-field-3 (the first-lap chase cap).
  *
  * Shared vehicle state. sh2z_vehicle_t is the line-space state of ANY vehicle
  * on the line: agents the field drives, and vehicles driven elsewhere (a
@@ -30,6 +31,11 @@
  * tick, pace = (laps - 1) * length / (finish_ticks - first lap tick), and its
  * expectation restarts at one lap. finish_ticks = 0 keeps line-field-1's one
  * pace for the whole race, step for step, and its hashes.
+ *
+ * First-lap chase cap (line-field-3). A chasing agent with first_lap_cap > 0
+ * holds its target speed to that cap until it completes its first lap:
+ * racing games often keep chasers at their machine's own top speed while the
+ * field forms, and let them run faster later. 0 = no cap (line-field-2).
  *
  * Determinism. One xorshift32 state in the field drives every random choice;
  * the same initial state and the same external inputs give the same result
@@ -98,6 +104,7 @@ typedef struct {
     uint8_t finish_seq;        /**< Finishing order, 0 = winner. */
     uint8_t touch_cool;        /**< Ticks left of the current contact incident. */
     int32_t finish_ticks;      /**< line-field-2: race tick to finish by, from the second lap on; 0 keeps the pace. Caller's tuning. */
+    int32_t first_lap_cap;     /**< line-field-3: Q8 per tick cap on a chase target before the first lap is done; 0 = none. Caller's tuning. */
 } sh2z_field_brain_t;
 
 /** Field tuning. */

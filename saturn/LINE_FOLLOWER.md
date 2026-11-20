@@ -1,12 +1,13 @@
-# Racing-line follower and line field (`line-follower-1`, `line-field-1`, `line-field-2`, experimental)
+# Racing-line follower and line field (`line-follower-1`, `line-field-1` to `line-field-3`, experimental)
 
 Contracts: [`line_follower_experimental.h`](include/sh2zam/line_follower_experimental.h),
 section "Contract tag line-follower-1", and
 [`line_field_experimental.h`](include/sh2zam/line_field_experimental.h), section
-"Contract tags line-field-1 and line-field-2". Tests: `tests/test_line_follower.c` and
+"Contract tags line-field-1, line-field-2 and line-field-3". Tests: `tests/test_line_follower.c` and
 `tests/test_line_field.c`. Validation records:
 [line-follower-1](validation/line-follower-1.md) and
-[line-field-1](validation/line-field-1.md) and [line-field-2](validation/line-field-2.md). No instruction model yet: both are
+[line-field-1](validation/line-field-1.md), [line-field-2](validation/line-field-2.md) and
+[line-field-3](validation/line-field-3.md). No instruction model yet: both are
 compiled C and have only been measured as part of a larger program.
 
 Two layers for vehicles that travel along one closed, baked line: a lap
@@ -49,6 +50,9 @@ it arrives as `kick_lat` and `kick_speed`.
   lap. Racing games often pace the opening lap on a lap time and the rest on a
   finish time; with `finish_ticks = 0` the field runs exactly as `line-field-1`
   (same steps, same hashes).
+- **First-lap chase cap (`line-field-3`):** a chasing agent given `first_lap_cap`
+  holds its target speed to that cap until its first lap is done, as games keep
+  chasers at their machine's own top speed while the field forms; 0 is no cap.
 - **Lanes:** an agent takes the side with more room around a slower vehicle
   ahead, looking further ahead the faster it closes. It holds that side for a
   while, never cuts across a vehicle alongside, and does not move across a
