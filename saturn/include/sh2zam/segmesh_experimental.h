@@ -2,7 +2,8 @@
  * ordering for a closed (circular) chain of mesh segments. Not selected by any
  * default dispatch.
  *
- * Contract tag: segmesh-1. A mesh is a ring of N segments, each represented for
+ * Contract tags: segmesh-1 (pick, below) and segmesh-2 (cluster bounds culling,
+ * at the end). segmesh-1: A mesh is a ring of N segments, each represented for
  * visibility by one anchor point. Per frame the caller supplies four fixed-point
  * clip rows. The pick classifies every anchor, marks each segment's traversal
  * direction from the depth slope to its successor, splits the ring into runs of
@@ -17,6 +18,7 @@
 #define SH2ZAM_SEGMESH_EXPERIMENTAL_H
 
 #include "sh2zam.h"
+#include "view_experimental.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -112,6 +114,85 @@ int sh2z_segmesh_pick(const sh2z_segmesh_anchor_t *anchors, uint32_t n,
                          const sh2z_segmesh_scratch_t *scratch,
                          sh2z_segmesh_run_t *runs, uint32_t max_runs,
                          uint32_t *run_count, uint32_t *marked);
+
+
+/* ---- Contract tag segmesh-2: cluster bounds culling ----------------------- */
+
+/** \brief Bounds of one cluster of a segment's faces, baked offline (20 bytes).
+ *
+ * centre and radius: a sphere, in the view batch's int16 model units, that
+ * holds every vertex of the cluster. axis (Q1.14, unit length to within
+ * 2^-13), cos_q14 and sin_q14: a cone of half angle t holding every face
+ * normal, with cos_q14 <= 16384 cos t and sin_q14 >= 16384 sin t. A face
+ * normal is (b - a) x (c - a) for corners a, b, c in drawing order; a quad
+ * a, b, c, d contributes the normals of a, b, c and of a, c, d. Set
+ * SH2Z_SEGMESH_NO_CONE in flags when no cone applies. Cones need t < 80
+ * degrees: the test's rounding allowance assumes cos t >= 0.17. */
+typedef struct {
+    int16_t centre[3];
+    uint16_t radius;
+    int16_t axis[3];
+    int16_t cos_q14, sin_q14;
+    uint16_t flags;
+} sh2z_segmesh_bound_t;
+
+#define SH2Z_SEGMESH_NO_CONE 1u
+/** \brief Most bounds per sh2z_segmesh_cull call (one result bit each). */
+#define SH2Z_SEGMESH_CULL_MAX 32u
+/** \brief Largest side-plane margin, in pixels. */
+#define SH2Z_SEGMESH_MARGIN_MAX 64
+
+/** \brief Per-view state from sh2z_segmesh_cull_prepare (treat as opaque). */
+typedef struct {
+    int16_t r[3][3];
+    int16_t facing;            /**< \brief +1, or -1 when the rotation reflects */
+    int32_t t[3];
+    int32_t near_z, far_z;
+    int32_t focal_x, focal_y;
+    int32_t k[4];              /**< \brief left, right, top, bottom plane offsets (Q16 pixels) */
+    int32_t length[4];         /**< \brief their normal lengths, rounded up (see the source) */
+} sh2z_segmesh_cull_t;
+
+/** \brief Prepare culling for one centre view.
+ *
+ * margin (whole pixels, 0..SH2Z_SEGMESH_MARGIN_MAX) moves the side planes
+ * outward. Returns false, leaving out unchanged, on a null pointer, a view
+ * outside the view batch's contract (sh2z_view_t, sh2z_view_center_t) or a
+ * margin outside its range. */
+bool sh2z_segmesh_cull_prepare(sh2z_segmesh_cull_t *out, const sh2z_view_center_t *view,
+                               int32_t margin);
+
+/** \brief Classify up to SH2Z_SEGMESH_CULL_MAX bounds. Bit i of the result is
+ * clear only when every face of bound i is culled for the prepared view.
+ *
+ * With p = r * centre + t (Q18.14, the view batch's transform) and the sphere
+ * scaled by the same factor, bound i is culled when
+ *  - the sphere lies wholly beyond the near plane (z < near_z) or the far plane
+ *    (z > far_z), or wholly outside one of the four side planes of the view's
+ *    clip rectangle moved outward by margin pixels, as the half spaces of the
+ *    view guard clip (sh2z_view_clip_guard, _center form). Then every vertex
+ *    in front of the near plane projects outside that side, and the six-plane
+ *    clip of every face is empty; or
+ *  - its cone applies and dot(q, n) <= 0 for every point q of the sphere and
+ *    every normal n of the cone, with n in view space (negated when the
+ *    rotation reflects). The projected signed area
+ *    sum(sx_i * sy_{i+1} - sy_i * sx_{i+1}) of every face (sy grows downward),
+ *    and of any part of it in front of the near plane, is then >= 0, up to
+ *    the projection's rounding of corners.
+ * Integer arithmetic, every rounding against culling: the cone test runs in
+ * 1/16-unit steps; no float and no divide. Bits n..31 are zero; a null
+ * pointer or n > SH2Z_SEGMESH_CULL_MAX gives all n low bits set (nothing
+ * culled).
+ *
+ * \warning Not exact. The cluster path is an approximation of the per-face
+ * path: the facing test holds only up to the projection's rounding of
+ * corners, so a culled bound can still hold a face that the per-face path
+ * would draw (a near edge-on face a pixel wide). On one instrumented road
+ * renderer it skipped 0.08 such faces per frame. Callers that need the
+ * per-face result exactly keep cluster culling off and use sh2z_segmesh_pick
+ * alone. */
+uint32_t sh2z_segmesh_cull(const sh2z_segmesh_cull_t *cull, const sh2z_segmesh_bound_t *bounds,
+                           uint32_t n);
 
 #ifdef __cplusplus
 }
