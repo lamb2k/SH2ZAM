@@ -1,14 +1,14 @@
-# Racing-line follower and line field (`line-follower-1`, `line-field-1` to `line-field-3`, experimental)
+# Racing-line follower and line field (`line-follower-1`, `line-field-1` to `line-field-4`, experimental)
 
 Contracts: [`line_follower_experimental.h`](include/sh2zam/line_follower_experimental.h),
 section "Contract tag line-follower-1", and
 [`line_field_experimental.h`](include/sh2zam/line_field_experimental.h), section
-"Contract tags line-field-1, line-field-2 and line-field-3". Tests: `tests/test_line_follower.c` and
+"Contract tags line-field-1 to line-field-4". Tests: `tests/test_line_follower.c` and
 `tests/test_line_field.c`. Validation records:
 [line-follower-1](validation/line-follower-1.md) and
-[line-field-1](validation/line-field-1.md), [line-field-2](validation/line-field-2.md) and
-[line-field-3](validation/line-field-3.md). No instruction model yet: both are
-compiled C and have only been measured as part of a larger program.
+[line-field-1](validation/line-field-1.md), [line-field-2](validation/line-field-2.md),
+[line-field-3](validation/line-field-3.md) and [line-field-4](validation/line-field-4.md). No
+instruction model yet: both are compiled C and have only been measured as part of a larger program.
 
 Two layers for vehicles that travel along one closed, baked line: a lap
 course, a patrol loop, a rail.
@@ -53,6 +53,19 @@ it arrives as `kick_lat` and `kick_speed`.
 - **First-lap chase cap (`line-field-3`):** a chasing agent given `first_lap_cap`
   holds its target speed to that cap until its first lap is done, as games keep
   chasers at their machine's own top speed while the field forms; 0 is no cap.
+- **Surface (`line-field-4`):** `params->surface` gives the line zones and tube nodes; NULL keeps
+  `line-field-3` step for step (same hashes).
+  - Zones are distance stretches with a lateral band, sorted by start: a boost plate gives a free
+    boost of `plate_ticks`, low grip scales the steering gain by `slip_steer`, rough ground scales
+    the target speed by `rough_keep` unless boosting, and a recharge strip refills `recharge` energy
+    per tick. An agent takes the zone it is in when its step starts.
+  - Tube nodes (`(flags & wrap_mask) == wrap_value`) have no edge: lateral is an arc length round a
+    circle of radius `half_width` that wraps at plus or minus pi times it. Agents steer the short way
+    round, are never charged at an edge there, and contact pushes wrap. Leaving a tube for a node
+    with an edge puts an agent inside the new half width without a charge.
+- **Final dash (`line-field-4`):** with `dash_from` > 0, an agent on the final lap past that
+  distance drops its pace and chase targets, targets at least `dash_pace` of its pace and boosts
+  whenever its energy allows, as racing games often let the field race for the line.
 - **Lanes:** an agent takes the side with more room around a slower vehicle
   ahead, looking further ahead the faster it closes. It holds that side for a
   while, never cuts across a vehicle alongside, and does not move across a

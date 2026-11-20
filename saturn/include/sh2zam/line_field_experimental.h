@@ -4,8 +4,9 @@
  * retirement, distance level of detail, rank and lap bookkeeping.
  * Game-neutral: the library knows nothing about what a vehicle is.
  *
- * Contract tags line-field-1, line-field-2 (the second-lap re-target) and
- * line-field-3 (the first-lap chase cap).
+ * Contract tags line-field-1, line-field-2 (the second-lap re-target),
+ * line-field-3 (the first-lap chase cap) and line-field-4 (surface zones and
+ * tube nodes).
  *
  * Shared vehicle state. sh2z_vehicle_t is the line-space state of ANY vehicle
  * on the line: agents the field drives, and vehicles driven elsewhere (a
@@ -36,6 +37,24 @@
  * holds its target speed to that cap until it completes its first lap:
  * racing games often keep chasers at their machine's own top speed while the
  * field forms, and let them run faster later. 0 = no cap (line-field-2).
+ *
+ * Surface (line-field-4). params->surface, when set, gives the line surface
+ * zones and tube nodes; NULL is line-field-3 step for step, with its hashes.
+ * - Zones: a stretch of distance and a band of lateral where the ground acts
+ *   on agents: a boost plate starts a free boost, low grip scales steering,
+ *   rough ground damps the target speed unless boosting, a recharge strip
+ *   refills energy. An agent takes the zone it is in when its step starts.
+ * - Tube nodes: nodes whose flags match the surface's wrap mask have no edge.
+ *   Lateral there is an arc length round a circle of radius half_width: it
+ *   wraps at -pi to +pi times the radius, agents steer the short way round,
+ *   are never charged at an edge, and contact pushes wrap. An agent leaving
+ *   a tube for a node with an edge is put inside the new half width without
+ *   an edge charge.
+ * Final dash (line-field-4). With dash_from > 0, an agent on the final lap
+ * past dash_from drops its pace and chase targets and races for the line:
+ * it targets at least dash_pace of its pace whatever its expectation, and
+ * boosts whenever its energy allows, as racing games often let their field
+ * do over the last stretch.
  *
  * Determinism. One xorshift32 state in the field drives every random choice;
  * the same initial state and the same external inputs give the same result
@@ -140,6 +159,9 @@ typedef struct {
     int16_t boost_ticks;       /**< Boost length. */
     uint8_t laps;              /**< Race length in laps (1..4). */
     uint8_t boost_from_lap;    /**< Completed laps needed before boosting. */
+    const struct sh2z_field_surface *surface; /**< line-field-4: zones and tube nodes, or NULL for none. */
+    int32_t dash_from;         /**< line-field-4: Q8 distance into the final lap from which agents race for the line; 0 = never. */
+    int32_t dash_pace;         /**< line-field-4: Q16 share of its pace an agent targets at least in the final dash. */
 } sh2z_field_params_t;
 
 /** The field. The caller owns every array (count entries each). */
@@ -188,6 +210,35 @@ void sh2z_field_step(sh2z_field_t *f);
 
 /** FNV-1a hash of the whole field state, vehicles in index order (determinism checks). */
 uint32_t sh2z_field_hash(const sh2z_field_t *f);
+
+/* ---- Contract tag line-field-4 ------------------------------------------ */
+
+#define SH2Z_FIELD_ZONE_BOOST    1u /**< Boost plate: a free boost (no energy) of plate_ticks. */
+#define SH2Z_FIELD_ZONE_SLIP     2u /**< Low grip: steering gain scaled by slip_steer. */
+#define SH2Z_FIELD_ZONE_ROUGH    3u /**< Rough ground: target speed scaled by rough_keep unless boosting. */
+#define SH2Z_FIELD_ZONE_RECHARGE 4u /**< Recharge strip: energy refills by recharge per tick. */
+
+/** A surface zone: distances [start, end) and laterals [lat_lo, lat_hi], Q8.
+ *  A zone across the line's start is baked as two zones. */
+typedef struct {
+    int32_t start;             /**< Q8 distance where the zone starts. */
+    int32_t end;               /**< Q8 distance where it ends, > start. */
+    int32_t lat_lo;            /**< Q8 lowest lateral inside. */
+    int32_t lat_hi;            /**< Q8 highest lateral inside. */
+    uint32_t kind;             /**< SH2Z_FIELD_ZONE_* */
+} sh2z_field_zone_t;
+
+/** The line's surface (params->surface). */
+typedef struct sh2z_field_surface {
+    const sh2z_field_zone_t *zones; /**< Sorted by start; the first zone that holds an agent applies. */
+    uint32_t zone_count;
+    int32_t plate_ticks;       /**< Boost ticks a plate gives (at least; a longer boost is kept). */
+    int32_t slip_steer;        /**< Q16 share of the steering gain kept on low grip. */
+    int32_t rough_keep;        /**< Q16 share of the target speed kept on rough ground. */
+    int32_t recharge;          /**< Q8 energy per tick on a recharge strip. */
+    uint16_t wrap_mask;        /**< A node is a tube when wrap_mask != 0 and (flags & wrap_mask) == wrap_value. */
+    uint16_t wrap_value;
+} sh2z_field_surface_t;
 
 #ifdef __cplusplus
 }
