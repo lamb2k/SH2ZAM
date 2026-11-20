@@ -79,6 +79,11 @@
  *   +-air_spread of its speed. An agent in the air that is beyond the half
  *   width plus fall_margin of a node matching the open mask leaves the line: SH2Z_VEH_FALLING, out of contact, no laps. fall_ticks
  *   later it retires with energy exactly 0 (retire_tick that tick).
+ * - Drops: on a node matching the drop mask, an agent that comes out of a tube beyond the half width plus
+ *   fall_margin of an open-edge node is launched (launch_chance; otherwise it lands on the edge as before) and
+ *   leaves the line the same way, and an agent on a drop tube that is also a hold tube (an outside surface)
+ *   more than drop_lat of the radius round from the line drops off with drop_chance per step (one draw per
+ *   step while beyond). Falls and drops share the knock-out credit below.
  * - Knock-out credit: an agent's ko_age counts its steps since a contact
  *   incident began with an external vehicle (1 on the contact's own tick,
  *   ko_by that vehicle). When it starts to fall with ko_age <= ko_window and
@@ -307,6 +312,10 @@ typedef struct sh2z_field_behave {
     int32_t ko_window;         /**< Steps since a contact incident within which a fall is credited; 0 = no credit. */
     int32_t ko_near;           /**< Q8 distance from the focus within which energy can retire an agent; 0 = anywhere. */
     int32_t ko_floor;          /**< Q8 energy an agent beyond ko_near keeps (> 0). */
+    uint16_t drop_mask, drop_value;   /**< Drop nodes: launches out of a tube and drops off a tube (zero mask: none). */
+    int32_t drop_lat;          /**< Q16 of the radius: round a drop tube beyond this, an agent may drop off. */
+    int32_t drop_chance;       /**< Q16 chance per step that an agent beyond drop_lat drops off (0 = never). */
+    int32_t launch_chance;     /**< Q16 chance that an agent out of a tube beyond the open edge of a drop node is launched off (65536 = always). */
 } sh2z_field_behave_t;
 
 #ifdef __cplusplus

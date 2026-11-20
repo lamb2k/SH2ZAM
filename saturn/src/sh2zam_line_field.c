@@ -608,9 +608,22 @@ void sh2z_field_step(sh2z_field_t *f) {
             sh2z_line_sample_t now;
             sh2z_line_sample(line, v->t.node, v->t.dist, &now);
             const int now_tube = fld_tube(p, now.flags) && now.half_width > 0;
-            /* line-field-5: in the air beyond an open edge: the agent leaves the line. */
-            if(bh && air && !now_tube && !(v->flags & (SH2Z_VEH_RETIRED | SH2Z_VEH_FINISHED)) &&
-               fld_match(now.flags, bh->open_mask, bh->open_value) && fld_abs(v->t.lateral) > now.half_width + bh->fall_margin) {
+            /* line-field-5: in the air beyond an open edge, the agent leaves the line. On a drop node it also leaves
+             * the line when it comes out of a tube beyond the open edge (launched, launch_chance), or, on a drop tube, when it is
+             * round beyond drop_lat of the radius and loses its hold (drop_chance per step). */
+            int leaves = 0;
+            if(bh && !(v->flags & (SH2Z_VEH_RETIRED | SH2Z_VEH_FINISHED))) {
+                const int open = !now_tube && fld_match(now.flags, bh->open_mask, bh->open_value) &&
+                                 fld_abs(v->t.lateral) > now.half_width + bh->fall_margin;
+                if(air) leaves = open;
+                else if(fld_match(now.flags, bh->drop_mask, bh->drop_value)) {
+                    if(tube && !now_tube) leaves = open && (bh->launch_chance >= 65536 || (int32_t)(fld_rand(f) & 0xffffu) < bh->launch_chance);
+                    else if(now_tube && bh->drop_chance > 0 && fld_match(now.flags, bh->hold_mask, bh->hold_value) &&
+                            fld_abs(fld_wrap(v->t.lateral, fld_round(now.half_width))) > fld_mul_q16(now.half_width, bh->drop_lat))
+                        leaves = (int32_t)(fld_rand(f) & 0xffffu) < bh->drop_chance;
+                }
+            }
+            if(leaves) {
                 v->flags = (uint16_t)((v->flags | SH2Z_VEH_FALLING) & ~(SH2Z_VEH_BOOST | SH2Z_VEH_AIR));
                 b->fall_tick = (int32_t)(f->tick - f->start_tick);
                 ++f->falls;
