@@ -5,8 +5,9 @@
  * Game-neutral: the library knows nothing about what a vehicle is.
  *
  * Contract tags line-field-1, line-field-2 (the second-lap re-target),
- * line-field-3 (the first-lap chase cap) and line-field-4 (surface zones and
- * tube nodes).
+ * line-field-3 (the first-lap chase cap), line-field-4 (surface zones and
+ * tube nodes) and line-field-5 (tube roll, lateral inertia, falls with a
+ * knock-out credit, a near-focus knock-out gate).
  *
  * Shared vehicle state. sh2z_vehicle_t is the line-space state of ANY vehicle
  * on the line: agents the field drives, and vehicles driven elsewhere (a
@@ -56,6 +57,37 @@
  * boosts whenever its energy allows, as racing games often let their field
  * do over the last stretch.
  *
+ * Behaviour (line-field-5). params->behave, when set, adds the behaviours
+ * below; NULL is line-field-4 step for step, with its hashes.
+ * - Tube roll: on a tube node an agent decides now and then (roll_chance per
+ *   decision) to roll round the tube, moving round it by roll_lead of its
+ *   speed. A roll either lasts roll_min .. roll_min + roll_span - 1
+ *   decisions or, for roll_latch of the rolls, holds until the agent reaches
+ *   an exit stretch: a node matching the exit mask whose node roll_exit_ahead
+ *   ahead is not a tube. There the roll ends and the agent steers back to
+ *   its line. Not rolling, an agent on a node matching the hold mask keeps
+ *   its angle round the tube (drifting by hold_lead) instead of steering back. On other tubes, with
+ *   roll_well > 0, a rolling agent instead settles roll_well of the radius
+ *   round from its line (a tube that pulls back toward its line).
+ * - Lateral inertia: with lat_accel > 0 the lateral velocity changes by at
+ *   most lat_accel per tick toward the steering demand, and the agent may
+ *   reach the edge (the margin bounds its target, not its position). An
+ *   agent on the edge is charged as at a wall and its lateral velocity
+ *   reverses at half its size.
+ * - Air and falls: on a node matching the air mask an agent does not steer;
+ *   it keeps its lateral velocity plus a drift drawn at take-off, uniform in
+ *   +-air_spread of its speed. An agent in the air that is beyond the half
+ *   width plus fall_margin of a node matching the open mask leaves the line: SH2Z_VEH_FALLING, out of contact, no laps. fall_ticks
+ *   later it retires with energy exactly 0 (retire_tick that tick).
+ * - Knock-out credit: an agent's ko_age counts its steps since a contact
+ *   incident began with an external vehicle (1 on the contact's own tick,
+ *   ko_by that vehicle). When it starts to fall with ko_age <= ko_window and
+ *   ko_by not finished or retired, the fall is credited once: ko_credit is
+ *   set to ko_by, the field's kos counts it and the owner applies its reward.
+ * - Near-focus knock-out gate: with ko_near > 0 and a focus, contact or wall
+ *   energy cannot retire an agent farther than ko_near from the focus; its
+ *   energy stays at ko_floor.
+ *
  * Determinism. One xorshift32 state in the field drives every random choice;
  * the same initial state and the same external inputs give the same result
  * on every target. One integer division per agent and race (the re-target);
@@ -82,6 +114,8 @@ extern "C" {
 #define SH2Z_VEH_STOPPED  0x0010u /**< Retired and at rest: no longer stepped. */
 #define SH2Z_VEH_WALL     0x0020u /**< Touched the line's edge this step. */
 #define SH2Z_VEH_TOUCH    0x0040u /**< In contact with a vehicle this step. */
+#define SH2Z_VEH_FALLING  0x0080u /**< line-field-5: left the line; retires fall_ticks later. */
+#define SH2Z_VEH_AIR      0x0100u /**< line-field-5: in the air this step. */
 
 /** Line-space vehicle: shared by field agents and externally driven vehicles. */
 typedef struct {
@@ -124,6 +158,12 @@ typedef struct {
     uint8_t touch_cool;        /**< Ticks left of the current contact incident. */
     int32_t finish_ticks;      /**< line-field-2: race tick to finish by, from the second lap on; 0 keeps the pace. Caller's tuning. */
     int32_t first_lap_cap;     /**< line-field-3: Q8 per tick cap on a chase target before the first lap is done; 0 = none. Caller's tuning. */
+    int32_t fall_tick;         /**< line-field-5: race tick the agent left the line, -1 before. */
+    int32_t air_drift;         /**< line-field-5: Q16 share of speed drifted per tick in the air (drawn at take-off). */
+    int16_t roll;              /**< line-field-5: > 0 decisions of roll left, < 0 rolling until an exit, 0 none. */
+    int16_t ko_by;             /**< line-field-5: external vehicle of the last contact incident, -1 none. */
+    int16_t ko_credit;         /**< line-field-5: vehicle credited with this agent's fall, -1 none. */
+    uint16_t ko_age;           /**< line-field-5: steps since that incident began (saturates at 65535). */
 } sh2z_field_brain_t;
 
 /** Field tuning. */
@@ -162,6 +202,7 @@ typedef struct {
     const struct sh2z_field_surface *surface; /**< line-field-4: zones and tube nodes, or NULL for none. */
     int32_t dash_from;         /**< line-field-4: Q8 distance into the final lap from which agents race for the line; 0 = never. */
     int32_t dash_pace;         /**< line-field-4: Q16 share of its pace an agent targets at least in the final dash. */
+    const struct sh2z_field_behave *behave; /**< line-field-5: tube roll, inertia, falls, knock-out credit; NULL for none. */
 } sh2z_field_params_t;
 
 /** The field. The caller owns every array (count entries each). */
@@ -184,6 +225,8 @@ typedef struct {
     uint32_t contacts;         /**< Contact incidents so far (a pair touching counts once). */
     uint32_t rank_changes;     /**< Ticks on which the race order changed. */
     uint32_t steps;            /**< Agent steps executed (level-of-detail accounting). */
+    uint32_t falls;            /**< line-field-5: agents that left the line. */
+    uint32_t kos;              /**< line-field-5: falls credited to an external vehicle. */
 } sh2z_field_t;
 
 /** Start-grid slot for grid position p (0 = pole): rows of `columns` (1..4)
@@ -239,6 +282,32 @@ typedef struct sh2z_field_surface {
     uint16_t wrap_mask;        /**< A node is a tube when wrap_mask != 0 and (flags & wrap_mask) == wrap_value. */
     uint16_t wrap_value;
 } sh2z_field_surface_t;
+
+/* ---- Contract tag line-field-5 ------------------------------------------ */
+
+/** Behaviour tuning (params->behave). Every mask pair selects the nodes whose
+ *  flags satisfy (flags & mask) == value; a zero mask selects none. */
+typedef struct sh2z_field_behave {
+    int32_t roll_chance;       /**< Q16 chance per decision on a tube that a roll starts (a new roll replaces one under way). */
+    int32_t roll_latch;        /**< Q16 share of rolls that hold until an exit stretch. */
+    int32_t roll_lead;         /**< Q16 share of speed targeted ahead of the agent round the tube while rolling (signed: + is right). */
+    int32_t hold_lead;         /**< Q16 share of speed targeted ahead round a hold-mask tube when not rolling (a slow drift; 0 = keep the angle). */
+    int32_t roll_well;         /**< Q16 of the radius: on tubes outside the hold mask a roll settles this far round from the line; 0 = it circles. */
+    int16_t roll_min;          /**< Decisions a timed roll lasts at least (>= 1). */
+    int16_t roll_span;         /**< Spread of a timed roll's length in decisions (>= 1). */
+    uint16_t hold_mask, hold_value;   /**< Tubes where an agent that is not rolling keeps its angle. */
+    uint16_t exit_mask, exit_value;   /**< Tubes whose exit stretch ends rolls. */
+    int32_t roll_exit_ahead;   /**< Q8 look-ahead for an exit (a non-tube node). */
+    int32_t lat_accel;         /**< Q8 per tick^2 change of lateral velocity; 0 = line-field-4 steering. */
+    uint16_t air_mask, air_value;     /**< Nodes where agents are in the air. */
+    uint16_t open_mask, open_value;   /**< Nodes with an open edge (no wall to stop a flying agent). */
+    int32_t air_spread;        /**< Q16 share of speed: the take-off drift is uniform in +-air_spread. */
+    int32_t fall_margin;       /**< Q8 beyond the half width before an agent falls. */
+    int32_t fall_ticks;        /**< Ticks from leaving the line to retirement (>= 1). */
+    int32_t ko_window;         /**< Steps since a contact incident within which a fall is credited; 0 = no credit. */
+    int32_t ko_near;           /**< Q8 distance from the focus within which energy can retire an agent; 0 = anywhere. */
+    int32_t ko_floor;          /**< Q8 energy an agent beyond ko_near keeps (> 0). */
+} sh2z_field_behave_t;
 
 #ifdef __cplusplus
 }
