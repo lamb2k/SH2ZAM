@@ -624,6 +624,7 @@ void sh2z_field_step(sh2z_field_t *f) {
             }
             if(now_tube) v->t.lateral = fld_wrap(v->t.lateral, fld_round(now.half_width));
             else if(tube) v->t.lateral = fld_clamp(v->t.lateral, -now.half_width, now.half_width);   /* out of a tube */
+            else if(air) { }   /* line-field-5: in the air, above any wall; it lands (or falls) later */
             else if(v->t.lateral > now.half_width) { v->t.lateral = now.half_width; fld_wall(f, i); if(own_lateral) v->t.lat_vel = -(v->t.lat_vel >> 1); }
             else if(v->t.lateral < -now.half_width) { v->t.lateral = -now.half_width; fld_wall(f, i); if(own_lateral) v->t.lat_vel = -(v->t.lat_vel >> 1); }
             else if(fld_abs(v->t.lateral) >= at.half_width - 1 && at.half_width > 0) fld_wall(f, i);
