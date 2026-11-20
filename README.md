@@ -349,6 +349,20 @@ Pure bookkeeping: the caller reads the pad, draws, fades and waits. Portable C, 
 Host-tested against an independent timeline model with a negative control per rule. See
 [the scene guide](saturn/SCENE.md).
 
+## Sound events and CD audio (experimental)
+
+[`sh2zam/snd_experimental.h`](saturn/include/sh2zam/snd_experimental.h)
+(contract tag `snd-1`) drives Saturn sound from the SH-2 with no 68000 program:
+- an epoch-stamped event queue that delivers each event once per frame and refuses posts from a
+  scene that has left;
+- SCSP slot playback of 8- or 16-bit PCM clips, with priority stealing, level to TL and pitch
+  scaling helpers;
+- a CD audio player that plays a track range once and then a loop range forever, and fades and
+  pauses without waiting on the CD block.
+
+Register bases are the caller's, so it is host-tested against reference models with negative
+controls (no console run). See [the sound guide](saturn/SND.md).
+
 ## Link only what you call
 
 From contract tag `sections-1`, every hand-written SH-2 entry and every read-only table has its
