@@ -36,6 +36,16 @@ jobs:
       - name: Check the committed view-camera cotangent table against its generator
         if: matrix.sanitize == 'OFF'
         run: python3 saturn/tools/view_camera_cot.py --check saturn/src/sh2zam_view_camera.c
+      - name: Check the SCU DSP assembler against hand-derived encodings (and that its control fails)
+        if: matrix.sanitize == 'OFF'
+        run: |
+          python3 saturn/tools/sh2z_dspasm.py --self-test
+          ! python3 saturn/tools/sh2z_dspasm.py --self-test --control
+      - name: Check the committed SCU DSP kernels against their sources
+        if: matrix.sanitize == 'OFF'
+        run: |
+          python3 saturn/tools/sh2z_dspasm.py --check saturn/src/dsp/xform.dsp saturn/src/sh2zam_dsp_xform.inc
+          python3 saturn/tools/sh2z_dspasm.py --check saturn/src/dsp/scale16.dsp saturn/src/sh2zam_dsp_scale16.inc
       - name: Check the validation index lists every record
         if: matrix.sanitize == 'OFF'
         run: python3 saturn/tools/validation_index.py --check
