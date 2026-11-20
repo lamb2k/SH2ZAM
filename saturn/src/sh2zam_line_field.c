@@ -1,4 +1,4 @@
-/* Experimental line field (contract tags line-field-1 and line-field-2).
+/* Experimental line field (contract tags line-field-1, line-field-2 and line-field-3).
  *
  * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
  * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
@@ -156,6 +156,7 @@ static void fld_think(sh2z_field_t *f, uint32_t i, uint32_t due, const sh2z_line
         behind = sh2z_track_total(f->line, &c->t) + (int32_t)b->chase_lead * 256 - total;
         want = c->t.speed + fld_mul_q16(behind, p->chase_gain);
         if(want > v->top_speed) want = v->top_speed;
+        if(b->first_lap_cap > 0 && v->t.lap < 1 && want > b->first_lap_cap) want = b->first_lap_cap; /* line-field-3 */
         if(want < (b->pace >> 1)) want = b->pace >> 1;
     } else {
         want = sh2z_pace_target(b->pace, b->expect, total, p->pace_gain, b->pace >> 1, cap);
@@ -485,6 +486,7 @@ uint32_t sh2z_field_hash(const sh2z_field_t *f) {
         FLD_MIX(b->expect); FLD_MIX(b->target_lat); FLD_MIX(b->target_speed); FLD_MIX(b->finish_tick); FLD_MIX(b->retire_tick);
         FLD_MIX(b->pass_ticks); FLD_MIX(b->attack_ticks); FLD_MIX(f->rank_order[i]);
         if(b->finish_ticks) FLD_MIX(b->finish_ticks); /* line-field-1 states hash as before */
+        if(b->first_lap_cap) FLD_MIX(b->first_lap_cap);
     }
     return h;
 }
