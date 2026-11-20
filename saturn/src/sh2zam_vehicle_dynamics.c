@@ -11,10 +11,11 @@
 #define ONE30 INT32_C(0x40000000)
 #define ONE16 INT32_C(0x10000)
 /* vehicle-dynamics-2: sh2zam_vehicle_contact.c builds this file a second time
- * with VD_CONTACT set to apply a contact at the start of the tick. Here it is
- * nothing, so sh2z_vd_step keeps its vehicle-dynamics-1 code. */
+ * with VD_CONTACT set to apply a contact at the start of the tick. Here it
+ * expands to no tokens at all, so sh2z_vd_step keeps its vehicle-dynamics-1
+ * code, under LTO too. */
 #ifndef VD_CONTACT
-#define VD_CONTACT(b, v, r) ((void)0)
+#define VD_CONTACT(b, v, r)
 #endif
 
 /* ---- Arithmetic --------------------------------------------------------- */
@@ -740,7 +741,7 @@ void sh2z_vd_step(sh2z_vd_body_t *b, const sh2z_vd_track_t *k, const sh2z_vd_veh
     if(!(b->flags & SH2Z_VD_ACTIVE)) return;
     b->flags &= ~(SH2Z_VD_DAMAGED | SH2Z_VD_RECOIL);
     b->acc[0] = b->acc[1] = b->acc[2] = 0;
-    VD_CONTACT(b, v, r);
+    VD_CONTACT(b, v, r)
 
     /* 1. Pad. */
     if(!(b->flags & SH2Z_VD_CONTROLLABLE)) {

@@ -31,7 +31,7 @@ static void vdc_contact(sh2z_vd_body_t *b, const sh2z_vd_vehicle_t *v, const sh2
 #define sh2z_vd_line_view vdc_line_view
 #define sh2z_vd_apply_kick vdc_apply_kick
 #define sh2z_vd_spline vdc_spline
-#define VD_CONTACT(b, v, r) vdc_contact((b), (v), (r))
+#define VD_CONTACT(b, v, r) vdc_contact((b), (v), (r));
 #include "sh2zam_vehicle_dynamics.c"
 #undef sh2z_vd_step
 
