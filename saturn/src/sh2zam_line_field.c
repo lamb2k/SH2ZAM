@@ -312,6 +312,8 @@ static void fld_wall(sh2z_field_t *f, uint32_t i) {
 /* One pass over every pair in reach; returns the number of pairs pushed. */
 static uint32_t fld_contacts(sh2z_field_t *f) {
     const sh2z_field_params_t *p = f->params;
+    /* No reach across: no pair can overlap (|dl| >= 0 >= contact_lat), so the walk would change nothing. */
+    if(p->contact_lat <= 0) return 0u;
     const sh2z_line_t *line = f->line;
     sh2z_line_sample_t at;
     uint32_t pushed = 0u;

@@ -139,7 +139,7 @@ typedef struct {
     int32_t avoid_offset;      /**< Q8 offset taken around the vehicle ahead. */
     int32_t pass_hold;         /**< Ticks a pass side is held. */
     int32_t contact_long;      /**< Q8 */
-    int32_t contact_lat;       /**< Q8 */
+    int32_t contact_lat;       /**< Q8; 0 or less turns the field's own contact off (no pair walk, as before with no pair in reach). */
     int32_t bump_keep;         /**< Q16 */
     int32_t hit_energy;        /**< Q16 energy per Q8 of closing speed. */
     int32_t side_energy;       /**< Q8 energy per contact. */
