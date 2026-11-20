@@ -1,4 +1,4 @@
-# Track-bound vehicle dynamics (experimental, contract tag `vehicle-dynamics-1`)
+# Track-bound vehicle dynamics (experimental, contract tags `vehicle-dynamics-1` and `-2`)
 
 [`vehicle_dynamics_experimental.h`](include/sh2zam/vehicle_dynamics_experimental.h) steps one
 hovering vehicle on a closed road laid along a cardinal spline, one fixed tick at a time, in
@@ -34,8 +34,8 @@ times anything:
 - 1,366 closest-point searches and 86 that report the target off the line.
 
 Capture: [results.json](benchmarks/vehicle-dynamics-model/results.json), CI run
-[44660318294](https://github.com/lamb2k/SH2ZAM/actions/runs/44660318294), ELF SHA-256
-`72836f49...`.
+[44675995095](https://github.com/lamb2k/SH2ZAM/actions/runs/44675995095), ELF SHA-256
+`82234b60...` (first recorded from run 44660318294, ELF `72836f49...`, with the same values).
 
 | Call | Mean cycles | Median | Max | Mean instructions |
 | --- | ---: | ---: | ---: | ---: |
@@ -46,6 +46,23 @@ Capture: [results.json](benchmarks/vehicle-dynamics-model/results.json), CI run
 
 The step includes its own closest-point search. A tick costs about 9,400 modelled cycles, or about
 0.33 ms at 28.6 MHz before memory waits.
+
+**vehicle-dynamics-2.** The same suite runs `sh2z_vd_step2` on the tube stadium of
+`tests/test_vehicle_dynamics2.c` and checks 2,440 ticks against the host build word for word:
+- walled road, where the host step2 body also equals `sh2z_vd_step`'s on every tick;
+- a pipe and a cylinder, with the body on three sides of each;
+- a drive from road through a joined pipe and out.
+
+Half the ticks run with SR.S set. Same capture; the `sh2z_vd_step` rows above are unchanged value for
+value.
+
+| Call | Mean cycles | Median | Max | Mean instructions |
+| --- | ---: | ---: | ---: | ---: |
+| `sh2z_vd_step2`, one tick (all tube scripts) | 8,942.8 | 8,743 | 16,317 | 7,572 |
+| `sh2z_vd_step2` on the road | 9,294.5 | | | |
+| `sh2z_vd_step2` in a pipe (three sides) | 8,761.2 to 8,797.0 | | | |
+| `sh2z_vd_step2` on a cylinder (three sides) | 8,774.6 to 8,817.1 | | | |
+| `sh2z_vd_step2` through a joined pipe | 8,968.2 | | | |
 
 ## Formats
 
@@ -93,8 +110,41 @@ line-space field of other vehicles needs to rank, pace and collide with it.
 `sh2z_vd_apply_kick` applies a contact kick from such a field (lateral and speed deltas) before
 the next step.
 
+## Tubes (`vehicle-dynamics-2`)
+
+`sh2z_vd_step2(body, track2, vehicle, rules, input)` is the same tick with two more road shapes.
+`sh2z_vd_track2_t` holds the vehicle-dynamics-1 track as its first member, one join record per
+node (`sh2z_vd_join_t`, or NULL) and the tube rule constants (`sh2z_vd_tube_rules_t`).
+
+- **Pipe** (`SH2Z_VD_SHAPE_PIPE`): the ground is the inside of the circle of radius `half_left`
+  round the line.
+  - Height is the radius less the distance from the line.
+  - The ground up vector points to the line, and gravity, the hover and the up vector follow it,
+    so the vehicle can run all the way round.
+  - There are no walls: past the radius the body is put back on it and loses its speed into the
+    surface.
+- **Cylinder** (`SH2Z_VD_SHAPE_CYLINDER`): the ground is the outside of that circle.
+  - The up vector points away from the line.
+  - Beyond the radius plus `cyl_reach` the body has left the surface and falls as off a road.
+- **Joins:** a tube span tapers into an open neighbour over a join.
+  - The share `s` is the span's arc-length share over the join's `scale`: 0 at the seam, 1 where
+    the tube is whole.
+  - In a pipe join, the road plane lifted by `s` times the radius takes over where it is
+    higher. Off-road starts `pipe_rim` above the line, and the up vectors blend toward the road's
+    with `s`.
+  - In a cylinder join, the radius tapers with `s`. Gravity blends from the road up through
+    `(1 - s)^2`.
+- **Road shapes:** `sh2z_vd_step2` gives `sh2z_vd_step`'s bits on road shapes (a host test
+  checks 2,400 ticks).
+
+Build: `sh2zam_vehicle_dynamics2.c` compiles `sh2zam_vehicle_dynamics.c` a second time with the
+tube shapes and keeps only `sh2z_vd_step2`; the search, spline and line view come from the
+vehicle-dynamics-1 unit. A program that never calls `sh2z_vd_step2` links none of it, and the
+vehicle-dynamics-1 object code is unchanged by the tube code (checked with `cmp` under the CI
+flags).
+
 ## Not covered
 
-- Pipe, cylinder and half-pipe road shapes are treated as an open road.
+- Half-pipe road shapes are treated as an open road.
 - Vehicle-to-vehicle contact inside the model; the line-space field resolves contact and passes kicks.
 - Real memory timing (cache, SDRAM, bus contention) and a whole-frame measurement on hardware.

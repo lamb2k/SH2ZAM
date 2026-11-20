@@ -16,7 +16,14 @@
  * every locate and lap-distance probe must return the same value and leave
  * the same probe body. Any mismatch exits non-zero before any timing is
  * printed. The track is a synthetic stadium (two straights joined by half
- * circles) with a boost plate, a recharge strip, a mine and a launch ramp. */
+ * circles) with a boost plate, a recharge strip, a mine and a launch ramp.
+ *
+ * vehicle-dynamics-2 (sh2z_vd_step2) runs after the vehicle-dynamics-1
+ * scripts, on the stadium of tests/test_vehicle_dynamics2.c: walled road
+ * (where step2 must also give sh2z_vd_step's bits), a pipe and a cylinder on
+ * the first four spans with the body on three sides of each, and a drive
+ * from road into a pipe and out again over its joins. Every tick is checked
+ * against the host build word for word, as above. */
 #define main sh2_model_main
 #include "harness.c"
 #undef main
@@ -192,9 +199,10 @@ static bool same_body(const char *name,const sh2z_vd_body_t *b) {
  return true;
 }
 static void load_target(void) {
- const size_t host[8]={sizeof(sh2z_vd_node_t),sizeof(sh2z_vd_zone_t),sizeof(sh2z_vd_ramp_t),sizeof(sh2z_vd_mine_t),
-  sizeof(sh2z_vd_vehicle_t),sizeof(sh2z_vd_rules_t),sizeof(sh2z_vd_body_t),sizeof(sh2z_vd_input_t)};
- for(unsigned i=0;i<8;i++)if(rl(&cpu,symc("sizes")+4*i)!=(u32)host[i])bad("record layout differs from the host",i);
+ const size_t host[10]={sizeof(sh2z_vd_node_t),sizeof(sh2z_vd_zone_t),sizeof(sh2z_vd_ramp_t),sizeof(sh2z_vd_mine_t),
+  sizeof(sh2z_vd_vehicle_t),sizeof(sh2z_vd_rules_t),sizeof(sh2z_vd_body_t),sizeof(sh2z_vd_input_t),
+  sizeof(sh2z_vd_join_t)};
+ for(unsigned i=0;i<9;i++)if(rl(&cpu,symc("sizes")+4*i)!=(u32)host[i])bad("record layout differs from the host",i);
  for(unsigned i=0;i<N;i++)put_node(symc("nodes")+(u32)(i*sizeof(sh2z_vd_node_t)),&nodes[i]);
  put_words(symc("zones"),zones,sizeof zones);
  put_words(symc("ramps"),ramps,sizeof ramps);
@@ -293,6 +301,144 @@ static void run_script(int s) {
  }
 }
 
+
+/* ---- vehicle-dynamics-2: tube shapes (as tests/test_vehicle_dynamics2.c) ---- */
+#define RADIUS 300.0
+static sh2z_vd_join_t joins[N];
+static sh2z_vd_track2_t track2;
+static void build_tube_track(const uint8_t *tube) {
+ double total=0.0;
+ memset(nodes,0,sizeof nodes);
+ for(int i=0;i<N;i++){
+  double p[3];point(i,p);
+  for(int k=0;k<3;k++)nodes[i].pos[k]=q16(p[k]);
+  nodes[i].up[1]=q30(1.0);nodes[i].tension=q30(0.5);
+  nodes[i].half_left=nodes[i].half_right=q16(RADIUS);
+  nodes[i].shape=tube&&tube[i]?tube[i]:SH2Z_VD_SHAPE_WALLED;nodes[i].zones_by_side=1;
+  joins[i]=(sh2z_vd_join_t){0,q30(1.0),q30(1.0)};
+ }
+ track.nodes=nodes;track.zones=zones;track.ramps=ramps;track.mines=mines;track.count=N;track.laps=3;
+ for(int i=0;i<N;i++){
+  double len=0.0,prev[3]={0,0,0},marks[3]={0,0,0};
+  for(int s=0;s<=256;s++){
+   int32_t pos[3];
+   sh2z_vd_spline(&track,(uint32_t)i,(int32_t)((int64_t)s*(1<<30)/256),pos,NULL);
+   if(s)len+=sqrt(pow(f16(pos[0])-prev[0],2)+pow(f16(pos[1])-prev[1],2)+pow(f16(pos[2])-prev[2],2));
+   prev[0]=f16(pos[0]);prev[1]=f16(pos[1]);prev[2]=f16(pos[2]);
+   if(s==64||s==128||s==192){marks[s/64-1]=len;for(int k=0;k<3;k++)nodes[i].mark_pos[s/64-1][k]=pos[k];}
+  }
+  nodes[i].length=q12(len);nodes[i].start=q12(total);
+  for(int k=0;k<3;k++)nodes[i].mark_len[k]=q12(marks[k]);
+  total+=len;
+ }
+ track.length=q12(total);
+ track2.base=track;track2.joins=NULL;
+ track2.tube=(sh2z_vd_tube_rules_t){q16(1000.0),q16(23.0),q16(200.0),q16(200.0),q16(0.01),q30(0.01)};
+}
+/* Writes the tube track into target RAM and points the bridge's track2 at it. */
+static void load_tube_track(bool with_joins) {
+ for(unsigned i=0;i<N;i++)put_node(symc("nodes")+(u32)(i*sizeof(sh2z_vd_node_t)),&nodes[i]);
+ put_words(symc("joins"),joins,sizeof joins);
+ put_words(symc("track2")+rl(&cpu,symc("sizes")+36),&track2.tube,sizeof track2.tube); /* the target's offset of tube */
+ if(invoke("_set_track2",N,(u32)track.length,(u32)track.laps,with_joins?1u:0u).result!=1)bad("set_track2",0);
+ track2.joins=with_joins?joins:NULL;
+}
+enum {ON_ROAD,ON_PIPE,ON_CYLINDER};
+static sh2z_vd_body_t tube_body(int surface,int axis,int sign,double h,double t) {
+ sh2z_vd_body_t b;sh2z_basis30_t f;
+ memset(&b,0,sizeof b);
+ b.flags=SH2Z_VD_ACTIVE|SH2Z_VD_GRIPPING|SH2Z_VD_HOVER_SET|SH2Z_VD_CONTROLLABLE|SH2Z_VD_CAN_BOOST;
+ b.node=1;b.t=q30(t);
+ sh2z_vd_spline(&track,1,b.t,b.spos,b.fwd);
+ b.fwd_mag=(int32_t)lround(65536.0*sqrt(pow(f16(b.fwd[0]),2)+pow(f16(b.fwd[1]),2)+pow(f16(b.fwd[2]),2)));
+ for(int k=0;k<3;k++){f.x[k]=b.fwd[k];f.y[k]=nodes[1].up[k];}
+ if(sh2z_basis30_orthonormalize_forward(&f)!=0)bad("tube start basis",0);
+ const double off=surface==ON_PIPE?RADIUS-h:surface==ON_CYLINDER?RADIUS+h:h;
+ for(int k=0;k<3;k++){
+  const int32_t d=axis==0?f.z[k]:f.y[k];
+  const int32_t up=surface==ON_PIPE?-sign*d:sign*d;
+  b.road[0][k]=f.x[k];b.road[1][k]=f.y[k];b.road[2][k]=f.z[k];
+  b.disp[k]=q16(off*sign*f30(d));
+  b.pos[k]=b.ground[k]=b.spos[k]+b.disp[k];
+  b.body[0][k]=f.x[k];
+  b.body[1][k]=b.gravity_up[k]=b.tilt_up[k]=b.ground_up[k]=up;
+ }
+ sh2z_u30_cross(b.body[2],b.body[1],b.body[0]);
+ b.lap_dist=sh2z_vd_lap_distance(&b,&track);
+ b.half_left=b.half_right=q16(RADIUS);
+ b.energy=veh.max_energy;b.hover=q16(13.0);b.wall_bounce=veh.wall_bounce;b.lap=1;b.laps_done=1;b.height=q16(h);
+ return b;
+}
+enum {T_ROAD,T_PIPE_BOTTOM,T_PIPE_WALL,T_PIPE_CEILING,T_CYL_TOP,T_CYL_SIDE,T_CYL_BOTTOM,T_JOIN,TSCRIPTS};
+static const char *const tube_name[TSCRIPTS]={"road","pipe_bottom","pipe_wall","pipe_ceiling","cylinder_top","cylinder_side","cylinder_bottom","pipe_join"};
+static const char *const tube_text[TSCRIPTS]={
+ "walled stadium, 600 ticks: ACCEL, a boost every 300 ticks, LEAN_R in bursts, the stick swept -50 / 0 / +50 (sh2z_vd_step's bits, checked on the host too)",
+ "pipe on spans 0-3, 240 ticks of ACCEL on its floor",
+ "pipe on spans 0-3, 240 ticks of ACCEL on its left wall",
+ "pipe on spans 0-3, 240 ticks of ACCEL on its ceiling",
+ "cylinder on spans 0-3, 240 ticks of ACCEL on its top",
+ "cylinder on spans 0-3, 240 ticks of ACCEL on its side",
+ "cylinder on spans 0-3, 240 ticks of ACCEL underneath",
+ "pipe on spans 1-2 joining road at both ends (joins over 30% of each span), 400 ticks of ACCEL from the road into the pipe and out"};
+static unsigned tube_cycles[TSCRIPTS][600],tube_all[TSCRIPTS*600],tube_ticks[TSCRIPTS],n_tube;
+static uint64_t tube_instr[TSCRIPTS],tube_all_instr,tube_sr_set,road_same_as_step,tube_join_node3;
+static void run_tube_script(int s) {
+ static const uint8_t pipe[N]={SH2Z_VD_SHAPE_PIPE,SH2Z_VD_SHAPE_PIPE,SH2Z_VD_SHAPE_PIPE,SH2Z_VD_SHAPE_PIPE};
+ static const uint8_t cyl[N]={SH2Z_VD_SHAPE_CYLINDER,SH2Z_VD_SHAPE_CYLINDER,SH2Z_VD_SHAPE_CYLINDER,SH2Z_VD_SHAPE_CYLINDER};
+ static const uint8_t join[N]={0,SH2Z_VD_SHAPE_PIPE,SH2Z_VD_SHAPE_PIPE};
+ sh2z_vd_body_t b,road;
+ unsigned limit=240;
+ memset(&road,0,sizeof road);
+ if(s==T_ROAD){build_tube_track(NULL);load_tube_track(false);b=road=tube_body(ON_ROAD,1,1,13.0,0.05);limit=600;}
+ else if(s<=T_PIPE_CEILING){
+  build_tube_track(pipe);load_tube_track(false);
+  const int side=s-T_PIPE_BOTTOM,axis=side==1?0:1,sign=side==2?1:-1;
+  b=tube_body(ON_PIPE,axis,sign,13.0,0.05);
+ } else if(s<=T_CYL_BOTTOM){
+  build_tube_track(cyl);load_tube_track(false);
+  const int side=s-T_CYL_TOP,axis=side==1?0:1,sign=side==2?-1:1;
+  b=tube_body(ON_CYLINDER,axis,sign,13.0,0.05);
+ } else {
+  build_tube_track(join);
+  nodes[0].shape=SH2Z_VD_SHAPE_ROAD;nodes[3].shape=SH2Z_VD_SHAPE_ROAD;
+  joins[1]=(sh2z_vd_join_t){q30(0.3),q30(1.0),q30(0.3)};
+  joins[2]=(sh2z_vd_join_t){0,q30(0.7),q30(0.3)};
+  track2.base=track;load_tube_track(true);
+  b=tube_body(ON_ROAD,1,1,13.0,0.05);
+  b.node=0;b.t=q30(0.3);
+  sh2z_vd_spline(&track,0,b.t,b.spos,b.fwd);
+  for(int k=0;k<3;k++)b.pos[k]=b.ground[k]=b.spos[k]+b.disp[k];
+  limit=400;
+ }
+ put_words(symc("body"),&b,sizeof b);
+ uint16_t prev=0;
+ for(unsigned i=0;i<limit;i++){
+  uint16_t held=SH2Z_VD_BTN_ACCEL;int stick=0;
+  if(s==T_ROAD){
+   held=(uint16_t)(SH2Z_VD_BTN_ACCEL|((i%300)==250?SH2Z_VD_BTN_BOOST:0)|((i/70)%5==3?SH2Z_VD_BTN_LEAN_R:0));
+   stick=((int)(i/40)%3-1)*50;
+  }
+  const sh2z_vd_input_t in=pad(held,prev,stick);prev=held;
+  sh2z_vd_step2(&b,&track2,&veh,&rules,&in);
+  if(s==T_ROAD){
+   sh2z_vd_step(&road,&track,&veh,&rules,&in);
+   if(memcmp(&road,&b,sizeof b)!=0)bad("road: sh2z_vd_step2 differs from sh2z_vd_step on the host",i);
+   road_same_as_step++;
+  }
+  put_input(&in);
+  const u32 sr=(i&1u)?2u:0u; /* every other tick with SR.S set */
+  const struct cost r=call_sr("step2",0,0,0,sr);
+  tube_sr_set+=sr!=0;
+  if(r.result!=b.flags)bad("step2 flags",i);
+  if(!same_body("body",&b))bad(tube_name[s],i);
+  tube_cycles[s][tube_ticks[s]++]=r.cycles;tube_instr[s]+=r.instructions;
+  tube_all[n_tube++]=r.cycles;tube_all_instr+=r.instructions;
+  if(s==T_JOIN&&b.node==3)tube_join_node3++;
+  if(b.flags&SH2Z_VD_FALLING)bad("a tube script fell off the track",i);
+ }
+ if(s==T_JOIN&&!tube_join_node3)bad("the join drive did not leave the pipe",0);
+}
+
 int main(int argc,char**argv) {
  if(argc<2){fprintf(stderr,"usage: vehicle_dynamics_harness model.elf [locate-every]\n");return 2;}
  if(argc>2){locate_every=(unsigned)strtoul(argv[2],0,10);if(!locate_every)return 2;}
@@ -302,11 +448,13 @@ int main(int argc,char**argv) {
  build_track();build_vehicle();load_target();
  for(int s=0;s<SCRIPTS;s++)run_script(s);
  if(finish_tick<0)bad("the race script did not finish",0);
+ const uint64_t words_vd1=words_compared;
+ for(int s=0;s<TSCRIPTS;s++)run_tube_script(s);
  uint64_t total=0;for(int s=0;s<SCRIPTS;s++)total+=ticks[s];
  printf("{\"schema\":1,\"kind\":\"Yabause isolated SH2 interpreter flat-RAM model, not Saturn timing\",");
  printf("\"verified\":{\"ticks\":%"PRIu64",\"ticksSrSet\":%"PRIu64",\"bodyWordsCompared\":%"PRIu64",\"locateProbes\":%u,\"locateOffLine\":%u,\"lapDistanceProbes\":%u,"
   "\"entries\":\"every tick of every script: the step's return and all %u words of the SH-2 body against the host build of the same source; every probe: sh2z_vd_locate's result and all probe words, then sh2z_vd_lap_distance's result and all probe words, against the host\"},",
-  total,sr_set_ticks,words_compared,n_loc,n_off,n_lap,(unsigned)(sizeof(sh2z_vd_body_t)/4));
+  total,sr_set_ticks,words_vd1,n_loc,n_off,n_lap,(unsigned)(sizeof(sh2z_vd_body_t)/4));
  printf("\"coverage\":{\"airborneTicks\":%"PRIu64",\"wallTicks\":%"PRIu64",\"launchedTicks\":%"PRIu64",\"mineHitTicks\":%"PRIu64",\"plateBoostTicks\":%"PRIu64",\"boostTicks\":%"PRIu64",\"rechargeTicks\":%"PRIu64",\"spinningTicks\":%"PRIu64",\"fallingTicks\":%"PRIu64",\"raceFinishTick\":%d},",
   cov_air,cov_recoil,cov_launch,cov_mine,cov_plate,cov_boost,cov_recharge,cov_spin,cov_falling,finish_tick);
  printf("\"rows\":{");
@@ -319,6 +467,16 @@ int main(int argc,char**argv) {
  printf(",\"locate\":");print_stats(summarize(loc_cycles,n_loc,loc_instr));
  printf(",\"locateOffLine\":");print_stats(summarize(off_cycles,n_off,off_instr));
  printf(",\"lapDistance\":");print_stats(summarize(lap_cycles,n_lap,lap_instr));
+ printf(",\"step2Verified\":{\"ticks\":%u,\"ticksSrSet\":%"PRIu64",\"bodyWordsCompared\":%"PRIu64",\"roadTicksEqualToStep\":%"PRIu64",\"joinTicksPastThePipe\":%"PRIu64","
+  "\"entries\":\"every tick of every tube script: sh2z_vd_step2's return and all %u words of the SH-2 body against the host build of the same source; on the road script the host step2 body must also equal sh2z_vd_step's\"},",
+  n_tube,tube_sr_set,words_compared-words_vd1,road_same_as_step,tube_join_node3,(unsigned)(sizeof(sh2z_vd_body_t)/4));
+ printf("\"step2Rows\":{");
+ for(int s=0;s<TSCRIPTS;s++){
+  if(s)putchar(',');
+  printf("\"%s\":{\"description\":\"%s\",\"ticks\":%u,\"step2\":",tube_name[s],tube_text[s],tube_ticks[s]);
+  print_stats(summarize(tube_cycles[s],tube_ticks[s],tube_instr[s]));printf("}");
+ }
+ printf("},\"step2\":");print_stats(summarize(tube_all,n_tube,tube_all_instr));
  printf("}\n");
  return 0;
 }
