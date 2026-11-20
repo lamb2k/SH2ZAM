@@ -47,6 +47,7 @@ One line per guide, sorted by guide file name; a kernel lane adds its own line
 - [Experimental SCU DSP access, batched affine transform, Q16 outer product](DSP.md)
 - [Experimental two-CPU try-claim for an optional job](DUAL_CLAIM.md)
 - [Integer kernels: 68000 arithmetic, 2D box overlap, 16x16 cell placement](INTEGER_KERNELS.md); [Integer-kernel instruction model](benchmarks/integer-model/README.md)
+- [Experimental effect pool: particle rings, billboard projection, VDP1 effect commands](EFFECT_POOL.md)
 - [Experimental racing-line follower and line field](LINE_FOLLOWER.md)
 - [Experimental model pose from binary32 state, with no floating-point arithmetic](POSE.md); [pose instruction model](benchmarks/pose-model/README.md)
 - [Experimental block memo kernels: block compare-and-copy, keyed write-through, copy until a marker, run diff](MEMO.md); [memo instruction model](benchmarks/memo-model/README.md)
