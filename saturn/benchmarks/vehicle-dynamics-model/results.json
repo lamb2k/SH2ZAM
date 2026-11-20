@@ -1,0 +1,116 @@
+{
+ "schema": 1,
+ "kind": "Yabause isolated SH2 interpreter flat-RAM model, not Saturn timing",
+ "verified": {
+  "ticks": 5808,
+  "ticksSrSet": 2904,
+  "bodyWordsCompared": 853974,
+  "locateProbes": 1366,
+  "locateOffLine": 86,
+  "lapDistanceProbes": 1366,
+  "entries": "every tick of every script: the step's return and all 99 words of the SH-2 body against the host build of the same source; every probe: sh2z_vd_locate's result and all probe words, then sh2z_vd_lap_distance's result and all probe words, against the host"
+ },
+ "coverage": {
+  "airborneTicks": 450,
+  "wallTicks": 452,
+  "launchedTicks": 213,
+  "mineHitTicks": 172,
+  "plateBoostTicks": 673,
+  "boostTicks": 772,
+  "rechargeTicks": 99,
+  "spinningTicks": 262,
+  "fallingTicks": 0,
+  "raceFinishTick": 3607
+ },
+ "rows": {
+  "straight": {
+   "description": "ACCEL held for 600 ticks from the start line",
+   "ticks": 600,
+   "step": {
+    "meanCycles": 9322.98,
+    "medianCycles": 8580.5,
+    "minCycles": 4522,
+    "maxCycles": 15426,
+    "meanInstructions": 7897.83
+   }
+  },
+  "steer_boost": {
+   "description": "900 ticks: ACCEL, a boost every 240 ticks, LEAN_L in bursts, the stick swept -40 / 0 / +40",
+   "ticks": 900,
+   "step": {
+    "meanCycles": 9081.17,
+    "medianCycles": 9244.0,
+    "minCycles": 4355,
+    "maxCycles": 16187,
+    "meanInstructions": 7727.4
+   }
+  },
+  "wall": {
+   "description": "400 ticks: ACCEL, full right stick for ticks 120-135 into the right-hand wall and on",
+   "ticks": 400,
+   "step": {
+    "meanCycles": 9625.2,
+    "medianCycles": 8882.0,
+    "minCycles": 8063,
+    "maxCycles": 14299,
+    "meanInstructions": 8127.47
+   }
+  },
+  "airborne": {
+   "description": "300 ticks: ACCEL from 300 units above the road, falling back onto it",
+   "ticks": 300,
+   "step": {
+    "meanCycles": 8714.44,
+    "medianCycles": 8480.0,
+    "minCycles": 8104,
+    "maxCycles": 12153,
+    "meanInstructions": 7375.64
+   }
+  },
+  "race": {
+   "description": "a line-holding driver for three laps (plate, recharge strip, mine, ramp, finish)",
+   "ticks": 3608,
+   "step": {
+    "meanCycles": 9557.7,
+    "medianCycles": 9070.0,
+    "minCycles": 8063,
+    "maxCycles": 14949,
+    "meanInstructions": 8108.37
+   }
+  }
+ },
+ "step": {
+  "meanCycles": 9420.7,
+  "medianCycles": 9045.0,
+  "minCycles": 4355,
+  "maxCycles": 16187,
+  "meanInstructions": 7991.05
+ },
+ "locate": {
+  "meanCycles": 6411.82,
+  "medianCycles": 5870.0,
+  "minCycles": 2937,
+  "maxCycles": 92046,
+  "meanInstructions": 5433.0
+ },
+ "locateOffLine": {
+  "meanCycles": 872.3,
+  "medianCycles": 342.0,
+  "minCycles": 338,
+  "maxCycles": 14499,
+  "meanInstructions": 711.47
+ },
+ "lapDistance": {
+  "meanCycles": 394.71,
+  "medianCycles": 387.0,
+  "minCycles": 349,
+  "maxCycles": 468,
+  "meanInstructions": 325.33
+ },
+ "label": "MODELLED: executed SH-2 instructions in the Yabause interpreter; flat RAM, no caches or wait states; not Saturn hardware",
+ "sourceCommit": "039f43ddfe2de21b9243a44713476d6b102b074a",
+ "elfSha256": "72836f4909ddc8a4ab03dbbcc29cb1c7bbb2d382e486de5e87b959a37e621ad4",
+ "toolchain": "Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)",
+ "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44660318294",
+ "yabauseCommit": "7e38821dbac265490f115e163c523a939acda759"
+}

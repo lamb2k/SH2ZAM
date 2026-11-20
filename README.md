@@ -311,6 +311,20 @@ and upload. Portable C, no libc. Host-tested against a frame model with negative
 held bank must conflict, a changed guard bit must fail). See
 [the VDP1 banks guide](saturn/VDP1_BANKS.md).
 
+## SCU DSP
+
+[`sh2zam/dsp_experimental.h`](saturn/include/sh2zam/dsp_experimental.h) (contract tag `dsp-1`)
+drives the Saturn's SCU DSP, a fixed-point coprocessor that runs while the SH-2s do other work:
+- program and data RAM access, start, poll and wait;
+- D0-bus addresses and cache purge for the DSP's own DMA;
+- a batched affine transform (three rows of coefficients and a translation, exact modulo 2^32);
+- a Q16 outer product, `floor(a[i] * b[k] / 65536)` from the exact 48-bit product.
+
+Kernels are DSP assembly in `saturn/src/dsp/`, assembled by `saturn/tools/sh2z_dspasm.py` (MIT)
+and committed as data; CI checks them against their sources. Host tests run the committed words
+on a reference DSP simulator against the CPU form, with mutation controls. Portable builds run
+the CPU form. See [the DSP guide](saturn/DSP.md).
+
 ## Segmented strip meshes
 
 [`sh2zam/segmesh_experimental.h`](saturn/include/sh2zam/segmesh_experimental.h)
@@ -319,7 +333,79 @@ circuit built from strips. `sh2z_segmesh_pick` tests one anchor point per segmen
 fixed-point clip rows without dividing, groups the visible segments into runs of similar depth
 and returns the runs furthest first, ready for painter-order drawing. Integer arithmetic only,
 no float, libc or allocation. Host-exact tested against an independent oracle with mutation
-controls (no console run). See [the segmesh guide](saturn/SEGMESH.md).
+controls (no console run). Contract tag `segmesh-2` adds `sh2z_segmesh_cull`, which drops whole
+clusters of faces by a baked sphere and normal cone. It is an approximation: it can skip a face a
+pixel wide that the per-face path would draw. See [the segmesh guide](saturn/SEGMESH.md).
+
+## Sprite slot cache
+
+[`sh2zam/sprite_cache_experimental.h`](saturn/include/sh2zam/sprite_cache_experimental.h)
+(contract tag `sprite-cache-1`) streams pre-rendered sprite cells into a fixed pool of VDP1
+VRAM slots. Least-recently-used replacement never replaces a slot VDP1 may still read (one or
+two command banks), requests run a frame ahead, and mirrored cells draw from one slot with the
+VDP1 flip bit. cell4z, a 4-bit cell codec on vlc-2 symbols, decodes straight into a slot at
+0.37 to 0.44 of raw size and about 29 modelled cycles per pixel. Portable C, no libc or
+allocation. Host-tested against a reference model with one negative control per rule (no
+console run). See [the sprite cache guide](saturn/SPRITE_CACHE.md).
+
+## Scene sequencing
+
+[`sh2zam/scene_experimental.h`](saturn/include/sh2zam/scene_experimental.h)
+(contract tag `scene-1`) runs a fixed table of scenes, such as title, menus, loading, game and
+results:
+- fades in and out, with an interrupted fade turning around from the level it reached;
+- requests by rank, so a reset can still redirect a transition that has begun;
+- release only after the caller confirms that the last displayed frame of the leaving scene
+  has been replaced (elapsed frames alone prove nothing);
+- bounded preload chunks before a scene is entered;
+- bump arenas with a high-water mark, reset when their scene is released;
+- press edges that a transition consumes, with directional auto-repeat.
+
+Pure bookkeeping: the caller reads the pad, draws, fades and waits. Portable C, no libc.
+Host-tested against an independent timeline model with a negative control per rule. See
+[the scene guide](saturn/SCENE.md).
+
+## Sound events and CD audio (experimental)
+
+[`sh2zam/snd_experimental.h`](saturn/include/sh2zam/snd_experimental.h)
+(contract tag `snd-1`) drives Saturn sound from the SH-2 with no 68000 program:
+- an epoch-stamped event queue that delivers each event once per frame and refuses posts from a
+  scene that has left;
+- SCSP slot playback of 8- or 16-bit PCM clips, with priority stealing, level to TL and pitch
+  scaling helpers;
+- a CD audio player that plays a track range once and then a loop range forever, and fades and
+  pauses without waiting on the CD block.
+
+Register bases are the caller's, so it is host-tested against reference models with negative
+controls (no console run). See [the sound guide](saturn/SND.md).
+
+## Rotation sprites
+
+[`sh2zam/rotation_sprite_experimental.h`](saturn/include/sh2zam/rotation_sprite_experimental.h)
+(contract tags `rotation-sprites-2` and `rotation-sprites-3`) draws a 3D object as one VDP1
+distorted sprite, using a cell from a set baked over a grid of viewing directions:
+- picks the cell nearest the viewing direction, by dot products, with mirrored sets;
+- places the object's origin with sub-pixel precision and its on-screen up axis;
+- emits one command that scales the cell with depth and rotates it with the object's roll.
+
+The `-3` forms give identical output faster: a yaw climb from the last cell, the pose from a
+camera's own terms, and emission of one cell. Integer only, with no libc. Host-tested against
+float references and the general forms (no console run). See
+[the rotation sprite guide](saturn/ROTATION_SPRITES.md).
+
+## Racing lines and vehicle dynamics
+
+- [`sh2zam/line_follower_experimental.h`](saturn/include/sh2zam/line_follower_experimental.h)
+  (`line-follower-1`) moves a vehicle along a baked closed line, as a distance plus a lateral
+  offset, with speed and steering limits.
+- [`sh2zam/line_field_experimental.h`](saturn/include/sh2zam/line_field_experimental.h)
+  (`line-field-1`) runs up to 255 such vehicles, with contact, rank and level of detail.
+- [`sh2zam/vehicle_dynamics_experimental.h`](saturn/include/sh2zam/vehicle_dynamics_experimental.h)
+  (`vehicle-dynamics-1`) steps one hovering vehicle on a spline road, one fixed tick at a time.
+  A host build and an SH-2 build give the same bits.
+
+All three are integer only and deterministic. See [the line guide](saturn/LINE_FOLLOWER.md) and
+[the vehicle dynamics guide](saturn/VEHICLE_DYNAMICS.md).
 
 ## Link only what you call
 

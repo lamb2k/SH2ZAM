@@ -61,6 +61,12 @@ jobs:
             grep -q "dmuls.l" sh2-disassembly.txt
             cat sh2-elf.txt
             cat sh2-undefined.txt
+            # Library objects never call libc memory functions, not even through a
+            # compiler-generated struct copy (saturn/CONTRIBUTING-KERNELS.md).
+            if grep -nwE "_(memcpy|memset|memmove)" sh2-undefined.txt; then
+              echo "libsh2zam.a: an object calls memcpy, memset or memmove" >&2
+              exit 1
+            fi
             # Each model suite builds and audits its bridge and links its model ELF:
             # saturn/benchmarks/<suite>/ci.sh build, in C-locale suite order
             # (saturn/CONTRIBUTING-KERNELS.md). The tools go to the suites under

@@ -10,17 +10,22 @@
 #include "sh2zam/cell16.h"
 #include "sh2zam/contracts/pose_1.h"
 #include "sh2zam/divu_experimental.h"
+#include "sh2zam/dsp_experimental.h"
 #include "sh2zam/m68k.h"
 #include "sh2zam/memo_experimental.h"
 #include "sh2zam/reuse_experimental.h"
 #include "sh2zam/rotation_batch.h"
 #include "sh2zam/shade_experimental.h"
+#include "sh2zam/snd_experimental.h"
 #include "sh2zam/spatial.h"
+#include "sh2zam/sprite_cache_experimental.h"
 #include "sh2zam/trig12_experimental.h"
 #include "sh2zam/unit30_experimental.h"
+#include "sh2zam/vehicle_dynamics_experimental.h"
 #include "sh2zam/view_experimental.h"
 #include "sh2zam/vlc2_experimental.h"
 #include "sh2zam/vlc_experimental.h"
+#include "sh2zam/scene_experimental.h"
 #include <stdio.h>
 
 int main(void) {
