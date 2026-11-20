@@ -7,8 +7,8 @@ section "Contract tag line-follower-1", and
 `tests/test_line_field.c`. Validation records:
 [line-follower-1](validation/line-follower-1.md) and
 [line-field-1](validation/line-field-1.md), [line-field-2](validation/line-field-2.md),
-[line-field-3](validation/line-field-3.md) and [line-field-4](validation/line-field-4.md). No instruction model yet: both are
-compiled C and have only been measured as part of a larger program.
+[line-field-3](validation/line-field-3.md) and [line-field-4](validation/line-field-4.md). No
+instruction model yet: both are compiled C and have only been measured as part of a larger program.
 
 Two layers for vehicles that travel along one closed, baked line: a lap
 course, a patrol loop, a rail.

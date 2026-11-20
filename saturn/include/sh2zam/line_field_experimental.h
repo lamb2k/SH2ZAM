@@ -53,8 +53,8 @@
  * Final dash (line-field-4). With dash_from > 0, an agent on the final lap
  * past dash_from drops its pace and chase targets and races for the line:
  * it targets at least dash_pace of its pace whatever its expectation, and
- * boosts whenever its energy allows, as racing
- * games often let their field do over the last stretch.
+ * boosts whenever its energy allows, as racing games often let their field
+ * do over the last stretch.
  *
  * Determinism. One xorshift32 state in the field drives every random choice;
  * the same initial state and the same external inputs give the same result
@@ -213,7 +213,7 @@ uint32_t sh2z_field_hash(const sh2z_field_t *f);
 
 /* ---- Contract tag line-field-4 ------------------------------------------ */
 
-#define SH2Z_FIELD_ZONE_BOOST    1u /**< Boost plate: a free boost (no energy) of plate_ticks */
+#define SH2Z_FIELD_ZONE_BOOST    1u /**< Boost plate: a free boost (no energy) of plate_ticks. */
 #define SH2Z_FIELD_ZONE_SLIP     2u /**< Low grip: steering gain scaled by slip_steer. */
 #define SH2Z_FIELD_ZONE_ROUGH    3u /**< Rough ground: target speed scaled by rough_keep unless boosting. */
 #define SH2Z_FIELD_ZONE_RECHARGE 4u /**< Recharge strip: energy refills by recharge per tick. */
