@@ -6,6 +6,7 @@ a record, run `python3 saturn/tools/validation_index.py --write`; host CI runs
 `--check`. Records are listed by file name; each line gives the record's date
 and scope.
 
+- [body-contact-1](validation/body-contact-1.md): 2026-11-19 (body contact, body-contact-1)
 - [dsp-1](validation/dsp-1.md): 2026-11-19 (SCU DSP access, affine transform, Q16 outer product, dsp-1)
 - [dual-claim-1](validation/dual-claim-1.md): 2026-11-19 (two-CPU try-claim, dual-claim-1)
 - [fixed-unit-1](validation/fixed-unit-1.md): 2026-11-17 (Q2.30 unit vectors, fixed-unit-1)
@@ -30,6 +31,7 @@ and scope.
 - [vdp1-banks-1](validation/vdp1-banks-1.md): 2026-11-19 (VDP1 double-bank bookkeeping, vdp1-banks-1)
 - [vehicle-dynamics-1](validation/vehicle-dynamics-1.md): 2026-11-19 (track-bound vehicle dynamics, vehicle-dynamics-1)
 - [vehicle-dynamics-2](validation/vehicle-dynamics-2.md): 2026-11-20 (track-bound vehicle dynamics with tubes, vehicle-dynamics-2)
+- [vehicle-dynamics-3](validation/vehicle-dynamics-3.md): 2026-11-19 (vehicle dynamics with contact, vehicle-dynamics-3)
 - [vehicle-kernels-1](validation/vehicle-kernels-1.md): 2026-11-17 (vehicle kernels, vehicle-kernels-1)
 - [view-camera-1](validation/view-camera-1.md): 2026-11-17 (view from a camera, view-camera-1)
 - [view-merge-2](validation/view-merge-2.md): 2026-11-17 (tier texture-merge planner, view-merge-2)
