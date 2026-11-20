@@ -325,6 +325,19 @@ and committed as data; CI checks them against their sources. Host tests run the 
 on a reference DSP simulator against the CPU form, with mutation controls. Portable builds run
 the CPU form. See [the DSP guide](saturn/DSP.md).
 
+## Two-CPU try-claim
+
+[`sh2zam/dual_claim_experimental.h`](saturn/include/sh2zam/dual_claim_experimental.h)
+(contract tag `dual-claim-1`) shares an optional job between the two SH-2s so that exactly one
+runs it:
+- no atomic instruction: two claim words and a decision word in cache-through memory;
+- side A (the master) may wait a few instructions for B's decision; side B (the slave)
+  never waits;
+- a new tag for every job, so the record needs no reset.
+
+Host-tested over every interleaving of the two sides' operations, with four broken
+protocols as negative controls. See [the try-claim guide](saturn/DUAL_CLAIM.md).
+
 ## Segmented strip meshes
 
 [`sh2zam/segmesh_experimental.h`](saturn/include/sh2zam/segmesh_experimental.h)
@@ -399,7 +412,8 @@ float references and the general forms (no console run). See
   (`line-follower-1`) moves a vehicle along a baked closed line, as a distance plus a lateral
   offset, with speed and steering limits.
 - [`sh2zam/line_field_experimental.h`](saturn/include/sh2zam/line_field_experimental.h)
-  (`line-field-1`) runs up to 255 such vehicles, with contact, rank and level of detail.
+  (`line-field-1`) runs up to 255 such vehicles, with contact, rank and level of detail;
+  `line-field-2` adds a per-vehicle finish-time re-target from the second lap.
 - [`sh2zam/vehicle_dynamics_experimental.h`](saturn/include/sh2zam/vehicle_dynamics_experimental.h)
   (`vehicle-dynamics-1`) steps one hovering vehicle on a spline road, one fixed tick at a time.
   A host build and an SH-2 build give the same bits.

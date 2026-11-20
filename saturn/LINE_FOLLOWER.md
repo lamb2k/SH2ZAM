@@ -1,12 +1,12 @@
-# Racing-line follower and line field (`line-follower-1`, `line-field-1`, experimental)
+# Racing-line follower and line field (`line-follower-1`, `line-field-1`, `line-field-2`, experimental)
 
 Contracts: [`line_follower_experimental.h`](include/sh2zam/line_follower_experimental.h),
 section "Contract tag line-follower-1", and
 [`line_field_experimental.h`](include/sh2zam/line_field_experimental.h), section
-"Contract tag line-field-1". Tests: `tests/test_line_follower.c` and
+"Contract tags line-field-1 and line-field-2". Tests: `tests/test_line_follower.c` and
 `tests/test_line_field.c`. Validation records:
 [line-follower-1](validation/line-follower-1.md) and
-[line-field-1](validation/line-field-1.md). No instruction model yet: both are
+[line-field-1](validation/line-field-1.md) and [line-field-2](validation/line-field-2.md). No instruction model yet: both are
 compiled C and have only been measured as part of a larger program.
 
 Two layers for vehicles that travel along one closed, baked line: a lap
@@ -43,6 +43,12 @@ it arrives as `kick_lat` and `kick_speed`.
 - **Pace:** each agent follows its own lap-time pace with a rubber band, or
   chases another vehicle at a set lead. When the chased vehicle retires or
   finishes, the agent carries on at its own pace.
+- **Second-lap re-target (`line-field-2`):** an agent given a finish target
+  (`finish_ticks`) re-paces when it completes its first lap, to cover the
+  remaining laps evenly by that race tick, and its expectation restarts at one
+  lap. Racing games often pace the opening lap on a lap time and the rest on a
+  finish time; with `finish_ticks = 0` the field runs exactly as `line-field-1`
+  (same steps, same hashes).
 - **Lanes:** an agent takes the side with more room around a slower vehicle
   ahead, looking further ahead the faster it closes. It holds that side for a
   while, never cuts across a vehicle alongside, and does not move across a
@@ -63,7 +69,8 @@ it arrives as `kick_lat` and `kick_speed`.
 
 ## Determinism and limits
 
-- Integer only, no division at run time, no allocation, no global state. One
+- Integer only, no allocation, no global state, and no division at run time
+  except one per re-targeting agent and race (`line-field-2`). One
   xorshift32 state in the field drives every random choice.
 - The same initial state and the same external inputs give the same
   `sh2z_field_hash` on every target.

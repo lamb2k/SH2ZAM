@@ -4,7 +4,7 @@
  * retirement, distance level of detail, rank and lap bookkeeping.
  * Game-neutral: the library knows nothing about what a vehicle is.
  *
- * Contract tag line-field-1.
+ * Contract tags line-field-1 and line-field-2 (the second-lap re-target).
  *
  * Shared vehicle state. sh2z_vehicle_t is the line-space state of ANY vehicle
  * on the line: agents the field drives, and vehicles driven elsewhere (a
@@ -24,9 +24,17 @@
  * near the focus is exact and far pairs on different phases do not touch.
  * Rank extrapolates a skipped agent to the current tick.
  *
+ * Second-lap re-target (line-field-2). An agent whose brain has a finish
+ * target (finish_ticks > 0) changes pace when it completes its first lap:
+ * from then on it expects to cover the remaining laps evenly by that race
+ * tick, pace = (laps - 1) * length / (finish_ticks - first lap tick), and its
+ * expectation restarts at one lap. finish_ticks = 0 keeps line-field-1's one
+ * pace for the whole race, step for step, and its hashes.
+ *
  * Determinism. One xorshift32 state in the field drives every random choice;
  * the same initial state and the same external inputs give the same result
- * on every target. No division, no floating point, no allocation, no global
+ * on every target. One integer division per agent and race (the re-target);
+ * no other division, no floating point, no allocation, no global
  * state. sh2z_field_step is not reentrant on one field.
  *
  * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
@@ -89,6 +97,7 @@ typedef struct {
     uint8_t attack_target;     /**< Vehicle index under attack. */
     uint8_t finish_seq;        /**< Finishing order, 0 = winner. */
     uint8_t touch_cool;        /**< Ticks left of the current contact incident. */
+    int32_t finish_ticks;      /**< line-field-2: race tick to finish by, from the second lap on; 0 keeps the pace. Caller's tuning. */
 } sh2z_field_brain_t;
 
 /** Field tuning. */

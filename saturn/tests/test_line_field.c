@@ -1,4 +1,4 @@
-/* Line field (contract tag line-field-1) checks.
+/* Line field (contract tags line-field-1 and line-field-2) checks.
  * Invariants over long random races, an independent grid formula, exact
  * contact arithmetic on hand-placed pairs, determinism, level of detail, and
  * a control for every behavioural claim (the same scene with the feature off
@@ -137,6 +137,9 @@ static void test_races(void) {
     for(uint32_t seed = 1; seed <= 6; ++seed) {
         P.lod_near[0] = INT32_MAX; P.lod_near[1] = INT32_MAX; P.lod_near[2] = INT32_MAX;
         const uint32_t h1 = race(24, seed, 0, 5000, 1);
+        /* line-field-1 results, pinned: with no finish targets line-field-2 races step for step as before. */
+        static const uint32_t lf1[6] = { 0x7c56497eu, 0x9c2d952fu, 0x12afee5bu, 0xccfb9880u, 0x080ae758u, 0x244b0332u };
+        CHECK(h1 == lf1[seed - 1u]);
         CHECK(F.finished + F.retired == 24u);                       /* nobody is stuck: the race ends */
         CHECK(F.rank_changes > 0u);                                 /* places change hands */
         const uint32_t h2 = race(24, seed, 0, 5000, 0);
@@ -250,6 +253,40 @@ static void test_retire(void) {
     params();
 }
 
+/* line-field-2: one agent, three laps of 1,500-tick pace; from its first lap it re-targets a finish
+ * at FINISH ticks. Returns the finish tick. */
+static int32_t lone_race(int32_t finish) {
+    P.laps = 3;
+    rng = 7u;
+    vehicle(0, 0, 1500);
+    brain[0].lane = 0;
+    brain[0].finish_ticks = finish;
+    field(1, 3u);
+    for(uint32_t t = 0; t < 9000 && !(veh[0].flags & SH2Z_VEH_FINISHED); ++t) {
+        if(t == 60) sh2z_field_start(&F);
+        sh2z_field_step(&F);
+    }
+    CHECK(veh[0].flags & SH2Z_VEH_FINISHED);
+    return brain[0].finish_tick;
+}
+
+static void test_retarget(void) {
+    const int32_t keep = lone_race(0);
+    const int32_t lap1 = brain[0].lap_tick[0];
+    CHECK(keep > 4300 && keep < 4700);                            /* about three laps of 1,500 ticks */
+    /* Faster and slower finish targets are met within 1%; the control (0) misses each by far more. */
+    static const int32_t targets[] = { 3900, 4100, 4800, 5200 };
+    for(unsigned k = 0; k < sizeof targets / sizeof targets[0]; ++k) {
+        const int32_t got = lone_race(targets[k]);
+        CHECK(brain[0].lap_tick[0] == lap1);                      /* the first lap is unchanged */
+        CHECK(got * 100 >= targets[k] * 99 && got * 100 <= targets[k] * 101);
+        CHECK((keep - targets[k]) * 100 > targets[k] * 4 || (targets[k] - keep) * 100 > targets[k] * 4);
+    }
+    /* A target already behind the first lap is ignored: the agent keeps its pace. */
+    CHECK(lone_race(lap1 - 10) == keep);
+    params();
+}
+
 int main(void) {
     make_line();
     params();
@@ -259,6 +296,7 @@ int main(void) {
     test_contact();
     test_lod();
     test_retire();
+    test_retarget();
     printf("line field: %" PRIu64 " checks passed\n", checks);
     return 0;
 }
