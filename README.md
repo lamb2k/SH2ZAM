@@ -413,7 +413,8 @@ float references and the general forms (no console run). See
   offset, with speed and steering limits.
 - [`sh2zam/line_field_experimental.h`](saturn/include/sh2zam/line_field_experimental.h)
   (`line-field-1`) runs up to 255 such vehicles, with contact, rank and level of detail;
-  `line-field-2` adds a per-vehicle finish-time re-target from the second lap.
+  `line-field-2` adds a per-vehicle finish-time re-target from the second lap, and
+  `line-field-3` a first-lap cap on chasing vehicles.
 - [`sh2zam/vehicle_dynamics_experimental.h`](saturn/include/sh2zam/vehicle_dynamics_experimental.h)
   (`vehicle-dynamics-1`) steps one hovering vehicle on a spline road, one fixed tick at a time.
   A host build and an SH-2 build give the same bits.

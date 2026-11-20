@@ -1,4 +1,4 @@
-/* Line field (contract tags line-field-1 and line-field-2) checks.
+/* Line field (contract tags line-field-1, line-field-2 and line-field-3) checks.
  * Invariants over long random races, an independent grid formula, exact
  * contact arithmetic on hand-placed pairs, determinism, level of detail, and
  * a control for every behavioural claim (the same scene with the feature off
@@ -287,6 +287,38 @@ static void test_retarget(void) {
     params();
 }
 
+/* line-field-3: a chaser starting behind a fast leader. With a first-lap cap its target never passes the
+ * cap before its first lap is done, and it does after; the control (no cap) passes it on the first lap. */
+static int32_t chase_race(int32_t cap, int32_t *after) {
+    P.laps = 3;
+    rng = 11u;
+    vehicle(0, 0, 1300);
+    vehicle(1, 3, 1500);
+    brain[0].lane = brain[1].lane = 0;
+    brain[1].chase = 0; brain[1].chase_lead = 0; brain[1].first_lap_cap = cap;
+    field(2, 5u);
+    int32_t first = 0;
+    *after = 0;
+    for(uint32_t t = 0; t < 9000 && !(veh[1].flags & SH2Z_VEH_FINISHED); ++t) {
+        if(t == 60) sh2z_field_start(&F);
+        sh2z_field_step(&F);
+        if(veh[1].t.lap < 1) { if(brain[1].target_speed > first) first = brain[1].target_speed; }
+        else if(brain[1].target_speed > *after) *after = brain[1].target_speed;
+    }
+    return first;
+}
+
+static void test_first_lap_cap(void) {
+    int32_t after, after_free;
+    const int32_t cap = U(12);               /* under the leader's pace of about 14.8 per tick */
+    const int32_t capped = chase_race(cap, &after);
+    const int32_t free_run = chase_race(0, &after_free);
+    CHECK(capped <= cap);                     /* held on the first lap */
+    CHECK(after > cap);                       /* and free from the second */
+    CHECK(free_run > cap);                    /* control: without the cap the first lap passes it */
+    params();
+}
+
 int main(void) {
     make_line();
     params();
@@ -297,6 +329,7 @@ int main(void) {
     test_lod();
     test_retire();
     test_retarget();
+    test_first_lap_cap();
     printf("line field: %" PRIu64 " checks passed\n", checks);
     return 0;
 }
