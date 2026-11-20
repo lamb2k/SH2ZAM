@@ -402,7 +402,8 @@ float references and the general forms (no console run). See
   (`line-field-1`) runs up to 255 such vehicles, with contact, rank and level of detail.
 - [`sh2zam/vehicle_dynamics_experimental.h`](saturn/include/sh2zam/vehicle_dynamics_experimental.h)
   (`vehicle-dynamics-1`) steps one hovering vehicle on a spline road, one fixed tick at a time.
-  A host build and an SH-2 build give the same bits.
+  A host build and an SH-2 build give the same bits. `vehicle-dynamics-2` adds pipes (inside a
+  tube) and cylinders (outside one), with joins into open road.
 
 All three are integer only and deterministic. See [the line guide](saturn/LINE_FOLLOWER.md) and
 [the vehicle dynamics guide](saturn/VEHICLE_DYNAMICS.md).
