@@ -8,6 +8,9 @@
  * Contract tag: rotation-sprites-2 (2 adds the sub-pixel anchor: placement keeps
  * the fraction it used to drop and emission rounds each corner once, so an
  * object held still on screen no longer steps a pixel with rounding noise).
+ * Contract tag rotation-sprites-3 (at the end) adds faster forms with
+ * identical output: a yaw climb for convex tables, the world pose from a
+ * caller's camera-space terms and the emission of one cell.
  * Every function below is a pure function of
  * its inputs as stated. Selection is exact for the stated rule; placement and
  * emission round as stated (no floating point). Nothing here knows what the
@@ -243,6 +246,73 @@ bool sh2z_rspr_camera_scale(sh2z_rspr_camera_t *c,const sh2z_rspr_set_t *set,int
 bool sh2z_rspr_pose(sh2z_rspr_pick_t *pick,sh2z_rspr_place_t *place,int32_t *depth,
                     const sh2z_rspr_camera_t *c,const sh2z_rspr_set_t *set,
                     const int32_t pos[3],const int16_t basis[9]);
+
+/* ---- Contract tag rotation-sprites-3 ----
+ *
+ * Faster forms of the selection, the world pose and the emission above, each
+ * with output identical to the rotation-sprites-2 function it names, for a
+ * caller that already holds part of the work (a culling pass's camera-space
+ * terms) or can prove a property of its set once (a convex yaw table). The
+ * rotation-sprites-2 functions and their object code are unchanged. */
+
+/** True when set's yaw bin centres, in index order, are the corners of a
+ *  strictly convex polygon wound once around the origin, and set is not
+ *  mirrored. Every turn and every step around the origin then has the same
+ *  strict sign and the polar angle wraps once. For such a table the products
+ *  yaw[k].sin*x + yaw[k].cos*z (exact integers) rise to one maximum (a corner,
+ *  or one edge of two equal corners) and fall to one minimum around the
+ *  polygon, so sh2z_rspr_yaw_climb finds sh2z_rspr_select's yaw bin. Check
+ *  once per set (no division). False for a null or invalid-count set. */
+bool sh2z_rspr_yaw_convex(const sh2z_rspr_set_t *set);
+
+/** The yaw bin sh2z_rspr_select's rule gives for {x, z} (after its shift:
+ *  |x|, |z| < 2^15; not mirrored), found by climbing from bin start (any
+ *  value; out of range means 0) to a bin no neighbour exceeds, ties to the
+ *  lower bin. *best receives that bin's product. Only for a set accepted by
+ *  sh2z_rspr_yaw_convex; otherwise the result is unspecified. A caller that
+ *  passes the object's previous bin usually evaluates three bins, not
+ *  yaw_count. */
+unsigned sh2z_rspr_yaw_climb(const sh2z_rspr_set_t *set,unsigned start,int32_t x,int32_t z,int32_t *best);
+
+/** An object's camera-space terms for sh2z_rspr_pose_terms, as sh2z_rspr_pose
+ *  computes them from pos (a culling pass usually has them already):
+ *      d   = pos - eye (int32, wrapping)
+ *      tz  = floor(r[2].d / 2^16)
+ *      nx  = focal_x * floor(r[0].d / 2^16)
+ *      ny  = focal_y * floor(r[1].d / 2^16) */
+typedef struct {
+    int32_t d[3];
+    int32_t tz;
+    int64_t nx,ny;
+} sh2z_rspr_terms_t;
+
+/** sh2z_rspr_pose from terms t (as sh2z_rspr_terms_t states them for the
+ *  object's pos): the same outputs, *depth and return value as
+ *  sh2z_rspr_pose(pick, place, depth, c, set, pos, basis). Each division is
+ *  started on the hardware divider before independent work (the selection,
+ *  the up products, the square root) and collected after it, so the same
+ *  caller promise as sh2z_divu_start64 applies for the whole call.
+ *  yaw_hint (nullable): when non-null, the yaw bin is found by
+ *  sh2z_rspr_yaw_climb from *yaw_hint and the chosen bin is written back;
+ *  pass it only for a set accepted by sh2z_rspr_yaw_convex. The set must
+ *  already have been accepted by sh2z_rspr_valid. */
+bool sh2z_rspr_pose_terms(sh2z_rspr_pick_t *pick,sh2z_rspr_place_t *place,int32_t *depth,
+                          const sh2z_rspr_camera_t *c,const sh2z_rspr_set_t *set,
+                          const sh2z_rspr_terms_t *t,const int16_t basis[9],uint8_t *yaw_hint);
+
+/** sh2z_rspr_emit_valid for one cell, with the COLR and SRCA words given by
+ *  the caller (a cell held in a slot pool, a CLUT kept elsewhere): the same
+ *  sixteen words as sh2z_rspr_emit_valid(command, set, pick, place, vram,
+ *  pmod) followed by command[3] = colr and command[4] = srca, where cell is
+ *  the picked cell and mirror the pick's mirror flag. The set-level checks of
+ *  sh2z_rspr_emit_valid (the cell index, vram) are the caller's. Each corner
+ *  offset px*R - py*up is below 2^26 in magnitude (|px|, |py| <= 504,
+ *  |up| <= 2^15), so its product with the scale is one 32 x 32 -> 64-bit
+ *  multiply; the rounding is the same. Returns false, writing nothing, for a
+ *  scale outside 1..2^24, mirror > 1, a corner outside -1024..1023 or null
+ *  pointers. */
+bool sh2z_rspr_emit_cell(uint16_t command[16],const sh2z_rspr_cell_t *cell,uint32_t mirror,
+                         const sh2z_rspr_place_t *place,uint16_t pmod,uint16_t colr,uint16_t srca);
 
 #ifdef __cplusplus
 }
