@@ -10,8 +10,15 @@
  *   locate        sh2z_vd_locate on probe toward target (iterations,
  *                 tolerance in Q32 as two words)
  *   lap_distance  sh2z_vd_lap_distance on probe
- * sizes[] lets the harness check that each record has the host layout. */
+ *   set_track2    vehicle-dynamics-2: points track2 at the same records plus
+ *                 the joins (or none) and sets its count, length and laps (the
+ *                 harness writes the joins and the tube rules)
+ *   step2         sh2z_vd_step2 on body with the current pad: one tick
+ * sizes[] lets the harness check that each record has the host layout; its
+ * last entry is the target offset of track2.tube (track2 holds pointers, so
+ * its layout is the target's own). */
 #include "sh2zam/vehicle_dynamics_experimental.h"
+#include <stddef.h>
 
 #define NOINLINE __attribute__((noinline))
 
@@ -26,10 +33,13 @@ sh2z_vd_rules_t rules;
 sh2z_vd_body_t body,probe;
 sh2z_vd_input_t input;
 int32_t target[3];
+sh2z_vd_join_t joins[NODES];
+sh2z_vd_track2_t track2;
 
-const uint32_t sizes[8]={
+const uint32_t sizes[10]={
     sizeof(sh2z_vd_node_t),sizeof(sh2z_vd_zone_t),sizeof(sh2z_vd_ramp_t),sizeof(sh2z_vd_mine_t),
-    sizeof(sh2z_vd_vehicle_t),sizeof(sh2z_vd_rules_t),sizeof(sh2z_vd_body_t),sizeof(sh2z_vd_input_t)};
+    sizeof(sh2z_vd_vehicle_t),sizeof(sh2z_vd_rules_t),sizeof(sh2z_vd_body_t),sizeof(sh2z_vd_input_t),
+    sizeof(sh2z_vd_join_t),offsetof(sh2z_vd_track2_t,tube)};
 
 NOINLINE uint32_t set_track(uint32_t count,uint32_t length,uint32_t laps) {
     if(count<4u||count>NODES)return 0;
@@ -50,4 +60,17 @@ NOINLINE uint32_t locate(uint32_t iterations,uint32_t tolerance_hi,uint32_t tole
 
 NOINLINE uint32_t lap_distance(void) {
     return (uint32_t)sh2z_vd_lap_distance(&probe,&track);
+}
+
+NOINLINE uint32_t set_track2(uint32_t count,uint32_t length,uint32_t laps,uint32_t with_joins) {
+    if(count<4u||count>NODES)return 0;
+    track2.base.nodes=nodes;track2.base.zones=zones;track2.base.ramps=ramps;track2.base.mines=mines;
+    track2.base.count=count;track2.base.length=(int32_t)length;track2.base.laps=(int32_t)laps;
+    track2.joins=with_joins?joins:0;
+    return 1;
+}
+
+NOINLINE uint32_t step2(void) {
+    sh2z_vd_step2(&body,&track2,&vehicle,&rules,&input);
+    return body.flags;
 }
