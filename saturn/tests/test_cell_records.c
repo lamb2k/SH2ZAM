@@ -136,7 +136,8 @@ static void arguments(void) {
     p.form = 0; CHECK(sh2z_cellrec_expand(&pos, &p, rec, off, out, 1));
 }
 
-/* the count limit alone: the streams and the entries are separate buffers big enough for MAX_COUNT + 1 cells, so no overlap or alignment check can refuse the call; only the count can */
+/* the count limit alone: the streams and the entries are separate buffers big enough for MAX_COUNT + 1 cells,
+ * so no overlap or alignment check can refuse the call; only the count can */
 static void count_limit(void) {
     static uint8_t rec[4u * (SH2Z_CELLREC_MAX_COUNT + 1u) + 8u] __attribute__((aligned(4)));
     static uint8_t off[2u * (SH2Z_CELLREC_MAX_COUNT + 1u) + 8u] __attribute__((aligned(4)));
