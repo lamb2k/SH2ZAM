@@ -11,6 +11,12 @@
 #define FLD_INLINE static inline
 #endif
 
+#if defined(__GNUC__)
+#define FLD_COLD static __attribute__((noinline, cold))
+#else
+#define FLD_COLD static
+#endif
+
 #define FLD_TOUCH_COOL 30u   /* ticks a contact incident lasts for energy accounting */
 
 FLD_INLINE int32_t fld_abs(int32_t v) { return v < 0 ? -v : v; }
@@ -157,6 +163,29 @@ static int32_t fld_behind(const sh2z_field_t *f, uint32_t i) {
     return -1;
 }
 
+/* line-field-5: a tube roll decision (out of line: the step without a behaviour block never calls it). */
+FLD_COLD void fld_roll(sh2z_field_t *f, const sh2z_vehicle_t *v, sh2z_field_brain_t *b, uint32_t due,
+                       const sh2z_line_sample_t *at, const sh2z_field_behave_t *bh) {
+    const sh2z_field_params_t *p = f->params;
+    int exit = 0;
+    if(fld_match(at->flags, bh->exit_mask, bh->exit_value)) {
+        int32_t d = v->t.dist + bh->roll_exit_ahead;
+        while(d >= f->line->length) d -= f->line->length;
+        const uint32_t n = sh2z_line_locate(f->line, d, v->t.node);
+        exit = !fld_tube(p, f->line->nodes[n].flags);
+    }
+    /* A decision stands for 4 ticks; a level-of-detail step for its own ticks. */
+    const int32_t per = (int32_t)(due >> 2) > 1 ? (int32_t)(due >> 2) : 1;
+    if(exit) b->roll = 0;
+    else if((int32_t)(fld_rand(f) & 0xffffu) < bh->roll_chance * per) {
+        if((int32_t)(fld_rand(f) & 0xffffu) < bh->roll_latch) b->roll = -1;
+        else {
+            const int32_t span = bh->roll_span > 0 ? bh->roll_span : 1;
+            b->roll = (int16_t)((bh->roll_min > 0 ? bh->roll_min : 1) + (int32_t)(((fld_rand(f) & 0xffffu) * (uint32_t)span) >> 16));
+        }
+    } else if(b->roll > 0) b->roll = (int16_t)(b->roll > per ? b->roll - per : 0);
+}
+
 static void fld_think(sh2z_field_t *f, uint32_t i, uint32_t due, const sh2z_line_sample_t *at) {
     const sh2z_field_params_t *p = f->params;
     sh2z_vehicle_t *v = &f->veh[i];
@@ -286,26 +315,7 @@ static void fld_think(sh2z_field_t *f, uint32_t i, uint32_t due, const sh2z_line
     }
     b->target_lat = lat;
     /* line-field-5: tube roll decisions. */
-    const sh2z_field_behave_t *bh = p->behave;
-    if(bh && fld_tube(p, at->flags) && at->half_width > 0) {
-        int exit = 0;
-        if(fld_match(at->flags, bh->exit_mask, bh->exit_value)) {
-            int32_t d = v->t.dist + bh->roll_exit_ahead;
-            while(d >= f->line->length) d -= f->line->length;
-            const uint32_t n = sh2z_line_locate(f->line, d, v->t.node);
-            exit = !fld_tube(p, f->line->nodes[n].flags);
-        }
-        /* A decision stands for 4 ticks; a level-of-detail step for its own ticks. */
-        const int32_t per = (int32_t)(due >> 2) > 1 ? (int32_t)(due >> 2) : 1;
-        if(exit) b->roll = 0;
-        else if((int32_t)(fld_rand(f) & 0xffffu) < bh->roll_chance * per) {
-            if((int32_t)(fld_rand(f) & 0xffffu) < bh->roll_latch) b->roll = -1;
-            else {
-                const int32_t span = bh->roll_span > 0 ? bh->roll_span : 1;
-                b->roll = (int16_t)((bh->roll_min > 0 ? bh->roll_min : 1) + (int32_t)(((fld_rand(f) & 0xffffu) * (uint32_t)span) >> 16));
-            }
-        } else if(b->roll > 0) b->roll = (int16_t)(b->roll > per ? b->roll - per : 0);
-    }
+    if(p->behave && fld_tube(p, at->flags) && at->half_width > 0) fld_roll(f, v, b, due, at, p->behave);
 }
 
 /* Energy charged to a vehicle, scaled by its armor; retirement at zero. */
@@ -338,6 +348,29 @@ static void fld_wall(sh2z_field_t *f, uint32_t i) {
     v->flags |= SH2Z_VEH_WALL;
     v->t.speed = fld_mul_q16(v->t.speed, f->params->wall_keep);
     fld_damage(f, i, f->params->wall_energy);
+}
+
+/* line-field-5: a fresh contact incident's knock-out age and impact damage (out of line: the step without a
+ * behaviour block never calls it). Returns 1 when the impact charged the pair (contact_norm), 0 when the flat
+ * energy applies. */
+FLD_COLD int fld_contact_behave(sh2z_field_t *f, uint32_t ia, uint32_t ib, int a_ext, int b_ext, int32_t gap,
+                                int32_t adl, int32_t dl, int32_t closing, int a_attacks, int b_attacks) {
+    const sh2z_vehicle_t *a = &f->veh[ia], *b = &f->veh[ib];
+    const sh2z_field_behave_t *bh = f->params->behave;
+    /* A contact incident with an external vehicle starts a knock-out age. */
+    if(a_ext && !b_ext) { f->brain[ib].ko_by = (int16_t)ia; f->brain[ib].ko_age = 1u; }
+    if(b_ext && !a_ext) { f->brain[ia].ko_by = (int16_t)ib; f->brain[ia].ko_age = 1u; }
+    if(bh->contact_norm <= 0) return 0;
+    /* The impact is the closing speed along the line between the two (longitudinal gap and lateral offset; the
+     * length by max + min / 2), shared: contact_norm of it each, and the whole 2 x contact_norm to an attacker's
+     * victim (the attacker pays nothing). */
+    const int32_t ax = fld_abs(gap), ay = adl, len = (ax > ay ? ax + (ay >> 1) : ay + (ax >> 1));
+    const int64_t dot = (int64_t)closing * gap + (int64_t)(b->t.lat_vel - a->t.lat_vel) * dl;
+    const int32_t norm = len > 0 ? (int32_t)((dot < 0 ? -dot : dot) / len) : fld_abs(closing);
+    const int32_t share = fld_mul_q16(norm, bh->contact_norm);
+    fld_damage(f, ia, a_attacks ? 0 : (b_attacks ? share * 2 : share));
+    fld_damage(f, ib, b_attacks ? 0 : (a_attacks ? share * 2 : share));
+    return 1;
 }
 
 /* One pass over every pair in reach; returns the number of pairs pushed. */
@@ -431,24 +464,11 @@ static uint32_t fld_contacts(sh2z_field_t *f) {
                 f->brain[ib].pass_dir = (int8_t)-dir; f->brain[ib].pass_ticks = (uint8_t)fld_clamp(p->pass_hold, 1, 255);
                 f->brain[ib].target_lat = a->t.lateral - dir * p->avoid_offset;
             }
-            if(fresh && p->behave) {   /* line-field-5: a contact incident with an external vehicle starts a knock-out age */
-                if(a_ext && !b_ext) { f->brain[ib].ko_by = (int16_t)ia; f->brain[ib].ko_age = 1u; }
-                if(b_ext && !a_ext) { f->brain[ia].ko_by = (int16_t)ib; f->brain[ia].ko_age = 1u; }
-            }
             const int32_t hit = fresh ? p->side_energy + (closing > 0 ? fld_mul_q16(closing, p->hit_energy) : 0) : 0;
             const int a_attacks = !a_ext && f->brain[ia].attack_ticks && f->brain[ia].attack_target == ib;
             const int b_attacks = !b_ext && f->brain[ib].attack_ticks && f->brain[ib].attack_target == ia;
-            if(fresh && p->behave && p->behave->contact_norm > 0) {
-                /* line-field-5: the impact is the closing speed along the line between the two (longitudinal gap and
-                 * lateral offset; the length by max + min / 2), shared: contact_norm of it each, and the whole
-                 * 2 x contact_norm to an attacker's victim (the attacker pays nothing). */
-                const int32_t ax = fld_abs(gap), ay = adl, len = (ax > ay ? ax + (ay >> 1) : ay + (ax >> 1));
-                const int64_t dot = (int64_t)closing * gap + (int64_t)(b->t.lat_vel - a->t.lat_vel) * dl;
-                const int32_t norm = len > 0 ? (int32_t)((dot < 0 ? -dot : dot) / len) : fld_abs(closing);
-                const int32_t share = fld_mul_q16(norm, p->behave->contact_norm);
-                fld_damage(f, ia, a_attacks ? 0 : (b_attacks ? share * 2 : share));
-                fld_damage(f, ib, b_attacks ? 0 : (a_attacks ? share * 2 : share));
-            } else if(fresh) {
+            /* line-field-5: the knock-out age and the impact, out of line. */
+            if(fresh && !(p->behave && fld_contact_behave(f, ia, ib, a_ext, b_ext, gap, adl, dl, closing, a_attacks, b_attacks))) {
                 fld_damage(f, ia, a_attacks ? 0 : hit + (b_attacks ? p->attack_energy : 0));
                 fld_damage(f, ib, b_attacks ? 0 : hit + (a_attacks ? p->attack_energy : 0));
             }
@@ -487,6 +507,48 @@ static void fld_laps(sh2z_field_t *f, uint32_t i) {
         }
     }
     if(lap < (int32_t)b->laps_seen) b->laps_seen = (int16_t)lap;   /* an external vehicle driven backwards */
+}
+
+/* line-field-5: roll and hold round a tube, the air, and whether the lateral is the agent's own (inertia or
+ * air); out of line: the step without a behaviour block never calls it. */
+FLD_COLD int fld_behave_steer(sh2z_field_t *f, sh2z_vehicle_t *v, sh2z_field_brain_t *b, const sh2z_line_sample_t *at,
+                              int tube, int32_t *target_lat, int *air_out) {
+    const sh2z_field_behave_t *bh = f->params->behave;
+    int air;
+    if(tube && !b->attack_ticks && !b->pass_ticks) {
+        const int hold = fld_match(at->flags, bh->hold_mask, bh->hold_value);
+        if(b->roll && (hold || !bh->roll_well)) *target_lat = v->t.lateral + fld_mul_q16(v->t.speed, bh->roll_lead);
+        else if(b->roll) {   /* a tube with a pull back to its line: the roll settles roll_well of the radius round */
+            const int32_t off = fld_mul_q16(at->half_width, bh->roll_well);
+            *target_lat = v->t.lateral + fld_wrap(*target_lat + (bh->roll_lead < 0 ? -off : off) - v->t.lateral, fld_round(at->half_width));
+        }
+        else if(hold) *target_lat = v->t.lateral + fld_mul_q16(v->t.speed, bh->hold_lead);
+    }
+    air = fld_match(at->flags, bh->air_mask, bh->air_value) && !tube;
+    if(air && !(v->flags & SH2Z_VEH_AIR)) {
+        const int32_t spread = bh->air_spread;
+        b->air_drift = spread > 0 ? (int32_t)(((int64_t)(fld_rand(f) & 0xffffu) * (2 * spread + 1)) >> 16) - spread : 0;
+    }
+    v->flags = (uint16_t)(air ? (v->flags | SH2Z_VEH_AIR) : (v->flags & ~SH2Z_VEH_AIR));
+    *air_out = air;
+    return air || bh->lat_accel > 0;
+}
+
+/* line-field-5: whether the agent leaves the line this step (an open edge in the air, a launch out of a tube, a
+ * drop off a hold tube); out of line: the step without a behaviour block never calls it. */
+FLD_COLD int fld_behave_leaves(sh2z_field_t *f, const sh2z_vehicle_t *v, const sh2z_line_sample_t *now,
+                               int tube, int now_tube, int air) {
+    const sh2z_field_behave_t *bh = f->params->behave;
+    const int open = !now_tube && fld_match(now->flags, bh->open_mask, bh->open_value) &&
+                     fld_abs(v->t.lateral) > now->half_width + bh->fall_margin;
+    if(air) return open;
+    else if(fld_match(now->flags, bh->drop_mask, bh->drop_value)) {
+        if(tube && !now_tube) return open && (bh->launch_chance >= 65536 || (int32_t)(fld_rand(f) & 0xffffu) < bh->launch_chance);
+        else if(now_tube && bh->drop_chance > 0 && fld_match(now->flags, bh->hold_mask, bh->hold_value) &&
+                fld_abs(fld_wrap(v->t.lateral, fld_round(now->half_width))) > fld_mul_q16(now->half_width, bh->drop_lat))
+            return (int32_t)(fld_rand(f) & 0xffffu) < bh->drop_chance;
+    }
+    return 0;
 }
 
 void sh2z_field_step(sh2z_field_t *f) {
@@ -578,24 +640,7 @@ void sh2z_field_step(sh2z_field_t *f) {
         v->flags &= (uint16_t)~SH2Z_VEH_WALL;
         /* line-field-5: roll and hold round a tube, the air, lateral inertia. */
         int air = 0, own_lateral = 0;
-        if(bh && !(v->flags & (SH2Z_VEH_RETIRED | SH2Z_VEH_FINISHED))) {
-            if(tube && !b->attack_ticks && !b->pass_ticks) {
-                const int hold = fld_match(at.flags, bh->hold_mask, bh->hold_value);
-                if(b->roll && (hold || !bh->roll_well)) target_lat = v->t.lateral + fld_mul_q16(v->t.speed, bh->roll_lead);
-                else if(b->roll) {   /* a tube with a pull back to its line: the roll settles roll_well of the radius round */
-                    const int32_t off = fld_mul_q16(at.half_width, bh->roll_well);
-                    target_lat = v->t.lateral + fld_wrap(target_lat + (bh->roll_lead < 0 ? -off : off) - v->t.lateral, fld_round(at.half_width));
-                }
-                else if(hold) target_lat = v->t.lateral + fld_mul_q16(v->t.speed, bh->hold_lead);
-            }
-            air = fld_match(at.flags, bh->air_mask, bh->air_value) && !tube;
-            if(air && !(v->flags & SH2Z_VEH_AIR)) {
-                const int32_t spread = bh->air_spread;
-                b->air_drift = spread > 0 ? (int32_t)(((int64_t)(fld_rand(f) & 0xffffu) * (2 * spread + 1)) >> 16) - spread : 0;
-            }
-            v->flags = (uint16_t)(air ? (v->flags | SH2Z_VEH_AIR) : (v->flags & ~SH2Z_VEH_AIR));
-            own_lateral = air || bh->lat_accel > 0;
-        }
+        if(bh && !(v->flags & (SH2Z_VEH_RETIRED | SH2Z_VEH_FINISHED))) own_lateral = fld_behave_steer(f, v, b, &at, tube, &target_lat, &air);
         if(own_lateral) {
             /* The follower moves speed and distance only; the lateral is integrated here. */
             const int32_t lat0 = v->t.lateral, vel0 = v->t.lat_vel, n = (int32_t)(due < 64u ? due : 64u);
@@ -622,17 +667,7 @@ void sh2z_field_step(sh2z_field_t *f) {
              * the line when it comes out of a tube beyond the open edge (launched, launch_chance), or, on a drop tube, when it is
              * round beyond drop_lat of the radius and loses its hold (drop_chance per step). */
             int leaves = 0;
-            if(bh && !(v->flags & (SH2Z_VEH_RETIRED | SH2Z_VEH_FINISHED))) {
-                const int open = !now_tube && fld_match(now.flags, bh->open_mask, bh->open_value) &&
-                                 fld_abs(v->t.lateral) > now.half_width + bh->fall_margin;
-                if(air) leaves = open;
-                else if(fld_match(now.flags, bh->drop_mask, bh->drop_value)) {
-                    if(tube && !now_tube) leaves = open && (bh->launch_chance >= 65536 || (int32_t)(fld_rand(f) & 0xffffu) < bh->launch_chance);
-                    else if(now_tube && bh->drop_chance > 0 && fld_match(now.flags, bh->hold_mask, bh->hold_value) &&
-                            fld_abs(fld_wrap(v->t.lateral, fld_round(now.half_width))) > fld_mul_q16(now.half_width, bh->drop_lat))
-                        leaves = (int32_t)(fld_rand(f) & 0xffffu) < bh->drop_chance;
-                }
-            }
+            if(bh && !(v->flags & (SH2Z_VEH_RETIRED | SH2Z_VEH_FINISHED))) leaves = fld_behave_leaves(f, v, &now, tube, now_tube, air);
             if(leaves) {
                 v->flags = (uint16_t)((v->flags | SH2Z_VEH_FALLING) & ~(SH2Z_VEH_BOOST | SH2Z_VEH_AIR));
                 b->fall_tick = (int32_t)(f->tick - f->start_tick);
