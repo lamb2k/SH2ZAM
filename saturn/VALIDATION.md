@@ -20,6 +20,7 @@ and scope.
 - [line-field-5](validation/line-field-5.md): 2026-11-20 (line field behaviours, line-field-5)
 - [line-field-7](validation/line-field-7.md): 2026-11-21 (line field step entry points and exact step cuts, line-field-7)
 - [line-field-8](validation/line-field-8.md): 2026-11-21 (line field contact order within a step, line-field-8)
+- [line-field-9](validation/line-field-9.md): 2026-11-21 (line field without the extra lateral holds, line-field-9)
 - [line-follower-1](validation/line-follower-1.md): 2026-11-19 (racing-line follower, line-follower-1)
 - [memo-1](validation/memo-1.md): 2026-11-17 (block memo kernels, memo-1)
 - [pose-1](validation/pose-1.md): 2026-11-17 (model pose from binary32 state, pose-1)

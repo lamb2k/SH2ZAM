@@ -1,5 +1,5 @@
 /* Experimental line field (contract tags line-field-1 to line-field-5,
- * line-field-7 and line-field-8).
+ * line-field-7 to line-field-9).
  *
  * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
  * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
@@ -164,15 +164,6 @@ static int32_t fld_ahead(const sh2z_field_t *f, uint32_t i) {
     }
     return -1;
 }
-static int32_t fld_behind(const sh2z_field_t *f, uint32_t i) {
-    uint32_t s = f->slot[i];
-    for(uint32_t k = 1u; k < f->count; ++k) {
-        s = s + 1u < f->count ? s + 1u : 0u;
-        const uint32_t j = f->order[s];
-        if(fld_active(&f->veh[j])) return (int32_t)j;
-    }
-    return -1;
-}
 
 FLD_INLINE void fld_think(sh2z_field_t *f, uint32_t i, uint32_t due, const sh2z_line_sample_t *at,
                           const sh2z_field_behave_t *bh) {
@@ -234,7 +225,6 @@ FLD_INLINE void fld_think(sh2z_field_t *f, uint32_t i, uint32_t due, const sh2z_
     /* ---- lateral ---- */
     int32_t lat = base_lat;
     const int32_t a = fld_ahead(f, i);
-    const int32_t r = fld_behind(f, i);
     if(b->attack_ticks) {
         const sh2z_vehicle_t *t = &f->veh[b->attack_target];
         b->attack_ticks = (uint8_t)(b->attack_ticks > due ? b->attack_ticks - due : 0u);
@@ -267,14 +257,9 @@ FLD_INLINE void fld_think(sh2z_field_t *f, uint32_t i, uint32_t due, const sh2z_
                 lat = av->t.lateral + (int32_t)dir * p->avoid_offset;
             }
         }
-        /* Blocking limit: with a faster vehicle close behind on our line, hold
-         * the current target instead of moving across it. */
-        if(r >= 0 && !b->pass_dir) {
-            const sh2z_vehicle_t *rv = &f->veh[r];
-            const int32_t gap = sh2z_track_near_gap(f->line, &v->t, &rv->t);
-            if(gap > 0 && gap < p->avoid_long && rv->t.speed > v->t.speed &&
-               fld_abs(rv->t.lateral - v->t.lateral) < p->avoid_lat) lat = b->target_lat;
-        }
+        /* line-field-9: no blocking hold. A vehicle does not hold its target
+         * for a faster one close behind; the source avoidance reads the
+         * vehicle behind only for a side attack. */
         /* Side attack, on the chased vehicle only and only while alongside it. */
         if(b->aggression && chasing) {
             const sh2z_vehicle_t *c = &f->veh[b->chase];
@@ -286,22 +271,8 @@ FLD_INLINE void fld_think(sh2z_field_t *f, uint32_t i, uint32_t due, const sh2z_
             }
         }
     }
-    /* Never cut across a vehicle alongside: hold the current lateral while one
-     * sits between here and the target. */
-    if(!b->attack_ticks) {
-        for(int side = 0; side < 2; ++side) {
-            const int32_t n = side ? r : a;
-            if(n < 0) continue;
-            const sh2z_vehicle_t *nv = &f->veh[n];
-            if(fld_abs(sh2z_track_near_gap(f->line, &nv->t, &v->t)) >= p->contact_long * 2) continue;
-            const int32_t lo = (v->t.lateral < lat ? v->t.lateral : lat) - p->contact_lat;
-            const int32_t hi = (v->t.lateral < lat ? lat : v->t.lateral) + p->contact_lat;
-            if(nv->t.lateral > lo && nv->t.lateral < hi && fld_abs(nv->t.lateral - v->t.lateral) >= p->contact_lat) {
-                lat = v->t.lateral;
-                break;
-            }
-        }
-    }
+    /* line-field-9: no hold against cutting across a vehicle alongside. The
+     * target stands as chosen; contact settles any overlap. */
     b->target_lat = lat;
     /* line-field-5: tube roll decisions. */
     if(bh && fld_tube(p, at->flags) && at->half_width > 0) {
@@ -461,15 +432,8 @@ FLD_INLINE uint32_t fld_contacts(sh2z_field_t *f, const sh2z_field_behave_t *bh)
             const int fresh = !(f->brain[ia].touch_cool && f->brain[ib].touch_cool);
             a->flags |= SH2Z_VEH_TOUCH; b->flags |= SH2Z_VEH_TOUCH;
             f->brain[ia].touch_cool = f->brain[ib].touch_cool = FLD_TOUCH_COOL;
-            /* Give each other room: both hold the side they were pushed to. */
-            if(!a_ext && !f->brain[ia].attack_ticks) {
-                f->brain[ia].pass_dir = (int8_t)dir; f->brain[ia].pass_ticks = (uint8_t)fld_clamp(p->pass_hold, 1, 255);
-                f->brain[ia].target_lat = b->t.lateral + dir * p->avoid_offset;
-            }
-            if(!b_ext && !f->brain[ib].attack_ticks) {
-                f->brain[ib].pass_dir = (int8_t)-dir; f->brain[ib].pass_ticks = (uint8_t)fld_clamp(p->pass_hold, 1, 255);
-                f->brain[ib].target_lat = a->t.lateral - dir * p->avoid_offset;
-            }
+            /* line-field-9: no post-contact room hold. The contact is a push and
+             * an impact; neither vehicle is set to hold a side afterwards. */
             if(fresh && bh) {   /* line-field-5: a contact incident with an external vehicle starts a knock-out age */
                 if(a_ext && !b_ext) { f->brain[ib].ko_by = (int16_t)ia; f->brain[ib].ko_age = 1u; }
                 if(b_ext && !a_ext) { f->brain[ia].ko_by = (int16_t)ib; f->brain[ia].ko_age = 1u; }

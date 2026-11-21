@@ -1,15 +1,15 @@
-# Racing-line follower and line field (`line-follower-1`, `line-field-1` to `line-field-5`, `line-field-7`, `line-field-8`, experimental)
+# Racing-line follower and line field (`line-follower-1`, `line-field-1` to `line-field-5`, `line-field-7` to `line-field-9`, experimental)
 
 Contracts: [`line_follower_experimental.h`](include/sh2zam/line_follower_experimental.h),
 section "Contract tag line-follower-1", and
 [`line_field_experimental.h`](include/sh2zam/line_field_experimental.h), sections
-"Contract tags line-field-1 to line-field-5", "Contract tag line-field-7" and "Contract tag line-field-8". Tests:
+"Contract tags line-field-1 to line-field-5", "Contract tag line-field-7", "Contract tag line-field-8" and "Contract tag line-field-9". Tests:
 `tests/test_line_follower.c` and `tests/test_line_field.c`. Validation records:
 [line-follower-1](validation/line-follower-1.md) and
 [line-field-1](validation/line-field-1.md), [line-field-2](validation/line-field-2.md),
 [line-field-3](validation/line-field-3.md), [line-field-4](validation/line-field-4.md),
-[line-field-5](validation/line-field-5.md), [line-field-7](validation/line-field-7.md) and
-[line-field-8](validation/line-field-8.md). No
+[line-field-5](validation/line-field-5.md), [line-field-7](validation/line-field-7.md),
+[line-field-8](validation/line-field-8.md) and [line-field-9](validation/line-field-9.md). No
 instruction model yet: both are compiled C and have only been measured as part of a larger
 program.
 
@@ -94,10 +94,14 @@ it arrives as `kick_lat` and `kick_speed`.
 - **Contact order (`line-field-8`):** the step orders the field again from its own positions before
   the contact passes, so a vehicle that passes another within one step is checked against the
   vehicle it reaches (the scan from each vehicle ends at the first one out of reach).
+- **No extra lateral holds (`line-field-9`):** the field keeps only the lateral decisions of the
+  reference driver it models. A contact no longer sets either vehicle to hold a side, a target is
+  no longer held because a vehicle sits between it and the current lateral, and a vehicle no
+  longer keeps its target for a faster one close behind.
 - **Lanes:** an agent takes the side with more room around a slower vehicle
-  ahead, looking further ahead the faster it closes. It holds that side for a
-  while, never cuts across a vehicle alongside, and does not move across a
-  faster vehicle close behind on its line (the blocking limit).
+  ahead, looking further ahead the faster it closes, and holds that side for a
+  while. Since `line-field-9` it does not hold its lateral for a vehicle
+  alongside or a faster vehicle behind; contact settles any overlap.
 - **Boost:** after a set number of laps, with enough energy, when behind its
   pace.
 - **Contact:** touching pairs are pushed apart. What one cannot take (the
