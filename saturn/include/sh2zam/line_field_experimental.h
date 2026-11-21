@@ -8,7 +8,7 @@
  * line-field-3 (the first-lap chase cap), line-field-4 (surface zones and
  * tube nodes), line-field-5 (tube roll, lateral inertia, falls and drops
  * with a knock-out credit, a near-focus knock-out gate and impact damage)
- * and line-field-7 (the step split by behaviour block).
+ * and line-field-7 (the step split by behaviour block, a far node lookup).
  *
  * Shared vehicle state. sh2z_vehicle_t is the line-space state of ANY vehicle
  * on the line: agents the field drives, and vehicles driven elsewhere (a
