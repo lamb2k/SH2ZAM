@@ -136,6 +136,21 @@ static void arguments(void) {
     p.form = 0; CHECK(sh2z_cellrec_expand(&pos, &p, rec, off, out, 1));
 }
 
+/* the count limit alone: the streams and the entries are separate buffers big enough for MAX_COUNT + 1 cells, so no overlap or alignment check can refuse the call; only the count can */
+static void count_limit(void) {
+    static uint8_t rec[4u * (SH2Z_CELLREC_MAX_COUNT + 1u) + 8u] __attribute__((aligned(4)));
+    static uint8_t off[2u * (SH2Z_CELLREC_MAX_COUNT + 1u) + 8u] __attribute__((aligned(4)));
+    static uint8_t out[8u * (SH2Z_CELLREC_MAX_COUNT + 1u) + 8u] __attribute__((aligned(4)));
+    sh2z_cellrec_params_t p; sh2z_cellrec_pos_t pos = { 5, 6 };
+    fill_params(&p, 0, 0);
+    memset(out, 0x77, sizeof out);
+    CHECK(!sh2z_cellrec_expand(&pos, &p, rec, off, out, SH2Z_CELLREC_MAX_COUNT + 1u));
+    for(size_t i = 0; i < sizeof out; i++) CHECK(out[i] == 0x77);          /* the refusal left the output and the position alone */
+    CHECK(pos.x == 5u && pos.y == 6u);
+    CHECK(sh2z_cellrec_expand(&pos, &p, rec, off, out, SH2Z_CELLREC_MAX_COUNT));   /* the same buffers at the limit are accepted */
+    CHECK(out[8u * SH2Z_CELLREC_MAX_COUNT] == 0x77);                       /* and nothing is written past the last entry */
+}
+
 /* an exact worked case: three cells, byte offsets, replaced palette bits, mirrored */
 static void worked(void) {
     static const uint8_t rec[12] __attribute__((aligned(4))) = { 0x12, 0x34, 0x03, 0x41, 0x12, 0x35, 0x13, 0xc2, 0x12, 0x36, 0x00, 0x03 };
@@ -155,6 +170,7 @@ int main(void) {
     exact();
     chained();
     arguments();
+    count_limit();
     worked();
     mutants();
     printf("cell_records_exact: %" PRIu64 " checks passed\n", checks);
