@@ -1,5 +1,5 @@
-/* Experimental line field (contract tags line-field-1 to line-field-5 and
- * line-field-7).
+/* Experimental line field (contract tags line-field-1 to line-field-5,
+ * line-field-7 and line-field-8).
  *
  * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
  * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
@@ -530,11 +530,9 @@ static void fld_laps(sh2z_field_t *f, uint32_t i) {
 /* The step, with the behaviour block as a parameter (line-field-7). Each entry point below inlines it once: with
  * bh a constant NULL every line-field-5 branch folds away, so the NULL step is line-field-4's code, and the
  * behaviour step carries none of the NULL tests. */
-FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
-    const sh2z_field_params_t *p = f->params;
-    const sh2z_line_t *line = f->line;
-    ++f->tick;
-    /* Physical order over the vehicle array (largest dist first, ties by index). */
+/* Physical order over the vehicle array (largest dist first, ties by index) and each vehicle's slot in it. The
+ * order is a strict total order of the positions, so the result does not depend on the order it starts from. */
+FLD_INLINE void fld_order(sh2z_field_t *f) {
     for(uint32_t i = 1u; i < f->count; ++i) {
         const uint8_t k = f->order[i];
         const int32_t kd = f->veh[k].t.dist;
@@ -549,6 +547,13 @@ FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
         f->order[j] = k;
     }
     for(uint32_t s = 0u; s < f->count; ++s) f->slot[f->order[s]] = (uint8_t)s;
+}
+
+FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
+    const sh2z_field_params_t *p = f->params;
+    const sh2z_line_t *line = f->line;
+    ++f->tick;
+    fld_order(f);
     if(!f->started) return;
 
     const sh2z_vehicle_t *focus = (f->focus >= 0 && (uint32_t)f->focus < f->count) ? &f->veh[f->focus] : (const sh2z_vehicle_t *)0;
@@ -700,6 +705,9 @@ FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
         f->veh[i].flags &= (uint16_t)~SH2Z_VEH_TOUCH;
         if(f->brain[i].touch_cool) --f->brain[i].touch_cool;
     }
+    /* line-field-8: the order again, from this step's positions. A contact scan ends at the first vehicle out of
+     * reach, so a vehicle that passed another during the step must not be left behind it in the order. */
+    fld_order(f);
     /* Further passes settle pile-ups of three or more (energy is per incident,
      * so nothing is charged twice). At most three passes. */
     for(int pass = 0; pass < 3; ++pass) if(fld_contacts(f, bh) <= 1u) break;

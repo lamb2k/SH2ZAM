@@ -8,7 +8,8 @@
  * line-field-3 (the first-lap chase cap), line-field-4 (surface zones and
  * tube nodes), line-field-5 (tube roll, lateral inertia, falls and drops
  * with a knock-out credit, a near-focus knock-out gate and impact damage)
- * and line-field-7 (the step split by behaviour block, a far node lookup).
+ * line-field-7 (the step split by behaviour block, a far node lookup) and
+ * line-field-8 (contact found for vehicles that pass one another within a step).
  *
  * Shared vehicle state. sh2z_vehicle_t is the line-space state of ANY vehicle
  * on the line: agents the field drives, and vehicles driven elsewhere (a
@@ -346,6 +347,17 @@ void sh2z_field_step_behave(sh2z_field_t *f);
  *  at or before dist, else 0. For a look-ahead far from any hint (the step's
  *  exit look-ahead uses it); log2(count) probes. */
 uint32_t sh2z_line_locate_far(const sh2z_line_t *line, int32_t dist);
+
+/* ---- Contract tag line-field-8 ------------------------------------------ */
+
+/* No new entry point. Every step (sh2z_field_step, _plain and _behave) orders
+ * the field again from the step's own positions before its contact passes.
+ * A vehicle that passes another within one step is then checked against the
+ * vehicle it reaches; before, the contact scan used the order from the start
+ * of the step and could end at the passed vehicle first. The order is a
+ * strict total order of the positions, so the rest of the step is unchanged;
+ * races in which the stale order left a touching pair unchecked, or scanned
+ * a pile-up in another sequence, give different results. */
 
 #ifdef __cplusplus
 }
