@@ -7,6 +7,7 @@ a record, run `python3 saturn/tools/validation_index.py --write`; host CI runs
 and scope.
 
 - [body-contact-1](validation/body-contact-1.md): 2026-11-19 (body contact, body-contact-1)
+- [cell-records-1](validation/cell-records-1.md): 2026-11-21 (delta coded sprite records, cell-records-1)
 - [dsp-1](validation/dsp-1.md): 2026-11-19 (SCU DSP access, affine transform, Q16 outer product, dsp-1)
 - [dual-claim-1](validation/dual-claim-1.md): 2026-11-19 (two-CPU try-claim, dual-claim-1)
 - [effect-pool-1](validation/effect-pool-1.md): 2026-11-20 (effect pool, effect-pool-1)
