@@ -7,8 +7,10 @@
  * Contract tags line-field-1, line-field-2 (the second-lap re-target),
  * line-field-3 (the first-lap chase cap), line-field-4 (surface zones and
  * tube nodes), line-field-5 (tube roll, lateral inertia, falls and drops
- * with a knock-out credit, a near-focus knock-out gate and impact damage)
- * and line-field-7 (the step split by behaviour block, a far node lookup).
+ * with a knock-out credit, a near-focus knock-out gate and impact damage),
+ * line-field-7 (the step split by behaviour block, a far node lookup) and
+ * line-field-8 (contact found for vehicles that pass one another within a
+ * step).
  *
  * Shared vehicle state. sh2z_vehicle_t is the line-space state of ANY vehicle
  * on the line: agents the field drives, and vehicles driven elsewhere (a
@@ -194,7 +196,7 @@ typedef struct {
     int32_t avoid_offset;      /**< Q8 offset taken around the vehicle ahead. */
     int32_t pass_hold;         /**< Ticks a pass side is held. */
     int32_t contact_long;      /**< Q8 */
-    int32_t contact_lat;       /**< Q8 */
+    int32_t contact_lat;       /**< Q8; 0 or less turns the field's own contact off (no pair walk, as before with no pair in reach). */
     int32_t bump_keep;         /**< Q16 */
     int32_t hit_energy;        /**< Q16 energy per Q8 of closing speed. */
     int32_t side_energy;       /**< Q8 energy per contact. */
@@ -346,6 +348,17 @@ void sh2z_field_step_behave(sh2z_field_t *f);
  *  at or before dist, else 0. For a look-ahead far from any hint (the step's
  *  exit look-ahead uses it); log2(count) probes. */
 uint32_t sh2z_line_locate_far(const sh2z_line_t *line, int32_t dist);
+
+/* ---- Contract tag line-field-8 ------------------------------------------ */
+
+/* No new entry point. Every step (sh2z_field_step, _plain and _behave) orders
+ * the field again from the step's own positions before its contact passes.
+ * A vehicle that passes another within one step is then checked against the
+ * vehicle it reaches; before, the contact scan used the order from the start
+ * of the step and could end at the passed vehicle first. The order is a
+ * strict total order of the positions, so the rest of the step is unchanged;
+ * races in which the stale order left a touching pair unchecked, or scanned
+ * a pile-up in another sequence, give different results. */
 
 #ifdef __cplusplus
 }

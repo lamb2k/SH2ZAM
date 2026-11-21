@@ -1,5 +1,5 @@
-/* Experimental line field (contract tags line-field-1 to line-field-5 and
- * line-field-7).
+/* Experimental line field (contract tags line-field-1 to line-field-5,
+ * line-field-7 and line-field-8).
  *
  * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
  * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
@@ -377,6 +377,8 @@ FLD_INLINE void fld_wall(sh2z_field_t *f, uint32_t i, const sh2z_field_behave_t 
 /* One pass over every pair in reach; returns the number of pairs pushed. */
 FLD_INLINE uint32_t fld_contacts(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
     const sh2z_field_params_t *p = f->params;
+    /* No reach across: no pair can overlap (|dl| >= 0 >= contact_lat), so the walk would change nothing. */
+    if(p->contact_lat <= 0) return 0u;
     const sh2z_line_t *line = f->line;
     sh2z_line_sample_t at;
     uint32_t pushed = 0u;
@@ -391,7 +393,8 @@ FLD_INLINE uint32_t fld_contacts(sh2z_field_t *f, const sh2z_field_behave_t *bh)
             if(!fld_current(f, i1)) continue;
             int32_t gap = sh2z_track_near_gap(line, &f->veh[i0].t, &f->veh[i1].t);
             if(gap >= p->contact_long) break;
-            /* The order dates from the start of the tick: a pair may have swapped. */
+            /* The order is by distance along the line: where it wraps past the line's start, the vehicle later in
+             * the order can be the one ahead, so the gap's sign decides. */
             uint32_t ia = i0, ib = i1;
             if(gap < 0) {
                 if(gap <= -p->contact_long) continue;
@@ -525,14 +528,9 @@ static void fld_laps(sh2z_field_t *f, uint32_t i) {
     if(lap < (int32_t)b->laps_seen) b->laps_seen = (int16_t)lap;   /* an external vehicle driven backwards */
 }
 
-/* The step, with the behaviour block as a parameter (line-field-7). Each entry point below inlines it once: with
- * bh a constant NULL every line-field-5 branch folds away, so the NULL step is line-field-4's code, and the
- * behaviour step carries none of the NULL tests. */
-FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
-    const sh2z_field_params_t *p = f->params;
-    const sh2z_line_t *line = f->line;
-    ++f->tick;
-    /* Physical order over the vehicle array (largest dist first, ties by index). */
+/* Physical order over the vehicle array (largest dist first, ties by index) and each vehicle's slot in it. The
+ * order is a strict total order of the positions, so the result does not depend on the order it starts from. */
+FLD_INLINE void fld_order(sh2z_field_t *f) {
     for(uint32_t i = 1u; i < f->count; ++i) {
         const uint8_t k = f->order[i];
         const int32_t kd = f->veh[k].t.dist;
@@ -547,6 +545,16 @@ FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
         f->order[j] = k;
     }
     for(uint32_t s = 0u; s < f->count; ++s) f->slot[f->order[s]] = (uint8_t)s;
+}
+
+/* The step, with the behaviour block as a parameter (line-field-7). Each entry point below inlines it once: with
+ * bh a constant NULL every line-field-5 branch folds away, so the NULL step is line-field-4's code, and the
+ * behaviour step carries none of the NULL tests. */
+FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
+    const sh2z_field_params_t *p = f->params;
+    const sh2z_line_t *line = f->line;
+    ++f->tick;
+    fld_order(f);
     if(!f->started) return;
 
     const sh2z_vehicle_t *focus = (f->focus >= 0 && (uint32_t)f->focus < f->count) ? &f->veh[f->focus] : (const sh2z_vehicle_t *)0;
@@ -698,6 +706,9 @@ FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
         f->veh[i].flags &= (uint16_t)~SH2Z_VEH_TOUCH;
         if(f->brain[i].touch_cool) --f->brain[i].touch_cool;
     }
+    /* line-field-8: the order again, from this step's positions. A contact scan ends at the first vehicle out of
+     * reach, so a vehicle that passed another during the step must not be left behind it in the order. */
+    fld_order(f);
     /* Further passes settle pile-ups of three or more (energy is per incident,
      * so nothing is charged twice). At most three passes. */
     for(int pass = 0; pass < 3; ++pass) if(fld_contacts(f, bh) <= 1u) break;
