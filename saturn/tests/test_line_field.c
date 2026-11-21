@@ -67,7 +67,7 @@ static void vehicle(uint32_t i, uint32_t grid, int32_t lap_ticks) {
 
 static sh2z_field_t F;
 /* The step the races take (line-field-7 runs them through each entry point). */
-static void (*step)(sh2z_field_t *) = sh2z_field_step;
+static void (*field_step)(sh2z_field_t *) = sh2z_field_step;
 static void field(uint32_t count, uint32_t seed) {
     sh2z_field_init(&F, &line, &P, veh, brain, order, slot, rank_order, count, seed);
 }
@@ -129,7 +129,7 @@ static uint32_t race(uint32_t count, uint32_t seed, int external, uint32_t ticks
             veh[0].kick_lat = veh[0].kick_speed = 0; veh[0].energy = veh[0].max_energy;
         }
         const sh2z_track_state_t before = veh[0].t;
-        step(&F);
+        field_step(&F);
         if(check) invariants(count, &before);
     }
     return sh2z_field_hash(&F);
@@ -965,10 +965,10 @@ static void test_step_entries(void) {
     uint32_t falls = 0u;
     for(uint32_t seed = 1; seed <= 6; ++seed) {
         params(); make_line();
-        step = sh2z_field_step_plain;
+        field_step = sh2z_field_step_plain;
         CHECK(race(24, seed, 0, 5000, 1) == lf1[seed - 1u]);
         behave_scene();
-        step = sh2z_field_step;
+        field_step = sh2z_field_step;
         const uint32_t h = race(30, seed, 1, 5000, 0);
         falls += F.falls;
 #ifdef LF7_PIN_PRINT
@@ -977,13 +977,13 @@ static void test_step_entries(void) {
         CHECK(h == lf5[seed - 1u]);
 #endif
         behave_scene();
-        step = sh2z_field_step_behave;
+        field_step = sh2z_field_step_behave;
         CHECK(race(30, seed, 1, 5000, 0) == h);
         behave_scene(); B.roll_chance = 0;                          /* control: one behaviour off */
         CHECK(race(30, seed, 1, 5000, 0) != h);
     }
     CHECK(falls > 0u);                                              /* the scene reaches the behaviour code */
-    step = sh2z_field_step;
+    field_step = sh2z_field_step;
     make_line(); params();
 }
 
