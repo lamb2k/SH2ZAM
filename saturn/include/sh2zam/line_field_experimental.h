@@ -341,6 +341,12 @@ void sh2z_field_step_plain(sh2z_field_t *f);
  *  same state, step for step, without the NULL tests. */
 void sh2z_field_step_behave(sh2z_field_t *f);
 
+/** The node containing dist, found by halving: the node sh2z_line_locate
+ *  gives from every hint (node starts never decrease), the last node starting
+ *  at or before dist, else 0. For a look-ahead far from any hint (the step's
+ *  exit look-ahead uses it); log2(count) probes. */
+uint32_t sh2z_line_locate_far(const sh2z_line_t *line, int32_t dist);
+
 #ifdef __cplusplus
 }
 #endif

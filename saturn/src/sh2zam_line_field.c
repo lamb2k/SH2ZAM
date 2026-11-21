@@ -41,6 +41,17 @@ FLD_INLINE int32_t fld_wrap(int32_t lat, int32_t c) {
     while(lat < -h) lat += c;
     return lat;
 }
+/* line-field-7: the last node starting at or before dist (else 0), by halving. */
+uint32_t sh2z_line_locate_far(const sh2z_line_t *line, int32_t dist) {
+    const sh2z_line_node_t *n = line->nodes;
+    uint32_t lo = 0u, hi = line->count;
+    while(hi - lo > 1u) {
+        const uint32_t mid = (lo + hi) >> 1;
+        if(n[mid].start <= dist) lo = mid;
+        else hi = mid;
+    }
+    return lo;
+}
 /* The zone holding a line state when its step starts, or 0. Zones are sorted by start. */
 static uint32_t fld_zone(const sh2z_field_surface_t *s, const sh2z_track_state_t *t) {
     for(uint32_t k = 0u; k < s->zone_count; ++k) {
@@ -116,22 +127,27 @@ FLD_INLINE int32_t fld_rank_key(const sh2z_field_t *f, uint32_t i) {
 static uint32_t fld_rank(sh2z_field_t *f) {
     uint8_t *o = f->rank_order;
     uint32_t moved = 0u;
+    /* line-field-7: the key of o[i - 1] carries over from the previous pass (keys do not change while sorting). */
+    int32_t last = f->count ? fld_rank_key(f, o[0]) : 0;
     for(uint32_t i = 1u; i < f->count; ++i) {
         const uint8_t k = o[i];
         const int32_t kk = fld_rank_key(f, k);
+        int32_t next = kk;   /* the key that ends at o[i] */
         uint32_t j = i;
         while(j > 0u) {
             const uint8_t p = o[j - 1u];
-            const int32_t pk = fld_rank_key(f, p);
+            const int32_t pk = j == i ? last : fld_rank_key(f, p);
             /* Between running vehicles a place changes hands only on a clear lead
              * (no flicker side by side); finishing order is exact. */
             if((f->veh[p].flags | f->veh[k].flags) & SH2Z_VEH_FINISHED) {
                 if(pk > kk || (pk == kk && p < k)) break;
             } else if((int64_t)pk + f->params->rank_lead >= kk) break;
+            if(j == i) next = pk;
             o[j] = p;
             --j;
         }
         if(j != i) { o[j] = k; moved = 1u; }
+        last = next;
     }
     for(uint32_t i = 0u; i < f->count; ++i) f->veh[o[i]].rank = (uint8_t)i;
     return moved;
@@ -292,7 +308,7 @@ FLD_INLINE void fld_think(sh2z_field_t *f, uint32_t i, uint32_t due, const sh2z_
         if(fld_match(at->flags, bh->exit_mask, bh->exit_value)) {
             int32_t d = v->t.dist + bh->roll_exit_ahead;
             while(d >= f->line->length) d -= f->line->length;
-            const uint32_t n = sh2z_line_locate(f->line, d, v->t.node);
+            const uint32_t n = sh2z_line_locate_far(f->line, d);
             exit = !fld_tube(p, f->line->nodes[n].flags);
         }
         /* A decision stands for 4 ticks; a level-of-detail step for its own ticks. */
@@ -364,9 +380,11 @@ FLD_INLINE uint32_t fld_contacts(sh2z_field_t *f, const sh2z_field_behave_t *bh)
             }
             sh2z_vehicle_t *a = &f->veh[ia], *b = &f->veh[ib];   /* a ahead of b */
             int32_t dl = a->t.lateral - b->t.lateral;
-            if(p->surface && p->surface->wrap_mask) {   /* line-field-4: across a tube's seam */
+            /* line-field-4: across a tube's seam. line-field-7: the node's flags are the sample's, so only a tube
+             * node is sampled. */
+            if(fld_tube(p, line->nodes[a->t.node].flags)) {
                 sh2z_line_sample(line, a->t.node, a->t.dist, &at);
-                if(fld_tube(p, at.flags) && at.half_width > 0) dl = fld_wrap(dl, fld_round(at.half_width));
+                if(at.half_width > 0) dl = fld_wrap(dl, fld_round(at.half_width));
             }
             const int32_t adl = fld_abs(dl);
             if(adl >= p->contact_lat) continue;

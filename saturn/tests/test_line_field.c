@@ -834,6 +834,80 @@ static void test_impact(void) {
     CHECK(a > U(50) && b > U(50));                                  /* control: the flat side energy empties both */
 }
 
+/* line-field-7: the contact test samples only tube nodes for the seam; a pair either side of a tube's seam still
+ * touches (its lateral difference wraps). Control: the same pair on a node that is not a tube does not. */
+static uint32_t seam_scene(uint16_t flags) {
+    params(); surface_reset(); surf.wrap_mask = 0x0180u; surf.wrap_value = 0x0080u; P.surface = &surf;
+    make_line(); mark(20, 60, flags, 100);
+    const int32_t round = (int32_t)(((int64_t)U(100) * 411775) >> 16), h = round >> 1;
+    rng = 5u;
+    vehicle(0, 0, 2000); vehicle(1, 1, 2000);
+    veh[0].t.dist = U(200 * 30); veh[0].t.lateral = round - h - U(10); veh[0].t.speed = U(30);
+    veh[1].t.dist = U(200 * 30) - U(20); veh[1].t.lateral = -h + U(10); veh[1].t.speed = U(30);
+    veh[0].t.node = sh2z_line_locate(&line, veh[0].t.dist, 0); veh[1].t.node = sh2z_line_locate(&line, veh[1].t.dist, 0);
+    field(2, 1u);
+    sh2z_field_start(&F);
+    veh[0].accel = veh[1].accel = 0; veh[0].brake = veh[1].brake = 0; veh[0].grip = veh[1].grip = 0;
+    brain[0].pace = brain[1].pace = 0;
+    sh2z_field_step(&F);
+    const uint32_t c = F.contacts;
+    params(); make_line();
+    return c;
+}
+static void test_seam_contact(void) {
+    CHECK(seam_scene(0x0080u) == 1u);                                /* across the seam of a tube */
+    CHECK(seam_scene(0x0000u) == 0u);                                /* control: no tube, no seam */
+}
+
+/* line-field-7: sh2z_line_locate_far gives sh2z_line_locate's node from every hint: on the even line, on a line of
+ * uneven spans with zero-length nodes, and on a one-node line; at every node start and either side of it, below the
+ * start and past the length, and for look-aheads of 3000 units from every node (crossing the start line). Control:
+ * a search that takes the first of equal starts differs on the zero-length nodes. */
+static uint32_t locate_first(const sh2z_line_t *l, int32_t dist) {   /* control */
+    uint32_t h = sh2z_line_locate_far(l, dist);
+    while(h > 0u && l->nodes[h - 1u].start == l->nodes[h].start) --h;
+    return h;
+}
+static uint32_t locate_check(const sh2z_line_t *l) {
+    uint32_t differ = 0u;
+    for(uint32_t k = 0; k <= l->count; ++k) {
+        const int32_t base = k < l->count ? l->nodes[k].start : l->length;
+        for(int32_t e = -2; e <= 2; ++e) {
+            const int32_t d = base + e;
+            const uint32_t far = sh2z_line_locate_far(l, d);
+            for(uint32_t h = 0; h < l->count + 2u; ++h) CHECK(sh2z_line_locate(l, d, h) == far);
+            differ += locate_first(l, d) != far;
+        }
+    }
+    for(uint32_t k = 0; k < l->count; ++k) {
+        int32_t d = l->nodes[k].start + U(3000) + (int32_t)(rnd() % 256u);
+        while(d >= l->length) d -= l->length;
+        CHECK(sh2z_line_locate(l, d, k) == sh2z_line_locate_far(l, d));
+    }
+    for(uint32_t r = 0; r < 20000; ++r) {
+        const int32_t d = (int32_t)(rnd() % (uint32_t)(l->length + 512)) - 256;
+        CHECK(sh2z_line_locate(l, d, rnd() % l->count) == sh2z_line_locate_far(l, d));
+    }
+    return differ;
+}
+static void test_locate_far(void) {
+    make_line();
+    CHECK(locate_check(&line) == 0u);                                /* no equal starts: the control agrees */
+    sh2z_line_node_t un[40];
+    sh2z_line_t ul = { un, 40u, 0 };
+    int32_t at = 0;
+    for(uint32_t i = 0; i < 40u; ++i) {
+        un[i] = nodes[i];
+        un[i].start = at;
+        at += (i % 7u == 3u) ? 0 : U(20 + (int32_t)(rnd() % 300u));   /* every 7th node has zero length */
+    }
+    ul.length = at + U(50);
+    CHECK(locate_check(&ul) > 0u);                                   /* control: first-of-equal differs */
+    sh2z_line_t one = { nodes, 1u, U(200) };
+    CHECK(locate_check(&one) == 0u);
+    make_line();
+}
+
 /* line-field-7: the entry points split by behaviour block. Each gives sh2z_field_step's state step for step:
  * the plain step the pinned line-field-1 hashes; the behaviour step, on a line with a hold tube, a drop tube, an
  * air stretch with an open edge and an outside driver, with every behaviour on, the hashes line-field-5's
@@ -913,6 +987,8 @@ int main(void) {
     test_launch();
     test_impact();
     test_step_entries();
+    test_locate_far();
+    test_seam_contact();
     printf("line field: %" PRIu64 " checks passed\n", checks);
     return 0;
 }
