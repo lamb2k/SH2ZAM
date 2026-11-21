@@ -319,7 +319,7 @@ static uint32_t room_scene(int avoid) {
     (void)frozen_pair(U(5000), U(10), U(30), -U(20), -U(10), U(34));
     think_steps();
     CHECK(F.contacts == 1u);
-    const uint32_t held = (brain[0].pass_ticks != 0u) + (brain[1].pass_ticks != 0u);
+    const uint32_t held = (uint32_t)(brain[0].pass_ticks != 0u) + (uint32_t)(brain[1].pass_ticks != 0u);
     CHECK(held == (uint32_t)(brain[0].pass_dir != 0) + (uint32_t)(brain[1].pass_dir != 0));
     params();
     return held;
