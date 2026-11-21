@@ -1,15 +1,16 @@
-# Racing-line follower and line field (`line-follower-1`, `line-field-1` to `line-field-5`, experimental)
+# Racing-line follower and line field (`line-follower-1`, `line-field-1` to `line-field-5`, `line-field-7`, experimental)
 
 Contracts: [`line_follower_experimental.h`](include/sh2zam/line_follower_experimental.h),
 section "Contract tag line-follower-1", and
-[`line_field_experimental.h`](include/sh2zam/line_field_experimental.h), section
-"Contract tags line-field-1 to line-field-5". Tests: `tests/test_line_follower.c` and
-`tests/test_line_field.c`. Validation records:
+[`line_field_experimental.h`](include/sh2zam/line_field_experimental.h), sections
+"Contract tags line-field-1 to line-field-5" and "Contract tag line-field-7". Tests:
+`tests/test_line_follower.c` and `tests/test_line_field.c`. Validation records:
 [line-follower-1](validation/line-follower-1.md) and
 [line-field-1](validation/line-field-1.md), [line-field-2](validation/line-field-2.md),
-[line-field-3](validation/line-field-3.md), [line-field-4](validation/line-field-4.md) and
-[line-field-5](validation/line-field-5.md). No instruction model yet: both are compiled C and have
-only been measured as part of a larger program.
+[line-field-3](validation/line-field-3.md), [line-field-4](validation/line-field-4.md),
+[line-field-5](validation/line-field-5.md) and [line-field-7](validation/line-field-7.md). No
+instruction model yet: both are compiled C and have only been measured as part of a larger
+program.
 
 Two layers for vehicles that travel along one closed, baked line: a lap
 course, a patrol loop, a rail.
@@ -82,6 +83,13 @@ it arrives as `kick_lat` and `kick_speed`.
   - a near-focus gate: far from the focus, contact and wall energy cannot retire an agent;
   - impact damage (`contact_norm`): an incident costs the closing speed along the line between the
     two, shared, and an attacker's victim the whole.
+- **Entry points (`line-field-7`):** `sh2z_field_step_plain` (no behaviour block) and
+  `sh2z_field_step_behave` (a block set) give `sh2z_field_step`'s state step for step; a caller that
+  knows which it runs calls one, and the other can be dropped at link time. `sh2z_line_locate_far`
+  finds a node by halving (the node `sh2z_line_locate` gives from every hint), for look-aheads far
+  from any hint such as the roll's exit look-ahead. The same release removes repeated work inside
+  the step with unchanged results: the seam sample only on tube nodes, rank keys carried through
+  the sort, and one line sample per agent step under lateral inertia.
 - **Lanes:** an agent takes the side with more room around a slower vehicle
   ahead, looking further ahead the faster it closes. It holds that side for a
   while, never cuts across a vehicle alongside, and does not move across a
