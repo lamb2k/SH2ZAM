@@ -1,4 +1,5 @@
-/* Experimental line field (contract tags line-field-1 to line-field-5).
+/* Experimental line field (contract tags line-field-1 to line-field-5 and
+ * line-field-7).
  *
  * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
  * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
