@@ -332,9 +332,9 @@ typedef struct sh2z_field_behave {
 /* ---- Contract tag line-field-7 ------------------------------------------ */
 
 /** sh2z_field_step for a field whose params->behave is NULL: the same state,
- *  step for step, from code that carries no line-field-5 branch. A caller that
- *  never sets a behaviour block calls this, and a linker that drops unused
- *  sections drops the behaviour step. */
+ *  step for step, from code that carries no line-field-5 branch. A caller
+ *  that never sets a behaviour block calls this, and a linker that drops
+ *  unused sections drops the behaviour step. */
 void sh2z_field_step_plain(sh2z_field_t *f);
 
 /** sh2z_field_step for a field whose params->behave is set (not NULL): the

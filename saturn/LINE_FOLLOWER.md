@@ -2,14 +2,15 @@
 
 Contracts: [`line_follower_experimental.h`](include/sh2zam/line_follower_experimental.h),
 section "Contract tag line-follower-1", and
-[`line_field_experimental.h`](include/sh2zam/line_field_experimental.h), section
-"Contract tags line-field-1 to line-field-5" and "Contract tag line-field-7". Tests: `tests/test_line_follower.c` and
-`tests/test_line_field.c`. Validation records:
+[`line_field_experimental.h`](include/sh2zam/line_field_experimental.h), sections
+"Contract tags line-field-1 to line-field-5" and "Contract tag line-field-7". Tests:
+`tests/test_line_follower.c` and `tests/test_line_field.c`. Validation records:
 [line-follower-1](validation/line-follower-1.md) and
 [line-field-1](validation/line-field-1.md), [line-field-2](validation/line-field-2.md),
 [line-field-3](validation/line-field-3.md), [line-field-4](validation/line-field-4.md),
-[line-field-5](validation/line-field-5.md) and [line-field-7](validation/line-field-7.md). No instruction model yet: both are compiled C and have
-only been measured as part of a larger program.
+[line-field-5](validation/line-field-5.md) and [line-field-7](validation/line-field-7.md). No
+instruction model yet: both are compiled C and have only been measured as part of a larger
+program.
 
 Two layers for vehicles that travel along one closed, baked line: a lap
 course, a patrol loop, a rail.
