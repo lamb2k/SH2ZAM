@@ -351,8 +351,8 @@ static void test_no_cut_hold(void) {
 }
 
 /* line-field-9: no blocking hold. The agent stands on its line with a stale target 80 off it, and an agent 80
- * behind on the same line closes at 4 a tick: the target is its line again (the reference reads the vehicle behind only for a side
- * attack). Control: with a pass side held, the stale target stands (the probe sees a held target). */
+ * behind on the same line closes at 4 a tick: the target is its line again (the reference reads the vehicle behind
+ * only for a side attack). Control: with a pass side held, the stale target stands (the probe sees a held target). */
 static int32_t block_scene(int32_t speed1, int hold, int32_t *line_lat) {
     params();
     *line_lat = frozen_pair(U(5000), 0, 0, -U(80), 0, speed1);   /* the agent stands; the one behind closes slowly */

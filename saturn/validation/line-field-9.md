@@ -7,10 +7,10 @@ reference driver the field models does not have:
 - **Post-contact room hold.** After a contact, both vehicles were set to hold the side they were pushed to for
   `pass_hold` ticks. The reference's contact is a push and an impact only.
 - **No-cut hold.** A target lateral with a vehicle between it and the current lateral was replaced by the
-  current lateral. The reference steers to the side it picked around the vehicle ahead (cpu.c 2004-2013) and
-  nudges away from it when close (cpu.c 2181-2198). Nothing holds the lateral for a vehicle in between.
+  current lateral. The reference steers to the side it picked around the vehicle ahead and nudges away from it
+  when close. Nothing holds the lateral for a vehicle in between.
 - **Blocking hold.** A vehicle kept its previous target while a faster vehicle was close behind on its line.
-  The reference reads the vehicle behind only for a side attack (cpu.c 1793).
+  The reference reads the vehicle behind only for a side attack.
 
 Avoiding the vehicle ahead, holding that side for `pass_hold` ticks and the side attack are unchanged.
 `pass_hold` now only times the side chosen around the vehicle ahead.

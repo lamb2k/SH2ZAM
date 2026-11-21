@@ -8,7 +8,7 @@
  * line-field-3 (the first-lap chase cap), line-field-4 (surface zones and
  * tube nodes), line-field-5 (tube roll, lateral inertia, falls and drops
  * with a knock-out credit, a near-focus knock-out gate and impact damage),
- * line-field-7 (the step split by behaviour block, a far node lookup) and
+ * line-field-7 (the step split by behaviour block, a far node lookup),
  * line-field-8 (contact found for vehicles that pass one another within a
  * step) and line-field-9 (no lateral holds beyond the reference driver's:
  * no post-contact room hold, no hold against cutting across a vehicle
@@ -373,12 +373,11 @@ uint32_t sh2z_line_locate_far(const sh2z_line_t *line, int32_t dist);
  *   - the hold against cutting across a vehicle alongside: a target lateral
  *     with a vehicle between it and the current lateral is no longer
  *     replaced by the current lateral. The reference's avoidance steers to
- *     the side it picked around the vehicle ahead (cpu.c 2004-2013) and
- *     nudges away from it when close (cpu.c 2181-2198); nothing holds the
- *     lateral for a vehicle in between.
+ *     the side it picked around the vehicle ahead and nudges away from it
+ *     when close; nothing holds the lateral for a vehicle in between.
  *   - the blocking hold: a vehicle no longer keeps its previous target for a
  *     faster vehicle close behind on its line. The reference reads the
- *     vehicle behind only for a side attack (cpu.c 1793).
+ *     vehicle behind only for a side attack.
  * Avoidance of the vehicle ahead, its pass_hold and the side attack stay as
  * before. Races with close racing give different results from line-field-8.
  * pass_hold now only times the side chosen around the vehicle ahead. */
