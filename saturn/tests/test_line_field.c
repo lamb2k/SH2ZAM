@@ -1,4 +1,4 @@
-/* Line field (contract tags line-field-1 to line-field-5) checks.
+/* Line field (contract tags line-field-1 to line-field-5 and line-field-7) checks.
  * Invariants over long random races, an independent grid formula, exact
  * contact arithmetic on hand-placed pairs, determinism, level of detail, and
  * a control for every behavioural claim (the same scene with the feature off
@@ -66,6 +66,8 @@ static void vehicle(uint32_t i, uint32_t grid, int32_t lap_ticks) {
 }
 
 static sh2z_field_t F;
+/* The step the races take (line-field-7 runs them through each entry point). */
+static void (*step)(sh2z_field_t *) = sh2z_field_step;
 static void field(uint32_t count, uint32_t seed) {
     sh2z_field_init(&F, &line, &P, veh, brain, order, slot, rank_order, count, seed);
 }
@@ -127,7 +129,7 @@ static uint32_t race(uint32_t count, uint32_t seed, int external, uint32_t ticks
             veh[0].kick_lat = veh[0].kick_speed = 0; veh[0].energy = veh[0].max_energy;
         }
         const sh2z_track_state_t before = veh[0].t;
-        sh2z_field_step(&F);
+        step(&F);
         if(check) invariants(count, &before);
     }
     return sh2z_field_hash(&F);
@@ -832,6 +834,58 @@ static void test_impact(void) {
     CHECK(a > U(50) && b > U(50));                                  /* control: the flat side energy empties both */
 }
 
+/* line-field-7: the entry points split by behaviour block. Each gives sh2z_field_step's state step for step:
+ * the plain step the pinned line-field-1 hashes; the behaviour step, on a line with a hold tube, a drop tube, an
+ * air stretch with an open edge and an outside driver, with every behaviour on, the hashes line-field-5's
+ * sh2z_field_step gave (pinned from main 7f99eb7) and sh2z_field_step's own. Controls: one behaviour value
+ * changed changes the race; the scene has falls and contact damage to tell apart. */
+static void behave_scene(void) {
+    params(); behave_reset(); surface_reset();
+    surf.wrap_mask = 0x0180u; surf.wrap_value = 0x0080u; P.surface = &surf;
+    make_line(); mark(10, 40, 0x00c0u, 100); mark(40, 46, 0x02c0u, 100); mark(60, 66, 0x0180u, 220); mark(66, 70, 0x0100u, 220);
+    B.roll_chance = 2000; B.roll_latch = 30000; B.roll_lead = 13107; B.hold_lead = 7864; B.roll_well = 52429;
+    B.hold_mask = 0x01c0u; B.hold_value = 0x00c0u; B.exit_mask = 0x01c0u; B.exit_value = 0x0080u; B.roll_exit_ahead = U(400);
+    B.lat_accel = 64; B.air_mask = 0x01c0u; B.air_value = 0x0180u; B.air_spread = 6554;
+    B.open_mask = 0x01c0u; B.open_value = 0x0100u; B.fall_margin = 0;
+    B.ko_window = 120; B.ko_near = U(1000); B.contact_norm = 36045;
+    B.drop_mask = 0x0200u; B.drop_value = 0x0200u; B.drop_lat = 117965; B.drop_chance = 4000; B.launch_chance = 4096;
+    P.behave = &B;
+}
+#ifdef LF7_PIN_PRINT   /* pin mode: built against line-field-5's sources, which have one step; prints lf5[] */
+#define sh2z_field_step_plain sh2z_field_step
+#define sh2z_field_step_behave sh2z_field_step
+#define LF5_PINS 0u
+#else
+#define LF5_PINS 0x68687a12u, 0xbaccf237u, 0xabc03fa3u, 0x29f21133u, 0x12e650c6u, 0xbb9479cdu
+#endif
+static void test_step_entries(void) {
+    static const uint32_t lf1[6] = { 0x7c56497eu, 0x9c2d952fu, 0x12afee5bu, 0xccfb9880u, 0x080ae758u, 0x244b0332u };
+    static const uint32_t lf5[6] = { LF5_PINS };
+    uint32_t falls = 0u;
+    for(uint32_t seed = 1; seed <= 6; ++seed) {
+        params(); make_line();
+        step = sh2z_field_step_plain;
+        CHECK(race(24, seed, 0, 5000, 1) == lf1[seed - 1u]);
+        behave_scene();
+        step = sh2z_field_step;
+        const uint32_t h = race(30, seed, 1, 5000, 0);
+        falls += F.falls;
+#ifdef LF7_PIN_PRINT
+        printf("lf5 pin seed %" PRIu32 ": 0x%08" PRIx32 "u\n", seed, h); (void)lf5;
+#else
+        CHECK(h == lf5[seed - 1u]);
+#endif
+        behave_scene();
+        step = sh2z_field_step_behave;
+        CHECK(race(30, seed, 1, 5000, 0) == h);
+        behave_scene(); B.roll_chance = 0;                          /* control: one behaviour off */
+        CHECK(race(30, seed, 1, 5000, 0) != h);
+    }
+    CHECK(falls > 0u);                                              /* the scene reaches the behaviour code */
+    step = sh2z_field_step;
+    make_line(); params();
+}
+
 int main(void) {
     make_line();
     params();
@@ -858,6 +912,7 @@ int main(void) {
     test_drops();
     test_launch();
     test_impact();
+    test_step_entries();
     printf("line field: %" PRIu64 " checks passed\n", checks);
     return 0;
 }

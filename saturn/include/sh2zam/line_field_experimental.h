@@ -6,8 +6,9 @@
  *
  * Contract tags line-field-1, line-field-2 (the second-lap re-target),
  * line-field-3 (the first-lap chase cap), line-field-4 (surface zones and
- * tube nodes) and line-field-5 (tube roll, lateral inertia, falls and drops
- * with a knock-out credit, a near-focus knock-out gate and impact damage).
+ * tube nodes), line-field-5 (tube roll, lateral inertia, falls and drops
+ * with a knock-out credit, a near-focus knock-out gate and impact damage)
+ * and line-field-7 (the step split by behaviour block).
  *
  * Shared vehicle state. sh2z_vehicle_t is the line-space state of ANY vehicle
  * on the line: agents the field drives, and vehicles driven elsewhere (a
@@ -327,6 +328,18 @@ typedef struct sh2z_field_behave {
     int32_t launch_chance;     /**< Q16 chance that an agent out of a tube beyond the open edge of a drop node is launched off (65536 = always). */
     int32_t contact_norm;      /**< Q16: > 0 charges a contact incident by its closing speed along the line between the two, contact_norm each (twice to an attacker's victim, nothing to the attacker), instead of side_energy, hit_energy and attack_energy. */
 } sh2z_field_behave_t;
+
+/* ---- Contract tag line-field-7 ------------------------------------------ */
+
+/** sh2z_field_step for a field whose params->behave is NULL: the same state,
+ *  step for step, from code that carries no line-field-5 branch. A caller that
+ *  never sets a behaviour block calls this, and a linker that drops unused
+ *  sections drops the behaviour step. */
+void sh2z_field_step_plain(sh2z_field_t *f);
+
+/** sh2z_field_step for a field whose params->behave is set (not NULL): the
+ *  same state, step for step, without the NULL tests. */
+void sh2z_field_step_behave(sh2z_field_t *f);
 
 #ifdef __cplusplus
 }
