@@ -8,9 +8,11 @@
  * line-field-3 (the first-lap chase cap), line-field-4 (surface zones and
  * tube nodes), line-field-5 (tube roll, lateral inertia, falls and drops
  * with a knock-out credit, a near-focus knock-out gate and impact damage),
- * line-field-7 (the step split by behaviour block, a far node lookup) and
+ * line-field-7 (the step split by behaviour block, a far node lookup),
  * line-field-8 (contact found for vehicles that pass one another within a
- * step).
+ * step) and line-field-9 (no lateral holds beyond the reference driver's:
+ * no post-contact room hold, no hold against cutting across a vehicle
+ * alongside, no blocking hold).
  *
  * Shared vehicle state. sh2z_vehicle_t is the line-space state of ANY vehicle
  * on the line: agents the field drives, and vehicles driven elsewhere (a
@@ -359,6 +361,26 @@ uint32_t sh2z_line_locate_far(const sh2z_line_t *line, int32_t dist);
  * strict total order of the positions, so the rest of the step is unchanged;
  * races in which the stale order left a touching pair unchecked, or scanned
  * a pile-up in another sequence, give different results. */
+
+/* ---- Contract tag line-field-9 ------------------------------------------ */
+
+/* No new entry point and no new parameter. Every step (sh2z_field_step,
+ * _plain and _behave) drops three lateral holds that the reference driver
+ * this field models does not have:
+ *   - the post-contact room hold: after a contact neither vehicle is set to
+ *     hold the side it was pushed to for pass_hold ticks. The reference's
+ *     contact is a push and an impact only.
+ *   - the hold against cutting across a vehicle alongside: a target lateral
+ *     with a vehicle between it and the current lateral is no longer
+ *     replaced by the current lateral. The reference's avoidance steers to
+ *     the side it picked around the vehicle ahead and nudges away from it
+ *     when close; nothing holds the lateral for a vehicle in between.
+ *   - the blocking hold: a vehicle no longer keeps its previous target for a
+ *     faster vehicle close behind on its line. The reference reads the
+ *     vehicle behind only for a side attack.
+ * Avoidance of the vehicle ahead, its pass_hold and the side attack stay as
+ * before. Races with close racing give different results from line-field-8.
+ * pass_hold now only times the side chosen around the vehicle ahead. */
 
 #ifdef __cplusplus
 }

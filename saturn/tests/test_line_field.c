@@ -1,4 +1,4 @@
-/* Line field (contract tags line-field-1 to line-field-5, line-field-7 and line-field-8) checks.
+/* Line field (contract tags line-field-1 to line-field-5 and line-field-7 to line-field-9) checks.
  * Invariants over long random races, an independent grid formula, exact
  * contact arithmetic on hand-placed pairs, determinism, level of detail, and
  * a control for every behavioural claim (the same scene with the feature off
@@ -153,8 +153,9 @@ static void test_races(void) {
         const uint32_t h1 = race(24, seed, 0, 5000, 1);
         /* line-field-1 results, pinned: with no finish targets line-field-2 races step for step as before.
          * line-field-8 orders again before the contact passes: seeds 2, 5 and 6 changed there (line-field-1 to
-         * line-field-7 gave 0x9c2d952f, 0x080ae758 and 0x244b0332); the other seeds race as before. */
-        static const uint32_t lf1[6] = { 0x7c56497eu, 0xb6a98eabu, 0x12afee5bu, 0xccfb9880u, 0xe86c77efu, 0x36df557bu };
+         * line-field-7 gave 0x9c2d952f, 0x080ae758 and 0x244b0332). line-field-9 drops three lateral holds: every
+         * seed changed (line-field-8 gave 0x7c56497e, 0xb6a98eab, 0x12afee5b, 0xccfb9880, 0xe86c77ef, 0x36df557b). */
+        static const uint32_t lf1[6] = { 0x26258cb9u, 0xae50d21fu, 0x9821ea57u, 0xc1fc223fu, 0xe9d006cfu, 0xa428c63bu };
         CHECK(h1 == lf1[seed - 1u]);
         CHECK(F.finished + F.retired == 24u);                       /* nobody is stuck: the race ends */
         CHECK(F.rank_changes > 0u);                                 /* places change hands */
@@ -290,6 +291,85 @@ static void test_overtake_contact(void) {
     params();
 }
 
+/* line-field-9 scenes: frozen agents (no speed or lateral change of their own), lane 0, placed relative to their
+ * racing line at dist `at`. Returns that line's lateral there. */
+static int32_t frozen_pair(int32_t at, int32_t lat0, int32_t speed0, int32_t gap1, int32_t lat1, int32_t speed1) {
+    rng = 13u;
+    vehicle(0, 0, 2000); vehicle(1, 1, 2000);
+    sh2z_line_sample_t s;
+    sh2z_line_sample(&line, sh2z_line_locate(&line, at, 0), at, &s);
+    for(uint32_t i = 0; i < 2u; ++i) {
+        veh[i].accel = veh[i].brake = 0; veh[i].grip = 0; brain[i].pace = 0; brain[i].lane = 0;
+        veh[i].t.dist = i ? at + gap1 : at; veh[i].t.lateral = s.lateral + (i ? lat1 : lat0);
+        veh[i].t.speed = i ? speed1 : speed0; veh[i].t.node = sh2z_line_locate(&line, veh[i].t.dist, 0);
+    }
+    field(2, 1u);
+    sh2z_field_start(&F);
+    return s.lateral;
+}
+/* Four steps: each agent decides once (decisions are staggered over four ticks). */
+static void think_steps(void) { for(uint32_t t = 0; t < 4u; ++t) sh2z_field_step(&F); }
+
+/* line-field-9: no post-contact room hold. A pair 20 apart and 20 across touches: both are pushed and charged once,
+ * and neither is left holding a side (the reference contact is a push and an impact only). Control: the same pair
+ * with avoidance on shows the probe sees a held side (the trailing agent picks one around the agent ahead). */
+static uint32_t room_scene(int avoid) {
+    params();
+    if(!avoid) { P.avoid_long = 0; P.avoid_ticks = 0; }
+    (void)frozen_pair(U(5000), U(10), U(30), -U(20), -U(10), U(34));
+    think_steps();
+    CHECK(F.contacts == 1u);
+    const uint32_t held = (uint32_t)(brain[0].pass_ticks != 0u) + (uint32_t)(brain[1].pass_ticks != 0u);
+    CHECK(held == (uint32_t)(brain[0].pass_dir != 0) + (uint32_t)(brain[1].pass_dir != 0));
+    params();
+    return held;
+}
+static void test_no_room_hold(void) {
+    CHECK(room_scene(0) == 0u);
+    CHECK(room_scene(1) == 1u);    /* control: the avoiding agent holds its side */
+}
+
+/* line-field-9: no hold against cutting across. The agent sits 100 left of its line with a neighbour 50 left of the
+ * line, 10 ahead or 10 behind: its target is its line, whether or not the neighbour is in between (the reference
+ * steers to the side it chose; contact settles any overlap). Control: with avoidance on, the neighbour ahead moves
+ * the target off the line (the probe sees a lateral decision). */
+static int32_t cut_scene(int32_t gap1, int32_t lat1, int avoid, int32_t *line_lat) {
+    params();
+    if(!avoid) { P.avoid_long = 0; P.avoid_ticks = 0; }
+    *line_lat = frozen_pair(U(5000), -U(100), 0, gap1, lat1, 0);
+    think_steps();
+    CHECK(F.contacts == 0u);
+    params();
+    return brain[0].target_lat;
+}
+static void test_no_cut_hold(void) {
+    int32_t base;
+    CHECK(cut_scene(U(10), -U(50), 0, &base) == base);      /* neighbour ahead, in between */
+    CHECK(cut_scene(-U(10), -U(50), 0, &base) == base);     /* neighbour behind, in between */
+    CHECK(cut_scene(U(10), -U(150), 0, &base) == base);     /* neighbour ahead, outside */
+    CHECK(cut_scene(U(10), -U(50), 1, &base) != base);      /* control: avoiding the neighbour ahead */
+}
+
+/* line-field-9: no blocking hold. The agent stands on its line with a stale target 80 off it, and an agent 80
+ * behind on the same line closes at 4 a tick: the target is its line again (the reference reads the vehicle behind
+ * only for a side attack). Control: with a pass side held, the stale target stands (the probe sees a held target). */
+static int32_t block_scene(int32_t speed1, int hold, int32_t *line_lat) {
+    params();
+    *line_lat = frozen_pair(U(5000), 0, 0, -U(80), 0, speed1);   /* the agent stands; the one behind closes slowly */
+    brain[0].target_lat = *line_lat + U(80);
+    if(hold) { brain[0].pass_dir = 1; brain[0].pass_ticks = 10u; }
+    think_steps();
+    CHECK(F.contacts == 0u);
+    params();
+    return brain[0].target_lat;
+}
+static void test_no_block_hold(void) {
+    int32_t base;
+    CHECK(block_scene(U(4), 0, &base) == base);             /* faster agent close behind */
+    CHECK(block_scene(0, 0, &base) == base);                /* agent behind not faster */
+    CHECK(block_scene(U(4), 1, &base) == base + U(80));     /* control: a held pass side keeps the stale target */
+}
+
 /* Level of detail: far agents take fewer steps and still arrive on time. */
 static void test_lod(void) {
     params();
@@ -405,7 +485,7 @@ static void surface_reset(void) {
     surf.zones = zone_buf; surf.plate_ticks = 60; surf.slip_steer = 16384; surf.rough_keep = 58982; surf.recharge = 512;
 }
 static void test_surface_identity(void) {
-    static const uint32_t lf1[6] = { 0x7c56497eu, 0xb6a98eabu, 0x12afee5bu, 0xccfb9880u, 0xe86c77efu, 0x36df557bu };
+    static const uint32_t lf1[6] = { 0x26258cb9u, 0xae50d21fu, 0x9821ea57u, 0xc1fc223fu, 0xe9d006cfu, 0xa428c63bu };
     params();
     surface_reset();
     P.surface = &surf;                                              /* no zones, no tubes */
@@ -627,7 +707,7 @@ static void mark(uint32_t lo, uint32_t hi, uint16_t flags, uint16_t hw) {
 /* A behaviour block whose tubes and air no node is moves nobody differently: the pinned line-field-1 hashes
  * of the line-field-4 state (the behaviour state hashes only with a block). */
 static void test_behave_identity(void) {
-    static const uint32_t lf1[6] = { 0x7c56497eu, 0xb6a98eabu, 0x12afee5bu, 0xccfb9880u, 0xe86c77efu, 0x36df557bu };
+    static const uint32_t lf1[6] = { 0x26258cb9u, 0xae50d21fu, 0x9821ea57u, 0xc1fc223fu, 0xe9d006cfu, 0xa428c63bu };
     params(); behave_reset();
     B.roll_chance = 65535; B.roll_lead = 13107;
     B.air_mask = 0x01c0u; B.air_value = 0x0180u; B.open_mask = 0x01c0u; B.open_value = 0x0100u; B.air_spread = 65535;
@@ -1015,7 +1095,8 @@ static void test_locate_far(void) {
  * the plain step the pinned line-field-1 hashes; the behaviour step, on a line with a hold tube, a drop tube, an
  * air stretch with an open edge and an outside driver, with every behaviour on, the hashes line-field-5's
  * sh2z_field_step gave (pinned from main 7f99eb7) and sh2z_field_step's own. Controls: one behaviour value
- * changed changes the race; the scene has falls and contact damage to tell apart. */
+ * changed changes the race; the scene has falls and contact damage to tell apart. line-field-9 moved all six
+ * behaviour pins (line-field-8 gave 0x68687a12, 0xbaccf237, 0xabc03fa3, 0x29f21133, 0x12e650c6, 0xbb9479cd). */
 static void behave_scene(void) {
     params(); behave_reset(); surface_reset();
     surf.wrap_mask = 0x0180u; surf.wrap_value = 0x0080u; P.surface = &surf;
@@ -1033,10 +1114,10 @@ static void behave_scene(void) {
 #define sh2z_field_step_behave sh2z_field_step
 #define LF5_PINS 0u
 #else
-#define LF5_PINS 0x68687a12u, 0xbaccf237u, 0xabc03fa3u, 0x29f21133u, 0x12e650c6u, 0xbb9479cdu
+#define LF5_PINS 0xc2a25804u, 0x47960c34u, 0xcdea24ddu, 0x864b559cu, 0x9c64a595u, 0x68fe14f3u
 #endif
 static void test_step_entries(void) {
-    static const uint32_t lf1[6] = { 0x7c56497eu, 0xb6a98eabu, 0x12afee5bu, 0xccfb9880u, 0xe86c77efu, 0x36df557bu };
+    static const uint32_t lf1[6] = { 0x26258cb9u, 0xae50d21fu, 0x9821ea57u, 0xc1fc223fu, 0xe9d006cfu, 0xa428c63bu };
     static const uint32_t lf5[6] = { LF5_PINS };
     uint32_t falls = 0u;
     for(uint32_t seed = 1; seed <= 6; ++seed) {
@@ -1072,6 +1153,9 @@ int main(void) {
     test_contact();
     test_contact_off();
     test_overtake_contact();
+    test_no_room_hold();
+    test_no_cut_hold();
+    test_no_block_hold();
     test_lod();
     test_retire();
     test_retarget();
