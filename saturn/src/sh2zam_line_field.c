@@ -393,7 +393,8 @@ FLD_INLINE uint32_t fld_contacts(sh2z_field_t *f, const sh2z_field_behave_t *bh)
             if(!fld_current(f, i1)) continue;
             int32_t gap = sh2z_track_near_gap(line, &f->veh[i0].t, &f->veh[i1].t);
             if(gap >= p->contact_long) break;
-            /* The order dates from the start of the tick: a pair may have swapped. */
+            /* The order is by distance along the line: where it wraps past the line's start, the vehicle later in
+             * the order can be the one ahead, so the gap's sign decides. */
             uint32_t ia = i0, ib = i1;
             if(gap < 0) {
                 if(gap <= -p->contact_long) continue;
@@ -527,9 +528,6 @@ static void fld_laps(sh2z_field_t *f, uint32_t i) {
     if(lap < (int32_t)b->laps_seen) b->laps_seen = (int16_t)lap;   /* an external vehicle driven backwards */
 }
 
-/* The step, with the behaviour block as a parameter (line-field-7). Each entry point below inlines it once: with
- * bh a constant NULL every line-field-5 branch folds away, so the NULL step is line-field-4's code, and the
- * behaviour step carries none of the NULL tests. */
 /* Physical order over the vehicle array (largest dist first, ties by index) and each vehicle's slot in it. The
  * order is a strict total order of the positions, so the result does not depend on the order it starts from. */
 FLD_INLINE void fld_order(sh2z_field_t *f) {
@@ -549,6 +547,9 @@ FLD_INLINE void fld_order(sh2z_field_t *f) {
     for(uint32_t s = 0u; s < f->count; ++s) f->slot[f->order[s]] = (uint8_t)s;
 }
 
+/* The step, with the behaviour block as a parameter (line-field-7). Each entry point below inlines it once: with
+ * bh a constant NULL every line-field-5 branch folds away, so the NULL step is line-field-4's code, and the
+ * behaviour step carries none of the NULL tests. */
 FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
     const sh2z_field_params_t *p = f->params;
     const sh2z_line_t *line = f->line;

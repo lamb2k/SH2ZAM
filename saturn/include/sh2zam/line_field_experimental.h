@@ -7,9 +7,10 @@
  * Contract tags line-field-1, line-field-2 (the second-lap re-target),
  * line-field-3 (the first-lap chase cap), line-field-4 (surface zones and
  * tube nodes), line-field-5 (tube roll, lateral inertia, falls and drops
- * with a knock-out credit, a near-focus knock-out gate and impact damage)
+ * with a knock-out credit, a near-focus knock-out gate and impact damage),
  * line-field-7 (the step split by behaviour block, a far node lookup) and
- * line-field-8 (contact found for vehicles that pass one another within a step).
+ * line-field-8 (contact found for vehicles that pass one another within a
+ * step).
  *
  * Shared vehicle state. sh2z_vehicle_t is the line-space state of ANY vehicle
  * on the line: agents the field drives, and vehicles driven elsewhere (a
