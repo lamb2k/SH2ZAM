@@ -1,7 +1,10 @@
-/* Delta coded sprite records (cell-records-1): every form against an
- * independent per-cell oracle, chained calls, buffer and argument contracts,
- * and the negative controls (every planted oracle mutant must disagree with the
- * library). MIT; SH2ZAM Contributors. */
+/* Delta coded sprite records (contract tag cell-records-1) checks.
+ * Every form against an independent per-cell oracle, chained calls, buffer and
+ * argument contracts, and the negative controls (every planted oracle mutant
+ * must disagree with the library).
+ *
+ * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
+ */
 #include "sh2zam/cell_records_experimental.h"
 #include "cell_records_oracle.h"
 #include <inttypes.h>
@@ -129,7 +132,7 @@ static void arguments(void) {
         for(size_t i = 0; i < sizeof out; i++) CHECK(out[i] == 0x77);        /* every refusal left the output alone */
         CHECK(pos.x == px && pos.y == py);
     }
-    /* an in-range case after refusals still works; a full list of the maximum count is accepted */
+    /* an in-range case after refusals still works */
     p.form = 0; CHECK(sh2z_cellrec_expand(&pos, &p, rec, off, out, 1));
 }
 
