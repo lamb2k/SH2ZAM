@@ -44,6 +44,7 @@ One line per guide, sorted by guide file name; a kernel lane adds its own line
 (its guide, then its instruction model).
 
 - [Experimental body contact: sphere contact with shared damage, pushes, attackers and credit; vehicle step with contact](BODY_CONTACT.md)
+- [Experimental delta coded sprite records: expand into cell list entries with mirror, attribute rules and byte or word offsets](CELL_RECORDS.md); [cell-records instruction model](benchmarks/cell-records-model/README.md)
 - [Experimental explicit SH-2 divider](DIVU.md)
 - [Experimental SCU DSP access, batched affine transform, Q16 outer product](DSP.md)
 - [Experimental two-CPU try-claim for an optional job](DUAL_CLAIM.md)
