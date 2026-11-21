@@ -214,6 +214,34 @@ static void test_contact(void) {
     params();
 }
 
+/* contact_lat 0 turns the field's own contact off: an overlapping pair is neither pushed, bumped nor
+ * charged, and no incident is counted. Control: the same scene with contact_lat 40 (test_contact). */
+static uint32_t contact_off_scene(int32_t contact_lat) {
+    params();
+    P.contact_lat = contact_lat;
+    rng = 9u;
+    vehicle(0, 0, 2000); vehicle(1, 1, 2000);
+    veh[0].t.dist = U(5000); veh[0].t.lateral = U(10); veh[0].t.speed = U(30);
+    veh[1].t.dist = U(5000) - U(20); veh[1].t.lateral = -U(10); veh[1].t.speed = U(34);
+    veh[0].t.node = sh2z_line_locate(&line, veh[0].t.dist, 0); veh[1].t.node = sh2z_line_locate(&line, veh[1].t.dist, 0);
+    field(2, 1u);
+    sh2z_field_start(&F);
+    veh[0].accel = veh[1].accel = 0; veh[0].brake = veh[1].brake = 0; veh[0].grip = veh[1].grip = 0;
+    brain[0].pace = brain[1].pace = 0;
+    const int32_t e0 = veh[0].energy, e1 = veh[1].energy;
+    sh2z_field_step(&F);
+    const uint32_t untouched = veh[0].t.lateral == U(10) && veh[1].t.lateral == -U(10) && veh[0].energy == e0 &&
+                               veh[1].energy == e1 && !((veh[0].flags | veh[1].flags) & SH2Z_VEH_TOUCH) &&
+                               !brain[0].touch_cool && !brain[1].touch_cool;
+    params();
+    return F.contacts == 0u && untouched;
+}
+static void test_contact_off(void) {
+    CHECK(contact_off_scene(0) == 1u);
+    CHECK(contact_off_scene(-U(1)) == 1u);
+    CHECK(contact_off_scene(U(40)) == 0u);    /* control: the same pair in reach collides */
+}
+
 /* Level of detail: far agents take fewer steps and still arrive on time. */
 static void test_lod(void) {
     params();
@@ -994,6 +1022,7 @@ int main(void) {
     test_races();
     test_pass();
     test_contact();
+    test_contact_off();
     test_lod();
     test_retire();
     test_retarget();
