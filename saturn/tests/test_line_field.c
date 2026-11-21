@@ -1,4 +1,4 @@
-/* Line field (contract tags line-field-1 to line-field-5 and line-field-7) checks.
+/* Line field (contract tags line-field-1 to line-field-5, line-field-7 and line-field-8) checks.
  * Invariants over long random races, an independent grid formula, exact
  * contact arithmetic on hand-placed pairs, determinism, level of detail, and
  * a control for every behavioural claim (the same scene with the feature off
@@ -113,6 +113,18 @@ static void invariants(uint32_t count, const sh2z_track_state_t *ext_before) {
     }
 }
 
+/* line-field-8: pairs of stepped agents left inside each other after a step (a quarter of the contact box, so a
+ * pair the contact passes resolved is never counted). */
+static uint32_t inside;
+static void count_inside(uint32_t count) {
+    for(uint32_t a = 0; a < count; ++a) for(uint32_t b = a + 1u; b < count; ++b) {
+        if((veh[a].flags | veh[b].flags) & (SH2Z_VEH_STOPPED | SH2Z_VEH_RETIRED | SH2Z_VEH_EXTERNAL)) continue;
+        if(brain[a].last_tick != F.tick || brain[b].last_tick != F.tick) continue;
+        const int32_t g = sh2z_track_near_gap(&line, &veh[a].t, &veh[b].t), dl = veh[a].t.lateral - veh[b].t.lateral;
+        if(abs(g) < U(46) / 4 && abs(dl) < U(40) / 4) ++inside;   /* a fixed box, whatever the contact settings */
+    }
+}
+
 static uint32_t race(uint32_t count, uint32_t seed, int external, uint32_t ticks, int check) {
     rng = seed * UINT32_C(2654435761) + 1u;
     for(uint32_t i = 0; i < count; ++i) vehicle(i, i, 1500 + (int32_t)i * 20);
@@ -139,8 +151,10 @@ static void test_races(void) {
     for(uint32_t seed = 1; seed <= 6; ++seed) {
         P.lod_near[0] = INT32_MAX; P.lod_near[1] = INT32_MAX; P.lod_near[2] = INT32_MAX;
         const uint32_t h1 = race(24, seed, 0, 5000, 1);
-        /* line-field-1 results, pinned: with no finish targets line-field-2 races step for step as before. */
-        static const uint32_t lf1[6] = { 0x7c56497eu, 0x9c2d952fu, 0x12afee5bu, 0xccfb9880u, 0x080ae758u, 0x244b0332u };
+        /* line-field-1 results, pinned: with no finish targets line-field-2 races step for step as before.
+         * line-field-8 orders again before the contact passes: seeds 2, 5 and 6 changed there (line-field-1 to
+         * line-field-7 gave 0x9c2d952f, 0x080ae758 and 0x244b0332); the other seeds race as before. */
+        static const uint32_t lf1[6] = { 0x7c56497eu, 0xb6a98eabu, 0x12afee5bu, 0xccfb9880u, 0xe86c77efu, 0x36df557bu };
         CHECK(h1 == lf1[seed - 1u]);
         CHECK(F.finished + F.retired == 24u);                       /* nobody is stuck: the race ends */
         CHECK(F.rank_changes > 0u);                                 /* places change hands */
@@ -211,6 +225,40 @@ static void test_contact(void) {
     const sh2z_track_state_t ext = veh[0].t;
     sh2z_field_step(&F);
     CHECK(memcmp(&ext, &veh[0].t, sizeof ext) == 0 && veh[0].kick_lat > 0 && F.contacts == 1u);
+    params();
+}
+
+/* line-field-8: an agent that passes another within one step still meets the vehicle it lands on. A (frozen) leads,
+ * B (frozen, wide) sits 50 behind it, C closes at 58 a step from 10 behind B and lands 2 behind A on its lateral, and
+ * D (frozen) is far behind. In the step's starting order A, B, C, D, a scan from A ends at B and a scan from C at D,
+ * so only an order taken after the movement checks A against C. Control: without contact, C stays inside A. */
+static uint32_t overtake_scene(int contact) {
+    params();
+    if(!contact) P.contact_long = 0;
+    rng = 11u;
+    for(uint32_t i = 0; i < 4u; ++i) {
+        vehicle(i, i, 2000);
+        veh[i].accel = veh[i].brake = 0; veh[i].grip = 0; brain[i].pace = 0; brain[i].lane = 0;
+    }
+    static const int32_t at[4] = { 5000, 4950, 4940, 4000 }, lat[4] = { 0, 150, 0, 0 };
+    for(uint32_t i = 0; i < 4u; ++i) {
+        veh[i].t.dist = U(at[i]); veh[i].t.lateral = U(lat[i]); veh[i].t.speed = 0;
+        veh[i].t.node = sh2z_line_locate(&line, veh[i].t.dist, 0);
+    }
+    veh[2].t.speed = U(58);
+    field(4, 1u);
+    sh2z_field_start(&F);
+    inside = 0u;
+    sh2z_field_step(&F);
+    count_inside(4u);
+    CHECK(sh2z_track_near_gap(&line, &veh[0].t, &veh[2].t) < P.contact_long || !contact);   /* C ends next to A */
+    CHECK(sh2z_track_near_gap(&line, &veh[2].t, &veh[1].t) > 0);                           /* and ahead of B */
+    return F.contacts;
+}
+static void test_overtake_contact(void) {
+    CHECK(overtake_scene(1) == 1u && inside == 0u);                 /* the pair is found and pushed apart */
+    CHECK(abs(veh[0].t.lateral - veh[2].t.lateral) >= P.contact_lat);
+    CHECK(overtake_scene(0) == 0u && inside == 1u);                 /* control: unresolved, it is inside */
     params();
 }
 
@@ -329,7 +377,7 @@ static void surface_reset(void) {
     surf.zones = zone_buf; surf.plate_ticks = 60; surf.slip_steer = 16384; surf.rough_keep = 58982; surf.recharge = 512;
 }
 static void test_surface_identity(void) {
-    static const uint32_t lf1[6] = { 0x7c56497eu, 0x9c2d952fu, 0x12afee5bu, 0xccfb9880u, 0x080ae758u, 0x244b0332u };
+    static const uint32_t lf1[6] = { 0x7c56497eu, 0xb6a98eabu, 0x12afee5bu, 0xccfb9880u, 0xe86c77efu, 0x36df557bu };
     params();
     surface_reset();
     P.surface = &surf;                                              /* no zones, no tubes */
@@ -551,7 +599,7 @@ static void mark(uint32_t lo, uint32_t hi, uint16_t flags, uint16_t hw) {
 /* A behaviour block whose tubes and air no node is moves nobody differently: the pinned line-field-1 hashes
  * of the line-field-4 state (the behaviour state hashes only with a block). */
 static void test_behave_identity(void) {
-    static const uint32_t lf1[6] = { 0x7c56497eu, 0x9c2d952fu, 0x12afee5bu, 0xccfb9880u, 0x080ae758u, 0x244b0332u };
+    static const uint32_t lf1[6] = { 0x7c56497eu, 0xb6a98eabu, 0x12afee5bu, 0xccfb9880u, 0xe86c77efu, 0x36df557bu };
     params(); behave_reset();
     B.roll_chance = 65535; B.roll_lead = 13107;
     B.air_mask = 0x01c0u; B.air_value = 0x0180u; B.open_mask = 0x01c0u; B.open_value = 0x0100u; B.air_spread = 65535;
@@ -960,7 +1008,7 @@ static void behave_scene(void) {
 #define LF5_PINS 0x68687a12u, 0xbaccf237u, 0xabc03fa3u, 0x29f21133u, 0x12e650c6u, 0xbb9479cdu
 #endif
 static void test_step_entries(void) {
-    static const uint32_t lf1[6] = { 0x7c56497eu, 0x9c2d952fu, 0x12afee5bu, 0xccfb9880u, 0x080ae758u, 0x244b0332u };
+    static const uint32_t lf1[6] = { 0x7c56497eu, 0xb6a98eabu, 0x12afee5bu, 0xccfb9880u, 0xe86c77efu, 0x36df557bu };
     static const uint32_t lf5[6] = { LF5_PINS };
     uint32_t falls = 0u;
     for(uint32_t seed = 1; seed <= 6; ++seed) {
@@ -994,6 +1042,7 @@ int main(void) {
     test_races();
     test_pass();
     test_contact();
+    test_overtake_contact();
     test_lod();
     test_retire();
     test_retarget();
