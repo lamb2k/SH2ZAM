@@ -1,0 +1,1057 @@
+{
+ "schema": 1,
+ "kind": "Yabause isolated SH2 interpreter flat-RAM model, not Saturn timing",
+ "verified": {
+  "lists": 10800,
+  "cells": 215604,
+  "entries": "fast_expand, checked_expand and plain_expand, all 12 forms, against tests/cell_records_oracle.h and the host build of the same library source: every entry word and the running position after the call, and nothing written past the entries"
+ },
+ "rows": {
+  "s8_keep_n40": {
+   "description": "byte offsets, no mirror, attribute kept, 40 cells",
+   "n": 40,
+   "corpora": 16,
+   "entries": {
+    "fast_expand": {
+     "cyclesPerElement": 20.0,
+     "instructionsPerElement": 19.0,
+     "call1": {
+      "meanCycles": 85.0,
+      "medianCycles": 85.0,
+      "minCycles": 85,
+      "maxCycles": 85,
+      "meanInstructions": 79.0
+     },
+     "call40": {
+      "meanCycles": 865.0,
+      "medianCycles": 865.0,
+      "minCycles": 865,
+      "maxCycles": 865,
+      "meanInstructions": 820.0
+     }
+    },
+    "checked_expand": {
+     "cyclesPerElement": 20.0,
+     "instructionsPerElement": 19.0,
+     "call1": {
+      "meanCycles": 240.0,
+      "medianCycles": 240.0,
+      "minCycles": 240,
+      "maxCycles": 240,
+      "meanInstructions": 214.0
+     },
+     "call40": {
+      "meanCycles": 1020.0,
+      "medianCycles": 1020.0,
+      "minCycles": 1020,
+      "maxCycles": 1020,
+      "meanInstructions": 955.0
+     }
+    },
+    "plain_expand": {
+     "cyclesPerElement": 48.0,
+     "instructionsPerElement": 45.0,
+     "call1": {
+      "meanCycles": 111.0,
+      "medianCycles": 111.0,
+      "minCycles": 111,
+      "maxCycles": 111,
+      "meanInstructions": 105.0
+     },
+     "call40": {
+      "meanCycles": 1983.0,
+      "medianCycles": 1983.0,
+      "minCycles": 1983,
+      "maxCycles": 1983,
+      "meanInstructions": 1860.0
+     }
+    }
+   },
+   "speedupOf_fast_expand": {
+    "checked_expand": 1.0,
+    "plain_expand": 2.4
+   }
+  },
+  "s8_replace_n40": {
+   "description": "byte offsets, no mirror, low field replaced, 40 cells",
+   "n": 40,
+   "corpora": 16,
+   "entries": {
+    "fast_expand": {
+     "cyclesPerElement": 22.0,
+     "instructionsPerElement": 21.0,
+     "call1": {
+      "meanCycles": 90.0,
+      "medianCycles": 90.0,
+      "minCycles": 90,
+      "maxCycles": 90,
+      "meanInstructions": 84.0
+     },
+     "call40": {
+      "meanCycles": 948.0,
+      "medianCycles": 948.0,
+      "minCycles": 948,
+      "maxCycles": 948,
+      "meanInstructions": 903.0
+     }
+    },
+    "checked_expand": {
+     "cyclesPerElement": 22.0,
+     "instructionsPerElement": 21.0,
+     "call1": {
+      "meanCycles": 245.0,
+      "medianCycles": 245.0,
+      "minCycles": 245,
+      "maxCycles": 245,
+      "meanInstructions": 219.0
+     },
+     "call40": {
+      "meanCycles": 1103.0,
+      "medianCycles": 1103.0,
+      "minCycles": 1103,
+      "maxCycles": 1103,
+      "meanInstructions": 1038.0
+     }
+    },
+    "plain_expand": {
+     "cyclesPerElement": 47.0,
+     "instructionsPerElement": 46.0,
+     "call1": {
+      "meanCycles": 110.0,
+      "medianCycles": 110.0,
+      "minCycles": 110,
+      "maxCycles": 110,
+      "meanInstructions": 106.0
+     },
+     "call40": {
+      "meanCycles": 1943.0,
+      "medianCycles": 1943.0,
+      "minCycles": 1943,
+      "maxCycles": 1943,
+      "meanInstructions": 1900.0
+     }
+    }
+   },
+   "speedupOf_fast_expand": {
+    "checked_expand": 1.0,
+    "plain_expand": 2.14
+   }
+  },
+  "s8_add_n40": {
+   "description": "byte offsets, no mirror, byte added, 40 cells",
+   "n": 40,
+   "corpora": 16,
+   "entries": {
+    "fast_expand": {
+     "cyclesPerElement": 25.0,
+     "instructionsPerElement": 24.0,
+     "call1": {
+      "meanCycles": 93.0,
+      "medianCycles": 93.0,
+      "minCycles": 93,
+      "maxCycles": 93,
+      "meanInstructions": 87.0
+     },
+     "call40": {
+      "meanCycles": 1068.0,
+      "medianCycles": 1068.0,
+      "minCycles": 1068,
+      "maxCycles": 1068,
+      "meanInstructions": 1023.0
+     }
+    },
+    "checked_expand": {
+     "cyclesPerElement": 25.0,
+     "instructionsPerElement": 24.0,
+     "call1": {
+      "meanCycles": 248.0,
+      "medianCycles": 248.0,
+      "minCycles": 248,
+      "maxCycles": 248,
+      "meanInstructions": 222.0
+     },
+     "call40": {
+      "meanCycles": 1223.0,
+      "medianCycles": 1223.0,
+      "minCycles": 1223,
+      "maxCycles": 1223,
+      "meanInstructions": 1158.0
+     }
+    },
+    "plain_expand": {
+     "cyclesPerElement": 55.0,
+     "instructionsPerElement": 52.0,
+     "call1": {
+      "meanCycles": 118.0,
+      "medianCycles": 118.0,
+      "minCycles": 118,
+      "maxCycles": 118,
+      "meanInstructions": 112.0
+     },
+     "call40": {
+      "meanCycles": 2263.0,
+      "medianCycles": 2263.0,
+      "minCycles": 2263,
+      "maxCycles": 2263,
+      "meanInstructions": 2140.0
+     }
+    }
+   },
+   "speedupOf_fast_expand": {
+    "checked_expand": 1.0,
+    "plain_expand": 2.2
+   }
+  },
+  "s8_mirror_keep_n40": {
+   "description": "byte offsets, mirrored, attribute kept, 40 cells",
+   "n": 40,
+   "corpora": 16,
+   "entries": {
+    "fast_expand": {
+     "cyclesPerElement": 29.0,
+     "instructionsPerElement": 28.0,
+     "call1": {
+      "meanCycles": 94.0,
+      "medianCycles": 94.0,
+      "minCycles": 94,
+      "maxCycles": 94,
+      "meanInstructions": 89.0
+     },
+     "call40": {
+      "meanCycles": 1225.0,
+      "medianCycles": 1225.0,
+      "minCycles": 1225,
+      "maxCycles": 1225,
+      "meanInstructions": 1181.0
+     }
+    },
+    "checked_expand": {
+     "cyclesPerElement": 29.0,
+     "instructionsPerElement": 28.0,
+     "call1": {
+      "meanCycles": 249.0,
+      "medianCycles": 249.0,
+      "minCycles": 249,
+      "maxCycles": 249,
+      "meanInstructions": 224.0
+     },
+     "call40": {
+      "meanCycles": 1380.0,
+      "medianCycles": 1380.0,
+      "minCycles": 1380,
+      "maxCycles": 1380,
+      "meanInstructions": 1316.0
+     }
+    },
+    "plain_expand": {
+     "cyclesPerElement": 56.0,
+     "instructionsPerElement": 53.0,
+     "call1": {
+      "meanCycles": 119.0,
+      "medianCycles": 119.0,
+      "minCycles": 119,
+      "maxCycles": 119,
+      "meanInstructions": 113.0
+     },
+     "call40": {
+      "meanCycles": 2303.0,
+      "medianCycles": 2303.0,
+      "minCycles": 2303,
+      "maxCycles": 2303,
+      "meanInstructions": 2180.0
+     }
+    }
+   },
+   "speedupOf_fast_expand": {
+    "checked_expand": 1.0,
+    "plain_expand": 1.93
+   }
+  },
+  "s8_mirror_replace_n40": {
+   "description": "byte offsets, mirrored, low field replaced, 40 cells",
+   "n": 40,
+   "corpora": 16,
+   "entries": {
+    "fast_expand": {
+     "cyclesPerElement": 32.0,
+     "instructionsPerElement": 31.0,
+     "call1": {
+      "meanCycles": 101.0,
+      "medianCycles": 101.0,
+      "minCycles": 101,
+      "maxCycles": 101,
+      "meanInstructions": 95.0
+     },
+     "call40": {
+      "meanCycles": 1349.0,
+      "medianCycles": 1349.0,
+      "minCycles": 1349,
+      "maxCycles": 1349,
+      "meanInstructions": 1304.0
+     }
+    },
+    "checked_expand": {
+     "cyclesPerElement": 32.0,
+     "instructionsPerElement": 31.0,
+     "call1": {
+      "meanCycles": 256.0,
+      "medianCycles": 256.0,
+      "minCycles": 256,
+      "maxCycles": 256,
+      "meanInstructions": 230.0
+     },
+     "call40": {
+      "meanCycles": 1504.0,
+      "medianCycles": 1504.0,
+      "minCycles": 1504,
+      "maxCycles": 1504,
+      "meanInstructions": 1439.0
+     }
+    },
+    "plain_expand": {
+     "cyclesPerElement": 55.0,
+     "instructionsPerElement": 54.0,
+     "call1": {
+      "meanCycles": 118.0,
+      "medianCycles": 118.0,
+      "minCycles": 118,
+      "maxCycles": 118,
+      "meanInstructions": 114.0
+     },
+     "call40": {
+      "meanCycles": 2263.0,
+      "medianCycles": 2263.0,
+      "minCycles": 2263,
+      "maxCycles": 2263,
+      "meanInstructions": 2220.0
+     }
+    }
+   },
+   "speedupOf_fast_expand": {
+    "checked_expand": 1.0,
+    "plain_expand": 1.72
+   }
+  },
+  "s8_mirror_add_n40": {
+   "description": "byte offsets, mirrored, byte added, 40 cells",
+   "n": 40,
+   "corpora": 16,
+   "entries": {
+    "fast_expand": {
+     "cyclesPerElement": 35.0,
+     "instructionsPerElement": 34.0,
+     "call1": {
+      "meanCycles": 101.0,
+      "medianCycles": 101.0,
+      "minCycles": 101,
+      "maxCycles": 101,
+      "meanInstructions": 96.0
+     },
+     "call40": {
+      "meanCycles": 1466.0,
+      "medianCycles": 1466.0,
+      "minCycles": 1466,
+      "maxCycles": 1466,
+      "meanInstructions": 1422.0
+     }
+    },
+    "checked_expand": {
+     "cyclesPerElement": 35.0,
+     "instructionsPerElement": 34.0,
+     "call1": {
+      "meanCycles": 256.0,
+      "medianCycles": 256.0,
+      "minCycles": 256,
+      "maxCycles": 256,
+      "meanInstructions": 231.0
+     },
+     "call40": {
+      "meanCycles": 1621.0,
+      "medianCycles": 1621.0,
+      "minCycles": 1621,
+      "maxCycles": 1621,
+      "meanInstructions": 1557.0
+     }
+    },
+    "plain_expand": {
+     "cyclesPerElement": 63.0,
+     "instructionsPerElement": 60.0,
+     "call1": {
+      "meanCycles": 126.0,
+      "medianCycles": 126.0,
+      "minCycles": 126,
+      "maxCycles": 126,
+      "meanInstructions": 120.0
+     },
+     "call40": {
+      "meanCycles": 2583.0,
+      "medianCycles": 2583.0,
+      "minCycles": 2583,
+      "maxCycles": 2583,
+      "meanInstructions": 2460.0
+     }
+    }
+   },
+   "speedupOf_fast_expand": {
+    "checked_expand": 1.0,
+    "plain_expand": 1.8
+   }
+  },
+  "s16_keep_n40": {
+   "description": "word offsets, no mirror, attribute kept, 40 cells",
+   "n": 40,
+   "corpora": 16,
+   "entries": {
+    "fast_expand": {
+     "cyclesPerElement": 18.0,
+     "instructionsPerElement": 17.0,
+     "call1": {
+      "meanCycles": 85.0,
+      "medianCycles": 85.0,
+      "minCycles": 85,
+      "maxCycles": 85,
+      "meanInstructions": 77.0
+     },
+     "call40": {
+      "meanCycles": 787.0,
+      "medianCycles": 787.0,
+      "minCycles": 787,
+      "maxCycles": 787,
+      "meanInstructions": 740.0
+     }
+    },
+    "checked_expand": {
+     "cyclesPerElement": 18.0,
+     "instructionsPerElement": 17.0,
+     "call1": {
+      "meanCycles": 240.0,
+      "medianCycles": 240.0,
+      "minCycles": 240,
+      "maxCycles": 240,
+      "meanInstructions": 213.0
+     },
+     "call40": {
+      "meanCycles": 942.0,
+      "medianCycles": 942.0,
+      "minCycles": 942,
+      "maxCycles": 942,
+      "meanInstructions": 876.0
+     }
+    },
+    "plain_expand": {
+     "cyclesPerElement": 61.0,
+     "instructionsPerElement": 56.0,
+     "call1": {
+      "meanCycles": 124.0,
+      "medianCycles": 124.0,
+      "minCycles": 124,
+      "maxCycles": 124,
+      "meanInstructions": 116.0
+     },
+     "call40": {
+      "meanCycles": 2503.0,
+      "medianCycles": 2503.0,
+      "minCycles": 2503,
+      "maxCycles": 2503,
+      "meanInstructions": 2300.0
+     }
+    }
+   },
+   "speedupOf_fast_expand": {
+    "checked_expand": 1.0,
+    "plain_expand": 3.39
+   }
+  },
+  "s16_replace_n40": {
+   "description": "word offsets, no mirror, low field replaced, 40 cells",
+   "n": 40,
+   "corpora": 16,
+   "entries": {
+    "fast_expand": {
+     "cyclesPerElement": 20.0,
+     "instructionsPerElement": 19.0,
+     "call1": {
+      "meanCycles": 89.0,
+      "medianCycles": 89.0,
+      "minCycles": 89,
+      "maxCycles": 89,
+      "meanInstructions": 81.0
+     },
+     "call40": {
+      "meanCycles": 869.0,
+      "medianCycles": 869.0,
+      "minCycles": 869,
+      "maxCycles": 869,
+      "meanInstructions": 822.0
+     }
+    },
+    "checked_expand": {
+     "cyclesPerElement": 20.0,
+     "instructionsPerElement": 19.0,
+     "call1": {
+      "meanCycles": 244.0,
+      "medianCycles": 244.0,
+      "minCycles": 244,
+      "maxCycles": 244,
+      "meanInstructions": 217.0
+     },
+     "call40": {
+      "meanCycles": 1024.0,
+      "medianCycles": 1024.0,
+      "minCycles": 1024,
+      "maxCycles": 1024,
+      "meanInstructions": 958.0
+     }
+    },
+    "plain_expand": {
+     "cyclesPerElement": 60.0,
+     "instructionsPerElement": 57.0,
+     "call1": {
+      "meanCycles": 123.0,
+      "medianCycles": 123.0,
+      "minCycles": 123,
+      "maxCycles": 123,
+      "meanInstructions": 117.0
+     },
+     "call40": {
+      "meanCycles": 2463.0,
+      "medianCycles": 2463.0,
+      "minCycles": 2463,
+      "maxCycles": 2463,
+      "meanInstructions": 2340.0
+     }
+    }
+   },
+   "speedupOf_fast_expand": {
+    "checked_expand": 1.0,
+    "plain_expand": 3.0
+   }
+  },
+  "s16_add_n40": {
+   "description": "word offsets, no mirror, byte added, 40 cells",
+   "n": 40,
+   "corpora": 16,
+   "entries": {
+    "fast_expand": {
+     "cyclesPerElement": 23.0,
+     "instructionsPerElement": 22.0,
+     "call1": {
+      "meanCycles": 90.0,
+      "medianCycles": 90.0,
+      "minCycles": 90,
+      "maxCycles": 90,
+      "meanInstructions": 85.0
+     },
+     "call40": {
+      "meanCycles": 987.0,
+      "medianCycles": 987.0,
+      "minCycles": 987,
+      "maxCycles": 987,
+      "meanInstructions": 943.0
+     }
+    },
+    "checked_expand": {
+     "cyclesPerElement": 23.0,
+     "instructionsPerElement": 22.0,
+     "call1": {
+      "meanCycles": 245.0,
+      "medianCycles": 245.0,
+      "minCycles": 245,
+      "maxCycles": 245,
+      "meanInstructions": 221.0
+     },
+     "call40": {
+      "meanCycles": 1142.0,
+      "medianCycles": 1142.0,
+      "minCycles": 1142,
+      "maxCycles": 1142,
+      "meanInstructions": 1079.0
+     }
+    },
+    "plain_expand": {
+     "cyclesPerElement": 68.0,
+     "instructionsPerElement": 63.0,
+     "call1": {
+      "meanCycles": 131.0,
+      "medianCycles": 131.0,
+      "minCycles": 131,
+      "maxCycles": 131,
+      "meanInstructions": 123.0
+     },
+     "call40": {
+      "meanCycles": 2783.0,
+      "medianCycles": 2783.0,
+      "minCycles": 2783,
+      "maxCycles": 2783,
+      "meanInstructions": 2580.0
+     }
+    }
+   },
+   "speedupOf_fast_expand": {
+    "checked_expand": 1.0,
+    "plain_expand": 2.96
+   }
+  },
+  "s16_mirror_keep_n40": {
+   "description": "word offsets, mirrored, attribute kept, 40 cells",
+   "n": 40,
+   "corpora": 16,
+   "entries": {
+    "fast_expand": {
+     "cyclesPerElement": 27.0,
+     "instructionsPerElement": 26.0,
+     "call1": {
+      "meanCycles": 94.0,
+      "medianCycles": 94.0,
+      "minCycles": 94,
+      "maxCycles": 94,
+      "meanInstructions": 88.0
+     },
+     "call40": {
+      "meanCycles": 1147.0,
+      "medianCycles": 1147.0,
+      "minCycles": 1147,
+      "maxCycles": 1147,
+      "meanInstructions": 1102.0
+     }
+    },
+    "checked_expand": {
+     "cyclesPerElement": 27.0,
+     "instructionsPerElement": 26.0,
+     "call1": {
+      "meanCycles": 249.0,
+      "medianCycles": 249.0,
+      "minCycles": 249,
+      "maxCycles": 249,
+      "meanInstructions": 224.0
+     },
+     "call40": {
+      "meanCycles": 1302.0,
+      "medianCycles": 1302.0,
+      "minCycles": 1302,
+      "maxCycles": 1302,
+      "meanInstructions": 1238.0
+     }
+    },
+    "plain_expand": {
+     "cyclesPerElement": 67.0,
+     "instructionsPerElement": 64.0,
+     "call1": {
+      "meanCycles": 130.0,
+      "medianCycles": 130.0,
+      "minCycles": 130,
+      "maxCycles": 130,
+      "meanInstructions": 124.0
+     },
+     "call40": {
+      "meanCycles": 2743.0,
+      "medianCycles": 2743.0,
+      "minCycles": 2743,
+      "maxCycles": 2743,
+      "meanInstructions": 2620.0
+     }
+    }
+   },
+   "speedupOf_fast_expand": {
+    "checked_expand": 1.0,
+    "plain_expand": 2.48
+   }
+  },
+  "s16_mirror_replace_n40": {
+   "description": "word offsets, mirrored, low field replaced, 40 cells",
+   "n": 40,
+   "corpora": 16,
+   "entries": {
+    "fast_expand": {
+     "cyclesPerElement": 29.0,
+     "instructionsPerElement": 28.0,
+     "call1": {
+      "meanCycles": 99.0,
+      "medianCycles": 99.0,
+      "minCycles": 99,
+      "maxCycles": 99,
+      "meanInstructions": 91.0
+     },
+     "call40": {
+      "meanCycles": 1230.0,
+      "medianCycles": 1230.0,
+      "minCycles": 1230,
+      "maxCycles": 1230,
+      "meanInstructions": 1183.0
+     }
+    },
+    "checked_expand": {
+     "cyclesPerElement": 29.0,
+     "instructionsPerElement": 28.0,
+     "call1": {
+      "meanCycles": 254.0,
+      "medianCycles": 254.0,
+      "minCycles": 254,
+      "maxCycles": 254,
+      "meanInstructions": 227.0
+     },
+     "call40": {
+      "meanCycles": 1385.0,
+      "medianCycles": 1385.0,
+      "minCycles": 1385,
+      "maxCycles": 1385,
+      "meanInstructions": 1319.0
+     }
+    },
+    "plain_expand": {
+     "cyclesPerElement": 66.0,
+     "instructionsPerElement": 65.0,
+     "call1": {
+      "meanCycles": 129.0,
+      "medianCycles": 129.0,
+      "minCycles": 129,
+      "maxCycles": 129,
+      "meanInstructions": 125.0
+     },
+     "call40": {
+      "meanCycles": 2703.0,
+      "medianCycles": 2703.0,
+      "minCycles": 2703,
+      "maxCycles": 2703,
+      "meanInstructions": 2660.0
+     }
+    }
+   },
+   "speedupOf_fast_expand": {
+    "checked_expand": 1.0,
+    "plain_expand": 2.28
+   }
+  },
+  "s16_mirror_add_n40": {
+   "description": "word offsets, mirrored, byte added, 40 cells",
+   "n": 40,
+   "corpora": 16,
+   "entries": {
+    "fast_expand": {
+     "cyclesPerElement": 32.0,
+     "instructionsPerElement": 31.0,
+     "call1": {
+      "meanCycles": 101.0,
+      "medianCycles": 101.0,
+      "minCycles": 101,
+      "maxCycles": 101,
+      "meanInstructions": 95.0
+     },
+     "call40": {
+      "meanCycles": 1349.0,
+      "medianCycles": 1349.0,
+      "minCycles": 1349,
+      "maxCycles": 1349,
+      "meanInstructions": 1304.0
+     }
+    },
+    "checked_expand": {
+     "cyclesPerElement": 32.0,
+     "instructionsPerElement": 31.0,
+     "call1": {
+      "meanCycles": 256.0,
+      "medianCycles": 256.0,
+      "minCycles": 256,
+      "maxCycles": 256,
+      "meanInstructions": 231.0
+     },
+     "call40": {
+      "meanCycles": 1504.0,
+      "medianCycles": 1504.0,
+      "minCycles": 1504,
+      "maxCycles": 1504,
+      "meanInstructions": 1440.0
+     }
+    },
+    "plain_expand": {
+     "cyclesPerElement": 74.0,
+     "instructionsPerElement": 71.0,
+     "call1": {
+      "meanCycles": 137.0,
+      "medianCycles": 137.0,
+      "minCycles": 137,
+      "maxCycles": 137,
+      "meanInstructions": 131.0
+     },
+     "call40": {
+      "meanCycles": 3023.0,
+      "medianCycles": 3023.0,
+      "minCycles": 3023,
+      "maxCycles": 3023,
+      "meanInstructions": 2900.0
+     }
+    }
+   },
+   "speedupOf_fast_expand": {
+    "checked_expand": 1.0,
+    "plain_expand": 2.31
+   }
+  },
+  "s8_keep_n4": {
+   "description": "byte offsets, no mirror, attribute kept, 4 cells",
+   "n": 4,
+   "corpora": 16,
+   "entries": {
+    "fast_expand": {
+     "cyclesPerElement": 20.0,
+     "instructionsPerElement": 19.0,
+     "call1": {
+      "meanCycles": 85.0,
+      "medianCycles": 85.0,
+      "minCycles": 85,
+      "maxCycles": 85,
+      "meanInstructions": 79.0
+     },
+     "call4": {
+      "meanCycles": 145.0,
+      "medianCycles": 145.0,
+      "minCycles": 145,
+      "maxCycles": 145,
+      "meanInstructions": 136.0
+     }
+    },
+    "checked_expand": {
+     "cyclesPerElement": 20.0,
+     "instructionsPerElement": 19.0,
+     "call1": {
+      "meanCycles": 240.0,
+      "medianCycles": 240.0,
+      "minCycles": 240,
+      "maxCycles": 240,
+      "meanInstructions": 214.0
+     },
+     "call4": {
+      "meanCycles": 300.0,
+      "medianCycles": 300.0,
+      "minCycles": 300,
+      "maxCycles": 300,
+      "meanInstructions": 271.0
+     }
+    },
+    "plain_expand": {
+     "cyclesPerElement": 48.0,
+     "instructionsPerElement": 45.0,
+     "call1": {
+      "meanCycles": 111.0,
+      "medianCycles": 111.0,
+      "minCycles": 111,
+      "maxCycles": 111,
+      "meanInstructions": 105.0
+     },
+     "call4": {
+      "meanCycles": 255.0,
+      "medianCycles": 255.0,
+      "minCycles": 255,
+      "maxCycles": 255,
+      "meanInstructions": 240.0
+     }
+    }
+   },
+   "speedupOf_fast_expand": {
+    "checked_expand": 1.0,
+    "plain_expand": 2.4
+   }
+  },
+  "s8_mirror_keep_n4": {
+   "description": "byte offsets, mirrored, attribute kept, 4 cells",
+   "n": 4,
+   "corpora": 16,
+   "entries": {
+    "fast_expand": {
+     "cyclesPerElement": 29.0,
+     "instructionsPerElement": 28.0,
+     "call1": {
+      "meanCycles": 94.0,
+      "medianCycles": 94.0,
+      "minCycles": 94,
+      "maxCycles": 94,
+      "meanInstructions": 89.0
+     },
+     "call4": {
+      "meanCycles": 181.0,
+      "medianCycles": 181.0,
+      "minCycles": 181,
+      "maxCycles": 181,
+      "meanInstructions": 173.0
+     }
+    },
+    "checked_expand": {
+     "cyclesPerElement": 29.0,
+     "instructionsPerElement": 28.0,
+     "call1": {
+      "meanCycles": 249.0,
+      "medianCycles": 249.0,
+      "minCycles": 249,
+      "maxCycles": 249,
+      "meanInstructions": 224.0
+     },
+     "call4": {
+      "meanCycles": 336.0,
+      "medianCycles": 336.0,
+      "minCycles": 336,
+      "maxCycles": 336,
+      "meanInstructions": 308.0
+     }
+    },
+    "plain_expand": {
+     "cyclesPerElement": 56.0,
+     "instructionsPerElement": 53.0,
+     "call1": {
+      "meanCycles": 119.0,
+      "medianCycles": 119.0,
+      "minCycles": 119,
+      "maxCycles": 119,
+      "meanInstructions": 113.0
+     },
+     "call4": {
+      "meanCycles": 287.0,
+      "medianCycles": 287.0,
+      "minCycles": 287,
+      "maxCycles": 287,
+      "meanInstructions": 272.0
+     }
+    }
+   },
+   "speedupOf_fast_expand": {
+    "checked_expand": 1.0,
+    "plain_expand": 1.93
+   }
+  },
+  "s8_add_n4": {
+   "description": "byte offsets, no mirror, byte added, 4 cells",
+   "n": 4,
+   "corpora": 16,
+   "entries": {
+    "fast_expand": {
+     "cyclesPerElement": 25.0,
+     "instructionsPerElement": 24.0,
+     "call1": {
+      "meanCycles": 93.0,
+      "medianCycles": 93.0,
+      "minCycles": 93,
+      "maxCycles": 93,
+      "meanInstructions": 87.0
+     },
+     "call4": {
+      "meanCycles": 168.0,
+      "medianCycles": 168.0,
+      "minCycles": 168,
+      "maxCycles": 168,
+      "meanInstructions": 159.0
+     }
+    },
+    "checked_expand": {
+     "cyclesPerElement": 25.0,
+     "instructionsPerElement": 24.0,
+     "call1": {
+      "meanCycles": 248.0,
+      "medianCycles": 248.0,
+      "minCycles": 248,
+      "maxCycles": 248,
+      "meanInstructions": 222.0
+     },
+     "call4": {
+      "meanCycles": 323.0,
+      "medianCycles": 323.0,
+      "minCycles": 323,
+      "maxCycles": 323,
+      "meanInstructions": 294.0
+     }
+    },
+    "plain_expand": {
+     "cyclesPerElement": 55.0,
+     "instructionsPerElement": 52.0,
+     "call1": {
+      "meanCycles": 118.0,
+      "medianCycles": 118.0,
+      "minCycles": 118,
+      "maxCycles": 118,
+      "meanInstructions": 112.0
+     },
+     "call4": {
+      "meanCycles": 283.0,
+      "medianCycles": 283.0,
+      "minCycles": 283,
+      "maxCycles": 283,
+      "meanInstructions": 268.0
+     }
+    }
+   },
+   "speedupOf_fast_expand": {
+    "checked_expand": 1.0,
+    "plain_expand": 2.2
+   }
+  },
+  "s8_mirror_add_n4": {
+   "description": "byte offsets, mirrored, byte added, 4 cells",
+   "n": 4,
+   "corpora": 16,
+   "entries": {
+    "fast_expand": {
+     "cyclesPerElement": 35.0,
+     "instructionsPerElement": 34.0,
+     "call1": {
+      "meanCycles": 101.0,
+      "medianCycles": 101.0,
+      "minCycles": 101,
+      "maxCycles": 101,
+      "meanInstructions": 96.0
+     },
+     "call4": {
+      "meanCycles": 206.0,
+      "medianCycles": 206.0,
+      "minCycles": 206,
+      "maxCycles": 206,
+      "meanInstructions": 198.0
+     }
+    },
+    "checked_expand": {
+     "cyclesPerElement": 35.0,
+     "instructionsPerElement": 34.0,
+     "call1": {
+      "meanCycles": 256.0,
+      "medianCycles": 256.0,
+      "minCycles": 256,
+      "maxCycles": 256,
+      "meanInstructions": 231.0
+     },
+     "call4": {
+      "meanCycles": 361.0,
+      "medianCycles": 361.0,
+      "minCycles": 361,
+      "maxCycles": 361,
+      "meanInstructions": 333.0
+     }
+    },
+    "plain_expand": {
+     "cyclesPerElement": 63.0,
+     "instructionsPerElement": 60.0,
+     "call1": {
+      "meanCycles": 126.0,
+      "medianCycles": 126.0,
+      "minCycles": 126,
+      "maxCycles": 126,
+      "meanInstructions": 120.0
+     },
+     "call4": {
+      "meanCycles": 315.0,
+      "medianCycles": 315.0,
+      "minCycles": 315,
+      "maxCycles": 315,
+      "meanInstructions": 300.0
+     }
+    }
+   },
+   "speedupOf_fast_expand": {
+    "checked_expand": 1.0,
+    "plain_expand": 1.8
+   }
+  }
+ },
+ "label": "MODELLED: executed SH-2 instructions in the Yabause interpreter; flat RAM, no caches or wait states; not Saturn hardware",
+ "sourceCommit": "395341b0f1536f8cead33544b219dbbf27dde2f8",
+ "elfSha256": "24600d2d264a677f25206152f37060090fd64b1e9841d758733f0bb1d0c3cbe5",
+ "toolchain": "Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)",
+ "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44919747602",
+ "yabauseCommit": "7e38821dbac265490f115e163c523a939acda759"
+}

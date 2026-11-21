@@ -19,6 +19,9 @@ Evidence by tier:
   object code of the trusted and checked entries and of an independent plain C control over 10,800 random lists
   (215,604 cells, all 12 forms): every entry word and the running position equal the oracle and the host build, and
   nothing is written past the entries. The cell cost is 18 to 35 cycles for the library and 47 to 74 for the control
-  (the control costs 1.5 to 3.2 times as much); the checked entry adds about 155 cycles a call.
+  (the control costs 1.5 to 3.2 times as much); the checked entry adds about 155 cycles a call. The numbers are the
+  committed [results](../benchmarks/cell-records-model/results.json), captured by
+  [CI run 44919747602](https://github.com/lamb2k/SH2ZAM/actions/runs/44919747602) (push run on 395341b), equal value
+  for value to the local run (same ELF SHA-256).
 - **SH-2 build:** compiled C with the CI flags; the object needs no symbol (no libc, no libgcc helper).
 - **Not done:** console execution, any frame measurement and a hand-written assembly path (the loops are compiled C).
