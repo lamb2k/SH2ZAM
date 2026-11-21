@@ -552,7 +552,8 @@ FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
     for(uint32_t i = 0u; i < f->count; ++i) {
         sh2z_vehicle_t *v = &f->veh[i];
         sh2z_field_brain_t *b = &f->brain[i];
-        if(v->flags & SH2Z_VEH_EXTERNAL) { fld_laps(f, i); continue; }
+        /* line-field-7: the lap bookkeeping only when the lap moved (fld_laps does nothing otherwise). */
+        if(v->flags & SH2Z_VEH_EXTERNAL) { if(v->t.lap != (int32_t)b->laps_seen) fld_laps(f, i); continue; }
         if(v->flags & SH2Z_VEH_STOPPED) continue;
         if(bh && (v->flags & SH2Z_VEH_FALLING)) {   /* line-field-5: off the line, every tick, until it retires */
             b->last_tick = f->tick;
@@ -688,7 +689,7 @@ FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
             else if(fld_abs(v->t.lateral) >= at.half_width - 1 && at.half_width > 0) fld_wall(f, i, bh);
         }
         if((v->flags & SH2Z_VEH_RETIRED) && v->t.speed == 0) v->flags |= SH2Z_VEH_STOPPED;
-        fld_laps(f, i);
+        if(v->t.lap != (int32_t)b->laps_seen) fld_laps(f, i);
         ++f->steps;
     }
     /* Touch history: TOUCH is this tick only; the cooldown spans an incident. */
