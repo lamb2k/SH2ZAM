@@ -1,4 +1,4 @@
-/* Line field (contract tags line-field-1 to line-field-4) checks.
+/* Line field (contract tags line-field-1 to line-field-5 and line-field-7) checks.
  * Invariants over long random races, an independent grid formula, exact
  * contact arithmetic on hand-placed pairs, determinism, level of detail, and
  * a control for every behavioural claim (the same scene with the feature off
@@ -66,6 +66,8 @@ static void vehicle(uint32_t i, uint32_t grid, int32_t lap_ticks) {
 }
 
 static sh2z_field_t F;
+/* The step the races take (line-field-7 runs them through each entry point). */
+static void (*field_step)(sh2z_field_t *) = sh2z_field_step;
 static void field(uint32_t count, uint32_t seed) {
     sh2z_field_init(&F, &line, &P, veh, brain, order, slot, rank_order, count, seed);
 }
@@ -127,7 +129,7 @@ static uint32_t race(uint32_t count, uint32_t seed, int external, uint32_t ticks
             veh[0].kick_lat = veh[0].kick_speed = 0; veh[0].energy = veh[0].max_energy;
         }
         const sh2z_track_state_t before = veh[0].t;
-        sh2z_field_step(&F);
+        field_step(&F);
         if(check) invariants(count, &before);
     }
     return sh2z_field_hash(&F);
@@ -562,6 +564,457 @@ static void test_dash(void) {
     params();
 }
 
+/* ---- line-field-5 ---------------------------------------------------------------------------------- */
+static sh2z_field_behave_t B;
+/* Every behaviour off but the ones a scene sets. */
+static void behave_reset(void) {
+    memset(&B, 0, sizeof B);
+    B.roll_min = 20; B.roll_span = 16; B.fall_ticks = 95; B.ko_floor = 26;
+}
+/* Nodes lo..hi-1 get flags and a half width (and the line's lateral 0). */
+static void mark(uint32_t lo, uint32_t hi, uint16_t flags, uint16_t hw) {
+    for(uint32_t i = lo; i < hi; ++i) { nodes[i].flags = flags; nodes[i].half_width = hw; nodes[i].lateral = 0; }
+}
+
+/* A behaviour block whose tubes and air no node is moves nobody differently: the pinned line-field-1 hashes
+ * of the line-field-4 state (the behaviour state hashes only with a block). */
+static void test_behave_identity(void) {
+    static const uint32_t lf1[6] = { 0x7c56497eu, 0x9c2d952fu, 0x12afee5bu, 0xccfb9880u, 0x080ae758u, 0x244b0332u };
+    params(); behave_reset();
+    B.roll_chance = 65535; B.roll_lead = 13107;
+    B.air_mask = 0x01c0u; B.air_value = 0x0180u; B.open_mask = 0x01c0u; B.open_value = 0x0100u; B.air_spread = 65535;
+    P.behave = &B;
+    surface_reset(); surf.wrap_mask = 0x0180u; surf.wrap_value = 0x0080u; P.surface = &surf;
+    for(uint32_t seed = 1; seed <= 6; ++seed) {
+        (void)race(24, seed, 0, 5000, 1);
+        P.behave = 0;                                               /* the line-field-4 state alone */
+        CHECK(sh2z_field_hash(&F) == lf1[seed - 1u]);
+        CHECK(F.falls == 0u && F.kos == 0u);
+        P.behave = &B;
+    }
+    params();
+}
+
+/* Roll: on a hold tube (radius 100, nodes 10..89) one agent that always rolls goes round and round;
+ * not rolling it keeps its angle (hold_lead 0); the control without the hold mask steers home. */
+static int32_t roll_scene(int32_t chance, int hold, int32_t start_lat, int32_t *travel) {
+    params(); behave_reset(); surface_reset();
+    surf.wrap_mask = 0x0180u; surf.wrap_value = 0x0080u; P.surface = &surf;
+    B.roll_chance = chance; B.roll_latch = 65536; B.roll_lead = 131072;
+    if(hold) { B.hold_mask = 0x01c0u; B.hold_value = 0x00c0u; }
+    P.behave = &B; P.boost_from_lap = 4;
+    make_line(); mark(10, 90, 0x00c0u, 100);
+    lone(U(200 * 11), start_lat, 3000);
+    int32_t last = veh[0].t.lateral; *travel = 0;
+    for(uint32_t t = 0; t < 1000; ++t) {
+        sh2z_field_step(&F);
+        sh2z_line_sample_t at; sh2z_line_sample(&line, veh[0].t.node, veh[0].t.dist, &at);
+        if(!(at.flags & 0x0080u)) break;
+        const int32_t c = (int32_t)(((int64_t)at.half_width * 411775) >> 16);
+        int32_t d = veh[0].t.lateral - last;
+        while(d >= c / 2) d -= c;
+        while(d < -c / 2) d += c;
+        *travel += d; last = veh[0].t.lateral;
+    }
+    const int32_t end = veh[0].t.lateral;
+    make_line(); params();
+    return end;
+}
+static void test_roll(void) {
+    int32_t travel;
+    (void)roll_scene(65536, 1, 0, &travel);
+    CHECK(travel > U(2 * 628));                                     /* more than twice round (radius 100) */
+    const int32_t held = roll_scene(0, 1, U(120), &travel);
+    CHECK(held == U(120) && travel == 0);                           /* not rolling: keeps its angle */
+    const int32_t home = roll_scene(0, 0, U(120), &travel);
+    CHECK(abs(home) < U(10));                                       /* control: no hold mask, back to its line */
+    (void)roll_scene(0, 1, 0, &travel);
+    CHECK(travel == 0);                                             /* control: no rolls, no travel */
+}
+
+/* A held roll ends in the exit stretch of an exit tube (pipe 0x80, nodes 10..49, look-ahead 600);
+ * the control (no exit mask) keeps it to the tube's end. */
+static int exit_scene(int exit_mask) {
+    params(); behave_reset(); surface_reset();
+    surf.wrap_mask = 0x0180u; surf.wrap_value = 0x0080u; P.surface = &surf;
+    B.roll_chance = 65536; B.roll_latch = 65536; B.roll_lead = 6554; B.roll_exit_ahead = U(600);
+    if(exit_mask) { B.exit_mask = 0x01c0u; B.exit_value = 0x0080u; }
+    P.behave = &B; P.boost_from_lap = 4;
+    make_line(); mark(10, 50, 0x0080u, 100);
+    lone(U(200 * 11), 0, 3000);
+    int ended = 0, rolled = 0;
+    for(uint32_t t = 0; t < 2000 && veh[0].t.dist < U(200 * 50); ++t) {
+        sh2z_field_step(&F);
+        if(brain[0].roll < 0) rolled = 1;
+        if(rolled && !ended && brain[0].roll == 0) {
+            ended = 1;
+            CHECK(veh[0].t.dist + U(600) + U(4 * 60) >= U(200 * 50));   /* within the look-ahead (a decision's travel) */
+        }
+    }
+    make_line(); params();
+    return rolled && ended;
+}
+static void test_roll_exit(void) {
+    CHECK(exit_scene(1) == 1);
+    CHECK(exit_scene(0) == 0);                                      /* control: no exit stretch, the roll holds */
+}
+
+/* Lateral inertia: the lateral velocity changes by at most lat_accel a tick and an agent sent across
+ * overshoots its target; the control (lat_accel 0, line-field-4 steering) does not. */
+static int32_t inertia_scene(int32_t accel) {
+    params(); behave_reset(); B.lat_accel = accel; P.behave = &B; P.boost_from_lap = 4;
+    make_line(); mark(0, NODES, 0x0000u, 300);
+    lone(U(200 * 3), -U(150), 3000);
+    brain[0].lane = U(150);
+    int32_t most = INT32_MIN, v0 = veh[0].t.lat_vel;
+    for(uint32_t t = 0; t < 400; ++t) {
+        sh2z_field_step(&F);
+        if(accel) CHECK(abs(veh[0].t.lat_vel - v0) <= accel);
+        v0 = veh[0].t.lat_vel;
+        if(veh[0].t.lateral - U(150) > most) most = veh[0].t.lateral - U(150);
+    }
+    make_line(); params();
+    return most;
+}
+static void test_inertia(void) {
+    CHECK(inertia_scene(48) > U(4));                                /* overshoots */
+    CHECK(inertia_scene(0) <= 0);                                   /* control */
+}
+
+/* line-field-7: an agent under lateral inertia still keeps the line's speed cap and its own accel and brake (its speed
+ * and distance come from the step's sample). Control: without the cap it runs faster. */
+static int32_t inertia_cap_scene(uint16_t cap_q4, int32_t *slowest) {
+    params(); behave_reset(); B.lat_accel = 48; P.behave = &B;
+    make_line();
+    for(uint32_t i = 40; i < 60; ++i) nodes[i].speed_cap = cap_q4;
+    lone(U(200 * 10), 0, 400);
+    veh[0].t.speed = U(50);
+    int32_t fastest = 0;
+    *slowest = INT32_MAX;
+    for(uint32_t t = 0; t < 400; ++t) {
+        sh2z_field_step(&F);
+        const uint32_t n = veh[0].t.node;
+        if(n >= 53u && n < 59u) {
+            if(veh[0].t.speed > fastest) fastest = veh[0].t.speed;
+            if(veh[0].t.speed < *slowest) *slowest = veh[0].t.speed;
+        }
+    }
+    params(); make_line();
+    return fastest;
+}
+static void test_inertia_cap(void) {
+    int32_t slow;
+    CHECK(inertia_cap_scene(30 * 16, &slow) <= U(30) && slow > U(20));   /* held to the cap, braking at its rate */
+    CHECK(inertia_cap_scene(60 * 16, &slow) > U(30));                    /* control: no cap */
+}
+
+/* Air and falls: nodes 0..29 walled road (0x40), 30..39 air (0x180), 40.. open road (0x000) of half width 60.
+ * An agent leaving the air beyond 60 + margin falls: out of contact, no laps, energy kept until it retires
+ * exactly fall_ticks later with energy 0. The control (no open mask) lands and stays on the line. */
+static int fall_scene(int open, int32_t *retire_at, int32_t *fall_at) {
+    params(); behave_reset();
+    B.air_mask = 0x01c0u; B.air_value = 0x0180u; B.fall_margin = U(10); B.fall_ticks = 95;
+    if(open) { B.open_mask = 0x01c0u; B.open_value = 0x0000u; }
+    P.behave = &B; P.boost_from_lap = 4;
+    make_line(); mark(0, 30, 0x0040u, 200); mark(30, 40, 0x0180u, 200); mark(40, NODES, 0x0000u, 60);
+    lone(U(200 * 25), U(150), 3000);
+    brain[0].lane = U(150);
+    int fell = 0;
+    for(uint32_t t = 0; t < 900; ++t) {
+        const uint16_t was = veh[0].flags;
+        sh2z_field_step(&F);
+        if((veh[0].flags & SH2Z_VEH_FALLING) && !(was & SH2Z_VEH_FALLING)) { fell = 1; CHECK(F.falls == 1u); }
+        if(veh[0].flags & SH2Z_VEH_FALLING) CHECK(veh[0].energy > 0 && brain[0].laps_seen == 0);
+        if((veh[0].flags & SH2Z_VEH_RETIRED) && !(was & SH2Z_VEH_RETIRED)) CHECK(veh[0].energy == 0);
+    }
+    *retire_at = brain[0].retire_tick; *fall_at = brain[0].fall_tick;
+    make_line(); params();
+    return fell;
+}
+static void test_falls(void) {
+    int32_t r, f;
+    CHECK(fall_scene(1, &r, &f) == 1);
+    CHECK(f >= 0 && r == f + 95);                                   /* retires exactly fall_ticks later */
+    CHECK(fall_scene(0, &r, &f) == 0 && r < 0 && f < 0);            /* control: no open edge, no fall */
+}
+
+/* Knock-out credit at the fall, the source predicate: credited when the age after the falling step's count
+ * is at most ko_window (120), once. The age is set before the step that falls, as the reference probe does. */
+static uint32_t credit_scene(int32_t age_before, int attacker_done, int32_t window) {
+    params(); behave_reset();
+    B.air_mask = 0x01c0u; B.air_value = 0x0180u; B.open_mask = 0x01c0u; B.open_value = 0x0000u;
+    B.fall_margin = U(10); B.fall_ticks = 95; B.ko_window = window;
+    P.behave = &B; P.boost_from_lap = 4;
+    make_line(); mark(0, 30, 0x0040u, 200); mark(30, 40, 0x0180u, 200); mark(40, NODES, 0x0000u, 60);
+    rng = 5u;
+    vehicle(0, 0, 3000); vehicle(1, 0, 3000);
+    veh[1].flags = SH2Z_VEH_EXTERNAL; veh[1].t.dist = U(10); veh[1].t.lap = 0; veh[1].t.lateral = 0; veh[1].t.node = 0;
+    if(attacker_done) veh[1].flags |= SH2Z_VEH_FINISHED;
+    brain[0].lane = U(150);
+    veh[0].t.dist = U(200 * 25); veh[0].t.lap = 0; veh[0].t.lateral = U(150); veh[0].t.speed = U(20);
+    veh[0].t.node = sh2z_line_locate(&line, veh[0].t.dist, 0);
+    field(2, 3u); sh2z_field_start(&F);
+    uint32_t kos_at_fall = 0u;
+    int found = 0;
+    static sh2z_vehicle_t sv[2]; static sh2z_field_brain_t sb[2]; static sh2z_field_t sf; static uint8_t so[2], ss[2], sr[2];
+    for(uint32_t t = 0; t < 600 && !found; ++t) {
+        /* Step a copy; on the step that falls, restore and set the age before it. */
+        memcpy(sv, veh, sizeof sv); memcpy(sb, brain, sizeof sb); sf = F; memcpy(so, order, 2); memcpy(ss, slot, 2); memcpy(sr, rank_order, 2);
+        sh2z_field_step(&F);
+        if(!(veh[0].flags & SH2Z_VEH_FALLING)) continue;
+        found = 1;
+        memcpy(veh, sv, sizeof sv); memcpy(brain, sb, sizeof sb); F = sf; memcpy(order, so, 2); memcpy(slot, ss, 2); memcpy(rank_order, sr, 2);
+        brain[0].ko_by = 1; brain[0].ko_age = (uint16_t)age_before;
+        sh2z_field_step(&F);
+        CHECK(veh[0].flags & SH2Z_VEH_FALLING);
+        CHECK(brain[0].ko_age == age_before + 1);
+        kos_at_fall = F.kos;
+        for(uint32_t k = 0; k < 200; ++k) sh2z_field_step(&F);
+        CHECK(F.kos == kos_at_fall);                                /* once */
+        CHECK(veh[0].energy == 0 && (veh[0].flags & SH2Z_VEH_RETIRED));
+        CHECK(brain[0].ko_credit == (kos_at_fall ? 1 : -1));
+    }
+    CHECK(found);
+    make_line(); params();
+    return kos_at_fall;
+}
+static void test_ko_credit(void) {
+    CHECK(credit_scene(118, 0, 120) == 1u);                        /* age 119 */
+    CHECK(credit_scene(119, 0, 120) == 1u);                        /* age 120: the last eligible */
+    CHECK(credit_scene(120, 0, 120) == 0u);                        /* age 121: the first ineligible */
+    CHECK(credit_scene(10, 1, 120) == 0u);                         /* the attacker has finished */
+    CHECK(credit_scene(10, 0, 0) == 0u);                           /* control: no window, no credit */
+}
+
+/* Near-focus gate: an agent emptied by contact far from the focus keeps ko_floor; near it, or with no gate
+ * (the control), it retires with energy 0. */
+static void test_ko_near(void) {
+    for(int far = 0; far < 2; ++far) for(int gate = 0; gate < 2; ++gate) {
+        params(); behave_reset(); B.ko_near = gate ? U(1000) : 0; P.behave = &B; P.boost_from_lap = 4;
+        P.side_energy = U(500);                                     /* one hit empties anyone */
+        rng = 5u;
+        vehicle(0, 0, 3000); vehicle(1, 0, 3000); vehicle(2, 0, 3000);
+        const int32_t at = far ? U(200 * 40) : U(200 * 2);
+        veh[0].t.dist = U(200 * 2) - U(30); veh[0].t.lateral = U(100);   /* the focus, beside them */
+        veh[1].t.dist = at; veh[1].t.lateral = 0; veh[2].t.dist = at + U(20); veh[2].t.lateral = U(5);
+        for(int i = 0; i < 3; ++i) { veh[i].t.lap = 0; veh[i].t.speed = U(10); veh[i].t.node = sh2z_line_locate(&line, veh[i].t.dist, 0); brain[i].lane = 0; }
+        field(3, 3u); F.focus = 0; sh2z_field_start(&F);
+        for(uint32_t t = 0; t < 3; ++t) sh2z_field_step(&F);
+        const int retired = (veh[1].flags & SH2Z_VEH_RETIRED) != 0;
+        if(far && gate) CHECK(!retired && veh[1].energy == 26);    /* far and gated: the floor */
+        else CHECK(retired && veh[1].energy == 0);                  /* near, or no gate (control) */
+    }
+    params();
+}
+
+/* Drops off an outside tube: a held agent round a drop cylinder (radius 100) beyond drop_lat drops off with
+ * drop_chance; controls: not beyond drop_lat, no drop flag, a pipe (not a hold tube), drop_chance 0. */
+static int drop_scene(uint16_t flags, int32_t start_lat, int32_t chance) {
+    params(); behave_reset(); surface_reset();
+    surf.wrap_mask = 0x0180u; surf.wrap_value = 0x0080u; P.surface = &surf;
+    B.hold_mask = 0x01c0u; B.hold_value = 0x00c0u;
+    B.drop_mask = 0x0200u; B.drop_value = 0x0200u; B.drop_lat = 117965; B.drop_chance = chance;
+    P.behave = &B; P.boost_from_lap = 4;
+    make_line(); mark(10, 90, flags, 100);
+    lone(U(200 * 11), start_lat, 3000);
+    brain[0].lane = start_lat;
+    int fell = 0;
+    for(uint32_t t = 0; t < 300 && !fell; ++t) { sh2z_field_step(&F); fell = (veh[0].flags & SH2Z_VEH_FALLING) != 0; }
+    if(fell) CHECK(F.falls == 1u && brain[0].fall_tick >= 0);
+    make_line(); params();
+    return fell;
+}
+static void test_drops(void) {
+    CHECK(drop_scene(0x02c0u, U(200), 65536) == 1);                 /* 2.0 of the radius round: drops off */
+    CHECK(drop_scene(0x02c0u, U(150), 65536) == 0);                 /* control: 1.5, inside drop_lat */
+    CHECK(drop_scene(0x00c0u, U(200), 65536) == 0);                 /* control: not a drop node */
+    CHECK(drop_scene(0x0280u, U(200), 65536) == 0);                 /* control: a pipe (inside surface) */
+    CHECK(drop_scene(0x02c0u, U(200), 0) == 0);                     /* control: no chance */
+    CHECK(drop_scene(0x02c0u, U(200), 1) == 0);                     /* 1 / 65536 a step: not within 300 steps here */
+}
+
+/* Launch out of a pipe (radius 100, nodes 10..39) onto an open drop road (half width 60): beyond the edge plus
+ * fall_margin the agent leaves the line with launch_chance; controls: launch_chance 0, no drop flag, inside the edge. */
+static int launch_scene(uint16_t road, int32_t lane, int32_t chance) {
+    params(); behave_reset(); surface_reset();
+    surf.wrap_mask = 0x0180u; surf.wrap_value = 0x0080u; P.surface = &surf;
+    B.open_mask = 0x01c0u; B.open_value = 0x0000u; B.fall_margin = U(10);
+    B.drop_mask = 0x0200u; B.drop_value = 0x0200u; B.launch_chance = chance;
+    P.behave = &B; P.boost_from_lap = 4;
+    make_line(); mark(10, 40, 0x0080u, 100); mark(40, NODES, road, 60);
+    lone(U(200 * 30), lane, 3000);
+    brain[0].lane = lane;
+    int fell = 0;
+    for(uint32_t t = 0; t < 600 && !fell; ++t) { sh2z_field_step(&F); fell = (veh[0].flags & SH2Z_VEH_FALLING) != 0; }
+    if(!fell) CHECK(abs(veh[0].t.lateral) <= U(60));                /* landed on the road */
+    make_line(); params();
+    return fell;
+}
+static void test_launch(void) {
+    CHECK(launch_scene(0x0200u, U(150), 65536) == 1);
+    CHECK(launch_scene(0x0200u, U(150), 0) == 0);                   /* control: no chance */
+    CHECK(launch_scene(0x0000u, U(150), 65536) == 0);               /* control: not a drop node */
+    CHECK(launch_scene(0x0200u, U(40), 65536) == 0);                /* control: inside the edge */
+}
+
+/* Impact damage (contact_norm): both pay contact_norm of the closing speed along the line between them, no flat
+ * side energy; an attacker's victim pays twice and the attacker nothing. Control: contact_norm 0 charges side_energy. */
+static void impact_scene(int32_t norm, int attack, int32_t *l0, int32_t *l1) {
+    params(); behave_reset(); B.contact_norm = norm; P.behave = &B;
+    P.side_energy = U(500); P.attack_energy = U(500);
+    rng = 9u;
+    vehicle(0, 0, 2000); vehicle(1, 1, 2000);
+    veh[0].t.dist = U(5000); veh[0].t.lateral = U(10); veh[0].t.speed = U(30);
+    veh[1].t.dist = U(5000) - U(20); veh[1].t.lateral = -U(10); veh[1].t.speed = U(34);
+    veh[0].t.node = sh2z_line_locate(&line, veh[0].t.dist, 0); veh[1].t.node = sh2z_line_locate(&line, veh[1].t.dist, 0);
+    field(2, 1u);
+    sh2z_field_start(&F);
+    veh[0].accel = veh[1].accel = 0; veh[0].brake = veh[1].brake = 0; veh[0].grip = veh[1].grip = 0;
+    brain[0].pace = brain[1].pace = 0;
+    if(attack) { brain[1].attack_ticks = 30; brain[1].attack_target = 0; }
+    const int32_t e0 = veh[0].energy, e1 = veh[1].energy;
+    sh2z_field_step(&F);
+    CHECK(F.contacts == 1u);
+    *l0 = e0 - veh[0].energy; *l1 = e1 - veh[1].energy;
+    params();
+}
+static void test_impact(void) {
+    int32_t a, b;
+    impact_scene(36045, 0, &a, &b);
+    CHECK(a == b && a > 0 && a < U(4));                             /* 0.55 of a closing speed under 4: no flat term */
+    const int32_t share = a;
+    impact_scene(36045, 1, &a, &b);
+    CHECK(b == 0 && a >= 2 * share - 1 && a <= 2 * share + 1);      /* the victim pays the whole, the attacker nothing */
+    impact_scene(0, 0, &a, &b);
+    CHECK(a > U(50) && b > U(50));                                  /* control: the flat side energy empties both */
+}
+
+/* line-field-7: the contact test samples only tube nodes for the seam; a pair either side of a tube's seam still
+ * touches (its lateral difference wraps). Control: the same pair on a node that is not a tube does not. */
+static uint32_t seam_scene(uint16_t flags) {
+    params(); surface_reset(); surf.wrap_mask = 0x0180u; surf.wrap_value = 0x0080u; P.surface = &surf;
+    make_line(); mark(20, 60, flags, 100);
+    const int32_t round = (int32_t)(((int64_t)U(100) * 411775) >> 16), h = round >> 1;
+    rng = 5u;
+    vehicle(0, 0, 2000); vehicle(1, 1, 2000);
+    veh[0].t.dist = U(200 * 30); veh[0].t.lateral = round - h - U(10); veh[0].t.speed = U(30);
+    veh[1].t.dist = U(200 * 30) - U(20); veh[1].t.lateral = -h + U(10); veh[1].t.speed = U(30);
+    veh[0].t.node = sh2z_line_locate(&line, veh[0].t.dist, 0); veh[1].t.node = sh2z_line_locate(&line, veh[1].t.dist, 0);
+    field(2, 1u);
+    sh2z_field_start(&F);
+    veh[0].accel = veh[1].accel = 0; veh[0].brake = veh[1].brake = 0; veh[0].grip = veh[1].grip = 0;
+    brain[0].pace = brain[1].pace = 0;
+    sh2z_field_step(&F);
+    const uint32_t c = F.contacts;
+    params(); make_line();
+    return c;
+}
+static void test_seam_contact(void) {
+    CHECK(seam_scene(0x0080u) == 1u);                                /* across the seam of a tube */
+    CHECK(seam_scene(0x0000u) == 0u);                                /* control: no tube, no seam */
+}
+
+/* line-field-7: sh2z_line_locate_far gives sh2z_line_locate's node from every hint: on the even line, on a line of
+ * uneven spans with zero-length nodes, and on a one-node line; at every node start and either side of it, below the
+ * start and past the length, and for look-aheads of 3000 units from every node (crossing the start line). Control:
+ * a search that takes the first of equal starts differs on the zero-length nodes. */
+static uint32_t locate_first(const sh2z_line_t *l, int32_t dist) {   /* control */
+    uint32_t h = sh2z_line_locate_far(l, dist);
+    while(h > 0u && l->nodes[h - 1u].start == l->nodes[h].start) --h;
+    return h;
+}
+static uint32_t locate_check(const sh2z_line_t *l) {
+    uint32_t differ = 0u;
+    for(uint32_t k = 0; k <= l->count; ++k) {
+        const int32_t base = k < l->count ? l->nodes[k].start : l->length;
+        for(int32_t e = -2; e <= 2; ++e) {
+            const int32_t d = base + e;
+            const uint32_t far = sh2z_line_locate_far(l, d);
+            for(uint32_t h = 0; h < l->count + 2u; ++h) CHECK(sh2z_line_locate(l, d, h) == far);
+            differ += locate_first(l, d) != far;
+        }
+    }
+    for(uint32_t k = 0; k < l->count; ++k) {
+        int32_t d = l->nodes[k].start + U(3000) + (int32_t)(rnd() % 256u);
+        while(d >= l->length) d -= l->length;
+        CHECK(sh2z_line_locate(l, d, k) == sh2z_line_locate_far(l, d));
+    }
+    for(uint32_t r = 0; r < 20000; ++r) {
+        const int32_t d = (int32_t)(rnd() % (uint32_t)(l->length + 512)) - 256;
+        CHECK(sh2z_line_locate(l, d, rnd() % l->count) == sh2z_line_locate_far(l, d));
+    }
+    return differ;
+}
+static void test_locate_far(void) {
+    make_line();
+    CHECK(locate_check(&line) == 0u);                                /* no equal starts: the control agrees */
+    sh2z_line_node_t un[40];
+    sh2z_line_t ul = { un, 40u, 0 };
+    int32_t at = 0;
+    for(uint32_t i = 0; i < 40u; ++i) {
+        un[i] = nodes[i];
+        un[i].start = at;
+        at += (i % 7u == 3u) ? 0 : U(20 + (int32_t)(rnd() % 300u));   /* every 7th node has zero length */
+    }
+    ul.length = at + U(50);
+    CHECK(locate_check(&ul) > 0u);                                   /* control: first-of-equal differs */
+    sh2z_line_t one = { nodes, 1u, U(200) };
+    CHECK(locate_check(&one) == 0u);
+    make_line();
+}
+
+/* line-field-7: the entry points split by behaviour block. Each gives sh2z_field_step's state step for step:
+ * the plain step the pinned line-field-1 hashes; the behaviour step, on a line with a hold tube, a drop tube, an
+ * air stretch with an open edge and an outside driver, with every behaviour on, the hashes line-field-5's
+ * sh2z_field_step gave (pinned from main 7f99eb7) and sh2z_field_step's own. Controls: one behaviour value
+ * changed changes the race; the scene has falls and contact damage to tell apart. */
+static void behave_scene(void) {
+    params(); behave_reset(); surface_reset();
+    surf.wrap_mask = 0x0180u; surf.wrap_value = 0x0080u; P.surface = &surf;
+    make_line(); mark(10, 40, 0x00c0u, 100); mark(40, 46, 0x02c0u, 100); mark(60, 66, 0x0180u, 220); mark(66, 70, 0x0100u, 220);
+    B.roll_chance = 2000; B.roll_latch = 30000; B.roll_lead = 13107; B.hold_lead = 7864; B.roll_well = 52429;
+    B.hold_mask = 0x01c0u; B.hold_value = 0x00c0u; B.exit_mask = 0x01c0u; B.exit_value = 0x0080u; B.roll_exit_ahead = U(400);
+    B.lat_accel = 64; B.air_mask = 0x01c0u; B.air_value = 0x0180u; B.air_spread = 6554;
+    B.open_mask = 0x01c0u; B.open_value = 0x0100u; B.fall_margin = 0;
+    B.ko_window = 120; B.ko_near = U(1000); B.contact_norm = 36045;
+    B.drop_mask = 0x0200u; B.drop_value = 0x0200u; B.drop_lat = 117965; B.drop_chance = 4000; B.launch_chance = 4096;
+    P.behave = &B;
+}
+#ifdef LF7_PIN_PRINT   /* pin mode: built against line-field-5's sources, which have one step; prints lf5[] */
+#define sh2z_field_step_plain sh2z_field_step
+#define sh2z_field_step_behave sh2z_field_step
+#define LF5_PINS 0u
+#else
+#define LF5_PINS 0x68687a12u, 0xbaccf237u, 0xabc03fa3u, 0x29f21133u, 0x12e650c6u, 0xbb9479cdu
+#endif
+static void test_step_entries(void) {
+    static const uint32_t lf1[6] = { 0x7c56497eu, 0x9c2d952fu, 0x12afee5bu, 0xccfb9880u, 0x080ae758u, 0x244b0332u };
+    static const uint32_t lf5[6] = { LF5_PINS };
+    uint32_t falls = 0u;
+    for(uint32_t seed = 1; seed <= 6; ++seed) {
+        params(); make_line();
+        field_step = sh2z_field_step_plain;
+        CHECK(race(24, seed, 0, 5000, 1) == lf1[seed - 1u]);
+        behave_scene();
+        field_step = sh2z_field_step;
+        const uint32_t h = race(30, seed, 1, 5000, 0);
+        falls += F.falls;
+#ifdef LF7_PIN_PRINT
+        printf("lf5 pin seed %" PRIu32 ": 0x%08" PRIx32 "u\n", seed, h); (void)lf5;
+#else
+        CHECK(h == lf5[seed - 1u]);
+#endif
+        behave_scene();
+        field_step = sh2z_field_step_behave;
+        CHECK(race(30, seed, 1, 5000, 0) == h);
+        behave_scene(); B.roll_chance = 0;                          /* control: one behaviour off */
+        CHECK(race(30, seed, 1, 5000, 0) != h);
+    }
+    CHECK(falls > 0u);                                              /* the scene reaches the behaviour code */
+    field_step = sh2z_field_step;
+    make_line(); params();
+}
+
 int main(void) {
     make_line();
     params();
@@ -579,6 +1032,20 @@ int main(void) {
     test_zones();
     test_tubes();
     test_dash();
+    test_behave_identity();
+    test_roll();
+    test_roll_exit();
+    test_inertia();
+    test_inertia_cap();
+    test_falls();
+    test_ko_credit();
+    test_ko_near();
+    test_drops();
+    test_launch();
+    test_impact();
+    test_step_entries();
+    test_locate_far();
+    test_seam_contact();
     printf("line field: %" PRIu64 " checks passed\n", checks);
     return 0;
 }

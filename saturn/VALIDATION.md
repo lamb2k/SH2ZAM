@@ -17,6 +17,8 @@ and scope.
 - [line-field-2](validation/line-field-2.md): 2026-11-20 (line field second-lap re-target, line-field-2)
 - [line-field-3](validation/line-field-3.md): 2026-11-20 (line field first-lap chase cap, line-field-3)
 - [line-field-4](validation/line-field-4.md): 2026-11-20 (line field surface zones, tube nodes and final dash, line-field-4)
+- [line-field-5](validation/line-field-5.md): 2026-11-20 (line field behaviours, line-field-5)
+- [line-field-7](validation/line-field-7.md): 2026-11-21 (line field step entry points and exact step cuts, line-field-7)
 - [line-follower-1](validation/line-follower-1.md): 2026-11-19 (racing-line follower, line-follower-1)
 - [memo-1](validation/memo-1.md): 2026-11-17 (block memo kernels, memo-1)
 - [pose-1](validation/pose-1.md): 2026-11-17 (model pose from binary32 state, pose-1)

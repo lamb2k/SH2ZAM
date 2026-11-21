@@ -1,4 +1,5 @@
-/* Experimental line field (contract tags line-field-1 to line-field-4).
+/* Experimental line field (contract tags line-field-1 to line-field-5 and
+ * line-field-7).
  *
  * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
  * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
@@ -23,7 +24,9 @@ FLD_INLINE uint32_t fld_rand(sh2z_field_t *f) {
     return x;
 }
 /* In the way of others: a retired vehicle leaves contact and avoidance at once. */
-FLD_INLINE int fld_active(const sh2z_vehicle_t *v) { return !(v->flags & (SH2Z_VEH_RETIRED | SH2Z_VEH_STOPPED)); }
+FLD_INLINE int fld_active(const sh2z_vehicle_t *v) { return !(v->flags & (SH2Z_VEH_RETIRED | SH2Z_VEH_STOPPED | SH2Z_VEH_FALLING)); }
+/* line-field-5: node flags against a mask pair (a zero mask matches nothing). */
+FLD_INLINE int fld_match(uint16_t flags, uint16_t mask, uint16_t value) { return mask && (flags & mask) == value; }
 
 /* line-field-4. A tube node: the surface's wrap mask matches its flags. */
 FLD_INLINE int fld_tube(const sh2z_field_params_t *p, uint16_t flags) {
@@ -38,6 +41,17 @@ FLD_INLINE int32_t fld_wrap(int32_t lat, int32_t c) {
     while(lat >= c - h) lat -= c;
     while(lat < -h) lat += c;
     return lat;
+}
+/* line-field-7: the last node starting at or before dist (else 0), by halving. */
+uint32_t sh2z_line_locate_far(const sh2z_line_t *line, int32_t dist) {
+    const sh2z_line_node_t *n = line->nodes;
+    uint32_t lo = 0u, hi = line->count;
+    while(hi - lo > 1u) {
+        const uint32_t mid = (lo + hi) >> 1;
+        if(n[mid].start <= dist) lo = mid;
+        else hi = mid;
+    }
+    return lo;
 }
 /* The zone holding a line state when its step starts, or 0. Zones are sorted by start. */
 static uint32_t fld_zone(const sh2z_field_surface_t *s, const sh2z_track_state_t *t) {
@@ -84,7 +98,9 @@ void sh2z_field_init(sh2z_field_t *f, const sh2z_line_t *line, const sh2z_field_
         for(int k = 0; k < 4; ++k) b->lap_tick[k] = -1;
         b->finish_tick = -1; b->retire_tick = -1; b->laps_seen = (int16_t)veh[i].t.lap;
         b->pass_ticks = 0u; b->pass_dir = 0; b->attack_ticks = 0u; b->attack_target = 0u; b->finish_seq = 0u; b->touch_cool = 0u;
+        b->fall_tick = -1; b->air_drift = 0; b->roll = 0; b->ko_by = -1; b->ko_credit = -1; b->ko_age = 0xffffu;
     }
+    f->falls = 0u; f->kos = 0u;
 }
 
 void sh2z_field_start(sh2z_field_t *f) {
@@ -112,22 +128,27 @@ FLD_INLINE int32_t fld_rank_key(const sh2z_field_t *f, uint32_t i) {
 static uint32_t fld_rank(sh2z_field_t *f) {
     uint8_t *o = f->rank_order;
     uint32_t moved = 0u;
+    /* line-field-7: the key of o[i - 1] carries over from the previous pass (keys do not change while sorting). */
+    int32_t last = f->count ? fld_rank_key(f, o[0]) : 0;
     for(uint32_t i = 1u; i < f->count; ++i) {
         const uint8_t k = o[i];
         const int32_t kk = fld_rank_key(f, k);
+        int32_t next = kk;   /* the key that ends at o[i] */
         uint32_t j = i;
         while(j > 0u) {
             const uint8_t p = o[j - 1u];
-            const int32_t pk = fld_rank_key(f, p);
+            const int32_t pk = j == i ? last : fld_rank_key(f, p);
             /* Between running vehicles a place changes hands only on a clear lead
              * (no flicker side by side); finishing order is exact. */
             if((f->veh[p].flags | f->veh[k].flags) & SH2Z_VEH_FINISHED) {
                 if(pk > kk || (pk == kk && p < k)) break;
             } else if((int64_t)pk + f->params->rank_lead >= kk) break;
+            if(j == i) next = pk;
             o[j] = p;
             --j;
         }
         if(j != i) { o[j] = k; moved = 1u; }
+        last = next;
     }
     for(uint32_t i = 0u; i < f->count; ++i) f->veh[o[i]].rank = (uint8_t)i;
     return moved;
@@ -153,7 +174,8 @@ static int32_t fld_behind(const sh2z_field_t *f, uint32_t i) {
     return -1;
 }
 
-static void fld_think(sh2z_field_t *f, uint32_t i, uint32_t due, const sh2z_line_sample_t *at) {
+FLD_INLINE void fld_think(sh2z_field_t *f, uint32_t i, uint32_t due, const sh2z_line_sample_t *at,
+                          const sh2z_field_behave_t *bh) {
     const sh2z_field_params_t *p = f->params;
     sh2z_vehicle_t *v = &f->veh[i];
     sh2z_field_brain_t *b = &f->brain[i];
@@ -281,13 +303,38 @@ static void fld_think(sh2z_field_t *f, uint32_t i, uint32_t due, const sh2z_line
         }
     }
     b->target_lat = lat;
+    /* line-field-5: tube roll decisions. */
+    if(bh && fld_tube(p, at->flags) && at->half_width > 0) {
+        int exit = 0;
+        if(fld_match(at->flags, bh->exit_mask, bh->exit_value)) {
+            int32_t d = v->t.dist + bh->roll_exit_ahead;
+            while(d >= f->line->length) d -= f->line->length;
+            const uint32_t n = sh2z_line_locate_far(f->line, d);
+            exit = !fld_tube(p, f->line->nodes[n].flags);
+        }
+        /* A decision stands for 4 ticks; a level-of-detail step for its own ticks. */
+        const int32_t per = (int32_t)(due >> 2) > 1 ? (int32_t)(due >> 2) : 1;
+        if(exit) b->roll = 0;
+        else if((int32_t)(fld_rand(f) & 0xffffu) < bh->roll_chance * per) {
+            if((int32_t)(fld_rand(f) & 0xffffu) < bh->roll_latch) b->roll = -1;
+            else {
+                const int32_t span = bh->roll_span > 0 ? bh->roll_span : 1;
+                b->roll = (int16_t)((bh->roll_min > 0 ? bh->roll_min : 1) + (int32_t)(((fld_rand(f) & 0xffffu) * (uint32_t)span) >> 16));
+            }
+        } else if(b->roll > 0) b->roll = (int16_t)(b->roll > per ? b->roll - per : 0);
+    }
 }
 
 /* Energy charged to a vehicle, scaled by its armor; retirement at zero. */
-static void fld_damage(sh2z_field_t *f, uint32_t i, int32_t amount) {
+FLD_INLINE void fld_damage(sh2z_field_t *f, uint32_t i, int32_t amount, const sh2z_field_behave_t *bh) {
     sh2z_vehicle_t *v = &f->veh[i];
-    if(amount <= 0 || (v->flags & (SH2Z_VEH_RETIRED | SH2Z_VEH_FINISHED))) return;
+    if(amount <= 0 || (v->flags & (SH2Z_VEH_RETIRED | SH2Z_VEH_FINISHED | SH2Z_VEH_FALLING))) return;
     v->energy -= (int32_t)(((int64_t)amount * v->armor) >> 8);
+    if(v->energy <= 0 && bh && bh->ko_near > 0 && f->focus >= 0 && (uint32_t)f->focus < f->count && (int32_t)i != f->focus &&
+       fld_abs(sh2z_track_near_gap(f->line, &v->t, &f->veh[f->focus].t)) > bh->ko_near) {
+        v->energy = bh->ko_floor > 0 ? bh->ko_floor : 1;   /* line-field-5: far from the focus, energy cannot retire */
+        return;
+    }
     if(v->energy <= 0) {
         v->energy = 0;
         v->flags |= SH2Z_VEH_RETIRED;
@@ -301,16 +348,34 @@ FLD_INLINE int fld_current(const sh2z_field_t *f, uint32_t i) {
     return (f->veh[i].flags & SH2Z_VEH_EXTERNAL) || f->brain[i].last_tick == f->tick;
 }
 
+/* line-field-7: sh2z_follow_step's speed and distance alone, for an agent whose lateral the step integrates itself
+ * (the follower's lateral would be overwritten), from the step's own sample of the same position. steps >= 1. */
+FLD_INLINE void fld_follow_speed(const sh2z_line_t *line, const sh2z_follow_params_t *fp, sh2z_track_state_t *s,
+                                 const sh2z_line_sample_t *at, int32_t target_speed, uint32_t steps) {
+    if(steps > 64u) steps = 64u;
+    const int32_t n = (int32_t)steps;
+    int32_t want = target_speed < at->speed_cap ? target_speed : at->speed_cap;
+    if(want < 0) want = 0;
+    if(want > s->speed) {
+        const int32_t up = s->speed + fp->accel * n;
+        s->speed = up < want ? up : want;
+    } else {
+        const int32_t down = s->speed - fp->brake * n;
+        s->speed = down > want ? down : want;
+    }
+    sh2z_track_advance(line, s, steps);
+}
+
 /* Pushed into the line's edge: scrub speed and charge energy. */
-static void fld_wall(sh2z_field_t *f, uint32_t i) {
+FLD_INLINE void fld_wall(sh2z_field_t *f, uint32_t i, const sh2z_field_behave_t *bh) {
     sh2z_vehicle_t *v = &f->veh[i];
     v->flags |= SH2Z_VEH_WALL;
     v->t.speed = fld_mul_q16(v->t.speed, f->params->wall_keep);
-    fld_damage(f, i, f->params->wall_energy);
+    fld_damage(f, i, f->params->wall_energy, bh);
 }
 
 /* One pass over every pair in reach; returns the number of pairs pushed. */
-static uint32_t fld_contacts(sh2z_field_t *f) {
+FLD_INLINE uint32_t fld_contacts(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
     const sh2z_field_params_t *p = f->params;
     /* No reach across: no pair can overlap (|dl| >= 0 >= contact_lat), so the walk would change nothing. */
     if(p->contact_lat <= 0) return 0u;
@@ -336,9 +401,11 @@ static uint32_t fld_contacts(sh2z_field_t *f) {
             }
             sh2z_vehicle_t *a = &f->veh[ia], *b = &f->veh[ib];   /* a ahead of b */
             int32_t dl = a->t.lateral - b->t.lateral;
-            if(p->surface && p->surface->wrap_mask) {   /* line-field-4: across a tube's seam */
+            /* line-field-4: across a tube's seam. line-field-7: the node's flags are the sample's, so only a tube
+             * node is sampled. */
+            if(fld_tube(p, line->nodes[a->t.node].flags)) {
                 sh2z_line_sample(line, a->t.node, a->t.dist, &at);
-                if(fld_tube(p, at.flags) && at.half_width > 0) dl = fld_wrap(dl, fld_round(at.half_width));
+                if(at.half_width > 0) dl = fld_wrap(dl, fld_round(at.half_width));
             }
             const int32_t adl = fld_abs(dl);
             if(adl >= p->contact_lat) continue;
@@ -361,7 +428,7 @@ static uint32_t fld_contacts(sh2z_field_t *f) {
                         else {
                             a->t.lateral = fld_clamp(nl, -at.half_width, at.half_width);
                             left_a = fld_abs(nl - a->t.lateral);
-                            if(left_a && !pass) fld_wall(f, ia);
+                            if(left_a && !pass) fld_wall(f, ia, bh);
                         }
                     }
                 }
@@ -374,7 +441,7 @@ static uint32_t fld_contacts(sh2z_field_t *f) {
                         else {
                             b->t.lateral = fld_clamp(nl, -at.half_width, at.half_width);
                             left_b = fld_abs(nl - b->t.lateral);
-                            if(left_b && !pass) fld_wall(f, ib);
+                            if(left_b && !pass) fld_wall(f, ib, bh);
                         }
                     }
                 }
@@ -402,12 +469,26 @@ static uint32_t fld_contacts(sh2z_field_t *f) {
                 f->brain[ib].pass_dir = (int8_t)-dir; f->brain[ib].pass_ticks = (uint8_t)fld_clamp(p->pass_hold, 1, 255);
                 f->brain[ib].target_lat = a->t.lateral - dir * p->avoid_offset;
             }
+            if(fresh && bh) {   /* line-field-5: a contact incident with an external vehicle starts a knock-out age */
+                if(a_ext && !b_ext) { f->brain[ib].ko_by = (int16_t)ia; f->brain[ib].ko_age = 1u; }
+                if(b_ext && !a_ext) { f->brain[ia].ko_by = (int16_t)ib; f->brain[ia].ko_age = 1u; }
+            }
             const int32_t hit = fresh ? p->side_energy + (closing > 0 ? fld_mul_q16(closing, p->hit_energy) : 0) : 0;
             const int a_attacks = !a_ext && f->brain[ia].attack_ticks && f->brain[ia].attack_target == ib;
             const int b_attacks = !b_ext && f->brain[ib].attack_ticks && f->brain[ib].attack_target == ia;
-            if(fresh) {
-                fld_damage(f, ia, a_attacks ? 0 : hit + (b_attacks ? p->attack_energy : 0));
-                fld_damage(f, ib, b_attacks ? 0 : hit + (a_attacks ? p->attack_energy : 0));
+            if(fresh && bh && bh->contact_norm > 0) {
+                /* line-field-5: the impact is the closing speed along the line between the two (longitudinal gap and
+                 * lateral offset; the length by max + min / 2), shared: contact_norm of it each, and the whole
+                 * 2 x contact_norm to an attacker's victim (the attacker pays nothing). */
+                const int32_t ax = fld_abs(gap), ay = adl, len = (ax > ay ? ax + (ay >> 1) : ay + (ax >> 1));
+                const int64_t dot = (int64_t)closing * gap + (int64_t)(b->t.lat_vel - a->t.lat_vel) * dl;
+                const int32_t norm = len > 0 ? (int32_t)((dot < 0 ? -dot : dot) / len) : fld_abs(closing);
+                const int32_t share = fld_mul_q16(norm, bh->contact_norm);
+                fld_damage(f, ia, a_attacks ? 0 : (b_attacks ? share * 2 : share), bh);
+                fld_damage(f, ib, b_attacks ? 0 : (a_attacks ? share * 2 : share), bh);
+            } else if(fresh) {
+                fld_damage(f, ia, a_attacks ? 0 : hit + (b_attacks ? p->attack_energy : 0), bh);
+                fld_damage(f, ib, b_attacks ? 0 : hit + (a_attacks ? p->attack_energy : 0), bh);
             }
             /* An attack that lands is over. */
             if(a_attacks) f->brain[ia].attack_ticks = 0u;
@@ -446,7 +527,10 @@ static void fld_laps(sh2z_field_t *f, uint32_t i) {
     if(lap < (int32_t)b->laps_seen) b->laps_seen = (int16_t)lap;   /* an external vehicle driven backwards */
 }
 
-void sh2z_field_step(sh2z_field_t *f) {
+/* The step, with the behaviour block as a parameter (line-field-7). Each entry point below inlines it once: with
+ * bh a constant NULL every line-field-5 branch folds away, so the NULL step is line-field-4's code, and the
+ * behaviour step carries none of the NULL tests. */
+FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
     const sh2z_field_params_t *p = f->params;
     const sh2z_line_t *line = f->line;
     ++f->tick;
@@ -471,8 +555,23 @@ void sh2z_field_step(sh2z_field_t *f) {
     for(uint32_t i = 0u; i < f->count; ++i) {
         sh2z_vehicle_t *v = &f->veh[i];
         sh2z_field_brain_t *b = &f->brain[i];
-        if(v->flags & SH2Z_VEH_EXTERNAL) { fld_laps(f, i); continue; }
+        /* line-field-7: the lap bookkeeping only when the lap moved (fld_laps does nothing otherwise). */
+        if(v->flags & SH2Z_VEH_EXTERNAL) { if(v->t.lap != (int32_t)b->laps_seen) fld_laps(f, i); continue; }
         if(v->flags & SH2Z_VEH_STOPPED) continue;
+        if(bh && (v->flags & SH2Z_VEH_FALLING)) {   /* line-field-5: off the line, every tick, until it retires */
+            b->last_tick = f->tick;
+            v->t.speed = fld_mul_q16(v->t.speed, 61604);   /* 0.94 a tick */
+            v->t.lateral += v->t.lat_vel;
+            if((int32_t)(f->tick - f->start_tick) - b->fall_tick >= (bh->fall_ticks > 0 ? bh->fall_ticks : 1)) {
+                v->energy = 0;
+                v->flags = (uint16_t)((v->flags | SH2Z_VEH_RETIRED | SH2Z_VEH_STOPPED) & ~(SH2Z_VEH_BOOST | SH2Z_VEH_FALLING));
+                v->t.speed = 0;
+                b->retire_tick = (int32_t)(f->tick - f->start_tick);
+                ++f->retired;
+            }
+            ++f->steps;
+            continue;
+        }
         const uint32_t period = focus ? sh2z_lod_period(sh2z_track_near_gap(line, &v->t, &focus->t), p->lod_near) : 1u;
         /* Vehicles on the same stretch of the line (512 units) share a phase, so
          * neighbours stay in step with each other; stretches are staggered. */
@@ -481,6 +580,10 @@ void sh2z_field_step(sh2z_field_t *f) {
         if(!due) continue;
         b->last_tick = f->tick;
         b->expect += b->pace * (int32_t)due;
+        if(bh && !(v->flags & (SH2Z_VEH_RETIRED | SH2Z_VEH_FINISHED))) {   /* line-field-5: knock-out age */
+            const uint32_t age = (uint32_t)b->ko_age + due;
+            b->ko_age = (uint16_t)(age > 0xffffu ? 0xffffu : age);
+        }
         sh2z_line_sample_t at;
         sh2z_line_sample(line, v->t.node, v->t.dist, &at);
         /* line-field-4: the zone under the agent as its step starts. */
@@ -496,7 +599,7 @@ void sh2z_field_step(sh2z_field_t *f) {
             }
         }
         /* Decisions every 4th tick per vehicle (staggered), and on every level-of-detail step. */
-        if(due > 1u || ((i + f->tick) & 3u) == 0u || (v->flags & (SH2Z_VEH_RETIRED | SH2Z_VEH_WALL))) fld_think(f, i, due > 1u ? due : 4u, &at);
+        if(due > 1u || ((i + f->tick) & 3u) == 0u || (v->flags & (SH2Z_VEH_RETIRED | SH2Z_VEH_WALL))) fld_think(f, i, due > 1u ? due : 4u, &at, bh);
         sh2z_follow_params_t fp;
         fp.accel = v->accel; fp.brake = (v->flags & SH2Z_VEH_RETIRED) ? v->brake * 2 : v->brake;
         fp.steer_gain = p->steer_gain; fp.steer_max = v->grip; fp.margin = b->attack_ticks ? 0 : p->margin;
@@ -513,19 +616,83 @@ void sh2z_field_step(sh2z_field_t *f) {
             fp.margin = -(INT32_C(1) << 28);
         }
         v->flags &= (uint16_t)~SH2Z_VEH_WALL;
-        sh2z_follow_step(line, &fp, &v->t, target, target_lat, due);
+        /* line-field-5: roll and hold round a tube, the air, lateral inertia. */
+        int air = 0, own_lateral = 0;
+        if(bh && !(v->flags & (SH2Z_VEH_RETIRED | SH2Z_VEH_FINISHED))) {
+            if(tube && !b->attack_ticks && !b->pass_ticks) {
+                const int hold = fld_match(at.flags, bh->hold_mask, bh->hold_value);
+                if(b->roll && (hold || !bh->roll_well)) target_lat = v->t.lateral + fld_mul_q16(v->t.speed, bh->roll_lead);
+                else if(b->roll) {   /* a tube with a pull back to its line: the roll settles roll_well of the radius round */
+                    const int32_t off = fld_mul_q16(at.half_width, bh->roll_well);
+                    target_lat = v->t.lateral + fld_wrap(target_lat + (bh->roll_lead < 0 ? -off : off) - v->t.lateral, fld_round(at.half_width));
+                }
+                else if(hold) target_lat = v->t.lateral + fld_mul_q16(v->t.speed, bh->hold_lead);
+            }
+            air = fld_match(at.flags, bh->air_mask, bh->air_value) && !tube;
+            if(air && !(v->flags & SH2Z_VEH_AIR)) {
+                const int32_t spread = bh->air_spread;
+                b->air_drift = spread > 0 ? (int32_t)(((int64_t)(fld_rand(f) & 0xffffu) * (2 * spread + 1)) >> 16) - spread : 0;
+            }
+            v->flags = (uint16_t)(air ? (v->flags | SH2Z_VEH_AIR) : (v->flags & ~SH2Z_VEH_AIR));
+            own_lateral = air || bh->lat_accel > 0;
+        }
+        if(own_lateral) {
+            /* The follower moves speed and distance only; the lateral is integrated here. */
+            const int32_t lat0 = v->t.lateral, vel0 = v->t.lat_vel, n = (int32_t)(due < 64u ? due : 64u);
+            if(!tube) {
+                const int32_t lim = at.half_width - p->margin > 0 ? at.half_width - p->margin : 0;
+                target_lat = fld_clamp(target_lat, -lim, lim);
+            }
+            int32_t vel = vel0;
+            if(!air) {
+                int32_t want = fld_clamp(fld_mul_q16(target_lat - lat0, fp.steer_gain), -fp.steer_max, fp.steer_max);
+                vel += fld_clamp(want - vel0, -bh->lat_accel * n, bh->lat_accel * n);
+            }
+            fld_follow_speed(line, &fp, &v->t, &at, target, due);
+            v->t.lateral = lat0 + vel * n + (air ? fld_mul_q16(v->t.speed, b->air_drift) * n : 0);
+            v->t.lat_vel = vel;
+        } else sh2z_follow_step(line, &fp, &v->t, target, target_lat, due);
         /* On the edge: scrub speed and charge energy. */
         {   /* The line may narrow under the vehicle: stay inside at the new position. */
             sh2z_line_sample_t now;
             sh2z_line_sample(line, v->t.node, v->t.dist, &now);
-            if(fld_tube(p, now.flags) && now.half_width > 0) v->t.lateral = fld_wrap(v->t.lateral, fld_round(now.half_width));
+            const int now_tube = fld_tube(p, now.flags) && now.half_width > 0;
+            /* line-field-5: in the air beyond an open edge, the agent leaves the line. On a drop node it also leaves
+             * the line when it comes out of a tube beyond the open edge (launched, launch_chance), or, on a drop tube, when it is
+             * round beyond drop_lat of the radius and loses its hold (drop_chance per step). */
+            int leaves = 0;
+            if(bh && !(v->flags & (SH2Z_VEH_RETIRED | SH2Z_VEH_FINISHED))) {
+                const int open = !now_tube && fld_match(now.flags, bh->open_mask, bh->open_value) &&
+                                 fld_abs(v->t.lateral) > now.half_width + bh->fall_margin;
+                if(air) leaves = open;
+                else if(fld_match(now.flags, bh->drop_mask, bh->drop_value)) {
+                    if(tube && !now_tube) leaves = open && (bh->launch_chance >= 65536 || (int32_t)(fld_rand(f) & 0xffffu) < bh->launch_chance);
+                    else if(now_tube && bh->drop_chance > 0 && fld_match(now.flags, bh->hold_mask, bh->hold_value) &&
+                            fld_abs(fld_wrap(v->t.lateral, fld_round(now.half_width))) > fld_mul_q16(now.half_width, bh->drop_lat))
+                        leaves = (int32_t)(fld_rand(f) & 0xffffu) < bh->drop_chance;
+                }
+            }
+            if(leaves) {
+                v->flags = (uint16_t)((v->flags | SH2Z_VEH_FALLING) & ~(SH2Z_VEH_BOOST | SH2Z_VEH_AIR));
+                b->fall_tick = (int32_t)(f->tick - f->start_tick);
+                ++f->falls;
+                if(bh->ko_window > 0 && b->ko_by >= 0 && (uint32_t)b->ko_by < f->count && (int32_t)b->ko_age <= bh->ko_window &&
+                   !(f->veh[b->ko_by].flags & (SH2Z_VEH_FINISHED | SH2Z_VEH_RETIRED))) {
+                    b->ko_credit = b->ko_by;
+                    ++f->kos;
+                }
+                ++f->steps;
+                continue;
+            }
+            if(now_tube) v->t.lateral = fld_wrap(v->t.lateral, fld_round(now.half_width));
             else if(tube) v->t.lateral = fld_clamp(v->t.lateral, -now.half_width, now.half_width);   /* out of a tube */
-            else if(v->t.lateral > now.half_width) { v->t.lateral = now.half_width; fld_wall(f, i); }
-            else if(v->t.lateral < -now.half_width) { v->t.lateral = -now.half_width; fld_wall(f, i); }
-            else if(fld_abs(v->t.lateral) >= at.half_width - 1 && at.half_width > 0) fld_wall(f, i);
+            else if(air) { }   /* line-field-5: in the air, above any wall; it lands (or falls) later */
+            else if(v->t.lateral > now.half_width) { v->t.lateral = now.half_width; fld_wall(f, i, bh); if(own_lateral) v->t.lat_vel = -(v->t.lat_vel >> 1); }
+            else if(v->t.lateral < -now.half_width) { v->t.lateral = -now.half_width; fld_wall(f, i, bh); if(own_lateral) v->t.lat_vel = -(v->t.lat_vel >> 1); }
+            else if(fld_abs(v->t.lateral) >= at.half_width - 1 && at.half_width > 0) fld_wall(f, i, bh);
         }
         if((v->flags & SH2Z_VEH_RETIRED) && v->t.speed == 0) v->flags |= SH2Z_VEH_STOPPED;
-        fld_laps(f, i);
+        if(v->t.lap != (int32_t)b->laps_seen) fld_laps(f, i);
         ++f->steps;
     }
     /* Touch history: TOUCH is this tick only; the cooldown spans an incident. */
@@ -535,8 +702,21 @@ void sh2z_field_step(sh2z_field_t *f) {
     }
     /* Further passes settle pile-ups of three or more (energy is per incident,
      * so nothing is charged twice). At most three passes. */
-    for(int pass = 0; pass < 3; ++pass) if(fld_contacts(f) <= 1u) break;
+    for(int pass = 0; pass < 3; ++pass) if(fld_contacts(f, bh) <= 1u) break;
     f->rank_changes += fld_rank(f);
+}
+
+void sh2z_field_step_plain(sh2z_field_t *f) {
+    fld_step(f, (const sh2z_field_behave_t *)0);
+}
+
+void sh2z_field_step_behave(sh2z_field_t *f) {
+    fld_step(f, f->params->behave);
+}
+
+void sh2z_field_step(sh2z_field_t *f) {
+    if(f->params->behave) sh2z_field_step_behave(f);
+    else sh2z_field_step_plain(f);
 }
 
 FLD_INLINE uint32_t fld_mix(uint32_t h, uint32_t x) { return (h ^ x) * UINT32_C(16777619); }
@@ -554,6 +734,8 @@ uint32_t sh2z_field_hash(const sh2z_field_t *f) {
         FLD_MIX(b->pass_ticks); FLD_MIX(b->attack_ticks); FLD_MIX(f->rank_order[i]);
         if(b->finish_ticks) FLD_MIX(b->finish_ticks); /* line-field-1 states hash as before */
         if(b->first_lap_cap) FLD_MIX(b->first_lap_cap);
+        if(f->params->behave) { FLD_MIX(b->fall_tick); FLD_MIX(b->air_drift); FLD_MIX(b->roll); FLD_MIX(b->ko_by); FLD_MIX(b->ko_credit); FLD_MIX(b->ko_age); }
     }
+    if(f->params->behave) { FLD_MIX(f->falls); FLD_MIX(f->kos); }
     return h;
 }
