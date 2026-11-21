@@ -347,6 +347,24 @@ FLD_INLINE int fld_current(const sh2z_field_t *f, uint32_t i) {
     return (f->veh[i].flags & SH2Z_VEH_EXTERNAL) || f->brain[i].last_tick == f->tick;
 }
 
+/* line-field-7: sh2z_follow_step's speed and distance alone, for an agent whose lateral the step integrates itself
+ * (the follower's lateral would be overwritten), from the step's own sample of the same position. steps >= 1. */
+FLD_INLINE void fld_follow_speed(const sh2z_line_t *line, const sh2z_follow_params_t *fp, sh2z_track_state_t *s,
+                                 const sh2z_line_sample_t *at, int32_t target_speed, uint32_t steps) {
+    if(steps > 64u) steps = 64u;
+    const int32_t n = (int32_t)steps;
+    int32_t want = target_speed < at->speed_cap ? target_speed : at->speed_cap;
+    if(want < 0) want = 0;
+    if(want > s->speed) {
+        const int32_t up = s->speed + fp->accel * n;
+        s->speed = up < want ? up : want;
+    } else {
+        const int32_t down = s->speed - fp->brake * n;
+        s->speed = down > want ? down : want;
+    }
+    sh2z_track_advance(line, s, steps);
+}
+
 /* Pushed into the line's edge: scrub speed and charge energy. */
 FLD_INLINE void fld_wall(sh2z_field_t *f, uint32_t i, const sh2z_field_behave_t *bh) {
     sh2z_vehicle_t *v = &f->veh[i];
@@ -626,8 +644,7 @@ FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
                 int32_t want = fld_clamp(fld_mul_q16(target_lat - lat0, fp.steer_gain), -fp.steer_max, fp.steer_max);
                 vel += fld_clamp(want - vel0, -bh->lat_accel * n, bh->lat_accel * n);
             }
-            fp.steer_gain = 0; fp.margin = -(INT32_C(1) << 28);
-            sh2z_follow_step(line, &fp, &v->t, target, lat0, due);
+            fld_follow_speed(line, &fp, &v->t, &at, target, due);
             v->t.lateral = lat0 + vel * n + (air ? fld_mul_q16(v->t.speed, b->air_drift) * n : 0);
             v->t.lat_vel = vel;
         } else sh2z_follow_step(line, &fp, &v->t, target, target_lat, due);

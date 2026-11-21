@@ -653,6 +653,33 @@ static void test_inertia(void) {
     CHECK(inertia_scene(0) <= 0);                                   /* control */
 }
 
+/* line-field-7: an agent under lateral inertia still keeps the line's speed cap and its own accel and brake (its speed
+ * and distance come from the step's sample). Control: without the cap it runs faster. */
+static int32_t inertia_cap_scene(uint16_t cap_q4, int32_t *slowest) {
+    params(); behave_reset(); B.lat_accel = 48; P.behave = &B;
+    make_line();
+    for(uint32_t i = 40; i < 60; ++i) nodes[i].speed_cap = cap_q4;
+    lone(U(200 * 10), 0, 400);
+    veh[0].t.speed = U(50);
+    int32_t fastest = 0;
+    *slowest = INT32_MAX;
+    for(uint32_t t = 0; t < 400; ++t) {
+        sh2z_field_step(&F);
+        const uint32_t n = veh[0].t.node;
+        if(n >= 53u && n < 59u) {
+            if(veh[0].t.speed > fastest) fastest = veh[0].t.speed;
+            if(veh[0].t.speed < *slowest) *slowest = veh[0].t.speed;
+        }
+    }
+    params(); make_line();
+    return fastest;
+}
+static void test_inertia_cap(void) {
+    int32_t slow;
+    CHECK(inertia_cap_scene(30 * 16, &slow) <= U(30) && slow > U(20));   /* held to the cap, braking at its rate */
+    CHECK(inertia_cap_scene(60 * 16, &slow) > U(30));                    /* control: no cap */
+}
+
 /* Air and falls: nodes 0..29 walled road (0x40), 30..39 air (0x180), 40.. open road (0x000) of half width 60.
  * An agent leaving the air beyond 60 + margin falls: out of contact, no laps, energy kept until it retires
  * exactly fall_ticks later with energy 0. The control (no open mask) lands and stays on the line. */
@@ -980,6 +1007,7 @@ int main(void) {
     test_roll();
     test_roll_exit();
     test_inertia();
+    test_inertia_cap();
     test_falls();
     test_ko_credit();
     test_ko_near();
