@@ -11,6 +11,7 @@
  * Contract tag vehicle-dynamics-4 adds the build-time force scale
  * SH2Z_VD_FORCE_FRAC (see below): the engine force carried with more fraction
  * bits, so a constant such as 0.10027 is not rounded to a multiple of 2^-16.
+ * Contract tag vehicle-dynamics-5 models the half-pipe shape in sh2z_vd_step2.
  *
  * Model. Each tick (sh2z_vd_step) runs, in order: the pad, the surface zone
  * under the vehicle, steering, body-frame damping, boost, mines and launch
@@ -67,7 +68,7 @@ enum {
     SH2Z_VD_SHAPE_WALLED = 1,     /**< walled road; airborne above rules.air_walled */
     SH2Z_VD_SHAPE_PIPE = 2,       /**< inside a tube (vehicle-dynamics-2); road in sh2z_vd_step */
     SH2Z_VD_SHAPE_CYLINDER = 3,   /**< outside a tube (vehicle-dynamics-2); road in sh2z_vd_step */
-    SH2Z_VD_SHAPE_HALF_PIPE = 4,  /**< not modelled: treated as SH2Z_VD_SHAPE_ROAD */
+    SH2Z_VD_SHAPE_HALF_PIPE = 4,  /**< a trough (vehicle-dynamics-5); road in sh2z_vd_step */
     SH2Z_VD_SHAPE_TUNNEL = 5,     /**< tunnel; airborne above rules.air_tunnel */
     SH2Z_VD_SHAPE_GAP = 6,        /**< no road: always airborne */
     SH2Z_VD_SHAPE_EDGELESS = 7    /**< road without walls: leaving its width is falling */
@@ -363,6 +364,11 @@ typedef struct {
  *    radius tapering to the line over a join. Height is the distance less the
  *    radius; the up vector points away from the line. Beyond radius plus
  *    tube.cyl_reach the body has left the surface (it falls).
+ *  - SH2Z_VD_SHAPE_HALF_PIPE (contract tag vehicle-dynamics-5): the pipe's
+ *    ground with the top open. The body leaves the surface when its height
+ *    over the line, less tube.pipe_rim, plus sin(22.5 degrees) of the radius
+ *    (tapered by the share over a join) reaches zero, on the whole span; the
+ *    joins are the pipe's, and gravity acts along the road's up everywhere.
  *  Road shapes give the same bits as sh2z_vd_step. */
 void sh2z_vd_step2(sh2z_vd_body_t *b, const sh2z_vd_track2_t *track, const sh2z_vd_vehicle_t *v,
                    const sh2z_vd_rules_t *r, const sh2z_vd_input_t *in);

@@ -323,8 +323,9 @@ static void test_cylinder(void) {
 /* Spans 1 and 2 are a pipe that joins open road (span 0 before, span 3 after);
  * each join covers 30% of its span. Driving along the bottom from the road,
  * the floor drops into the tube and climbs out again with the body in contact. */
-static int drive_through(int with_joins, double *worst_height, uint64_t *hash) {
-    static const uint8_t pipe[N] = {0, SH2Z_VD_SHAPE_PIPE, SH2Z_VD_SHAPE_PIPE};
+static double worst_gravity_dev; /* worst |gravity_up - road up| over the last join drive */
+static int drive_through_shape(int shape, int with_joins, double *worst_height, uint64_t *hash) {
+    const uint8_t pipe[N] = {0, (uint8_t)shape, (uint8_t)shape};
     sh2z_vd_body_t b;
     sh2z_vd_input_t in = pad(SH2Z_VD_BTN_ACCEL, 0, 0);
     uint64_t h = UINT64_C(0xCBF29CE484222325);
@@ -341,8 +342,16 @@ static int drive_through(int with_joins, double *worst_height, uint64_t *hash) {
     sh2z_vd_spline(track, 0, b.t, b.spos, b.fwd);
     { int k; for(k = 0; k < 3; k++) b.pos[k] = b.ground[k] = b.spos[k] + b.disp[k]; }
     *worst_height = 0.0;
+    worst_gravity_dev = 0.0;
     for(i = 0; i < 400; i++) {
         sh2z_vd_step2(&b, &track2, &veh, &rules, &in);
+        {
+            int k;
+            for(k = 0; k < 3; k++) {
+                const double d = fabs(f30(b.gravity_up[k]) - f30(b.road[1][k]));
+                if(d > worst_gravity_dev) worst_gravity_dev = d;
+            }
+        }
         in = pad(SH2Z_VD_BTN_ACCEL, SH2Z_VD_BTN_ACCEL, 0);
         h = fnv(h, &b);
         if(i > 30 && f16(b.height) > *worst_height) *worst_height = f16(b.height);
@@ -351,6 +360,10 @@ static int drive_through(int with_joins, double *worst_height, uint64_t *hash) {
     }
     *hash = h;
     return through;
+}
+
+static int drive_through(int with_joins, double *worst_height, uint64_t *hash) {
+    return drive_through_shape(SH2Z_VD_SHAPE_PIPE, with_joins, worst_height, hash);
 }
 
 static void test_joins(void) {
@@ -365,12 +378,118 @@ static void test_joins(void) {
     check(h == UINT64_C(0xd2659d3902905498), "golden state hash of the join drive (fixed by the contract)");
 }
 
+/* ---- Half-pipe (vehicle-dynamics-5) -------------------------------------- */
+
+/* sin(22.5 degrees), the rim gain of the rule. */
+#define RIM_GAIN 0.3826834
+#define RIM 23.0
+
+/* A body hovering in contact with the trough at angle a (0 bottom, 90 degrees
+ * the side, beyond it up the far wall), at span 1. */
+static sh2z_vd_body_t trough_body(double deg, double h) {
+    sh2z_vd_body_t b = start_body(ON_PIPE, 1, -1, h, 0.05);
+    const double a = deg * PI / 180.0, dist = RADIUS - h;
+    int k;
+    for(k = 0; k < 3; k++) {
+        const double rad = sin(a) * f30(b.road[2][k]) - cos(a) * f30(b.road[1][k]);
+        b.disp[k] = q16(dist * rad);
+        b.pos[k] = b.ground[k] = b.spos[k] + b.disp[k];
+        b.body[1][k] = b.gravity_up[k] = b.tilt_up[k] = b.ground_up[k] = q30(-rad);
+    }
+    sh2z_u30_cross(b.body[2], b.body[1], b.body[0]);
+    return b;
+}
+
+static void test_half_pipe(void) {
+    static const uint8_t half[N] = {SH2Z_VD_SHAPE_HALF_PIPE, SH2Z_VD_SHAPE_HALF_PIPE, SH2Z_VD_SHAPE_HALF_PIPE,
+                                    SH2Z_VD_SHAPE_HALF_PIPE};
+    static const uint8_t pipe[N] = {SH2Z_VD_SHAPE_PIPE, SH2Z_VD_SHAPE_PIPE, SH2Z_VD_SHAPE_PIPE, SH2Z_VD_SHAPE_PIPE};
+    sh2z_vd_body_t b;
+    sh2z_vd_input_t none = pad(0, 0, 0);
+    double he, ce, deg, worst, worst_pipe, gdev_half, gdev_pipe;
+    uint64_t h, h_pipe;
+    unsigned graded = 0, wrong = 0, left = 0, kept = 0;
+    int r, r_pipe;
+
+    /* Rim oracle: leaves the surface exactly when the height over the line,
+     * less the rim, plus the gain of the radius reaches zero (double). */
+    build_track(half);
+    for(deg = 0.0; deg <= 179.5; deg += 0.5) { /* not 180: gravity_up -1 exactly overflows airborne_up, as on any tube */
+        const double dist = RADIUS - 13.0, above = -dist * cos(deg * PI / 180.0) - RIM + RIM_GAIN * RADIUS;
+        if(fabs(above) < 0.5) continue; /* the oracle's own rounding band */
+        b = trough_body(deg, 13.0);
+        sh2z_vd_step2(&b, &track2, &veh, &rules, &none);
+        graded++;
+        if(above >= 0.0) left++; else kept++;
+        if(((b.flags & SH2Z_VD_OFF_ROAD) != 0) != (above >= 0.0)) wrong++;
+    }
+    check(graded > 300 && left > 50 && kept > 100, "half-pipe: the sweep covers both sides of the rim");
+    check(wrong == 0, "half-pipe: leaves the surface exactly where the rim rule says, over a 0.5 degree sweep");
+
+    /* The same bodies stay on a pipe (its rim applies only over a join). */
+    build_track(pipe);
+    b = trough_body(150.0, 13.0);
+    sh2z_vd_step2(&b, &track2, &veh, &rules, &none);
+    check(!(b.flags & SH2Z_VD_OFF_ROAD), "control: the pipe holds a body the half-pipe lets go");
+    /* Back on the trough: a body flagged off the road is taken back once it is inside the rim and the radius. */
+    build_track(half);
+    b = trough_body(20.0, 13.0);
+    b.flags |= SH2Z_VD_OFF_ROAD | SH2Z_VD_AIRBORNE;
+    sh2z_vd_step2(&b, &track2, &veh, &rules, &none);
+    check(!(b.flags & SH2Z_VD_OFF_ROAD), "half-pipe: a body that is back inside the rim is on the surface again");
+    b = trough_body(150.0, 13.0);
+    b.flags |= SH2Z_VD_OFF_ROAD | SH2Z_VD_AIRBORNE;
+    sh2z_vd_step2(&b, &track2, &veh, &rules, &none);
+    check(b.flags & SH2Z_VD_OFF_ROAD, "half-pipe: a body above the rim stays off the surface");
+    b = trough_body(20.0, -40.0);
+    b.flags |= SH2Z_VD_OFF_ROAD | SH2Z_VD_AIRBORNE;
+    sh2z_vd_step2(&b, &track2, &veh, &rules, &none);
+    check(b.flags & SH2Z_VD_OFF_ROAD, "half-pipe: a body past the radius stays off the surface");
+    build_track(half);
+
+    /* In the trough: the floor holds at the hover height, up to the line, gravity along the road's up. */
+    build_track(half);
+    b = start_body(ON_PIPE, 1, -1, 13.0, 0.05);
+    drive(&b, step_vd2, 240, -1.0, &he, &ce);
+    check(he < 1.0 && ce < 1e-4, "half-pipe: the floor holds the hover height with up to the line");
+    check(!(b.flags & (SH2Z_VD_AIRBORNE | SH2Z_VD_OFF_ROAD | SH2Z_VD_FALLING)), "half-pipe: in contact on the floor");
+    b = trough_body(60.0, 13.0);
+    sh2z_vd_step2(&b, &track2, &veh, &rules, &none);
+    check(!(b.flags & SH2Z_VD_OFF_ROAD), "half-pipe: a body 60 degrees up the wall is held");
+    check(fabs(f30(b.gravity_up[1]) - f30(b.road[1][1])) < 1e-9 && fabs(f30(b.gravity_up[2]) - f30(b.road[1][2])) < 1e-9,
+          "half-pipe: gravity acts along the road's up on the wall");
+    build_track(pipe);
+    b = trough_body(60.0, 13.0);
+    sh2z_vd_step2(&b, &track2, &veh, &rules, &none);
+    check(fabs(f30(b.gravity_up[1]) - f30(b.road[1][1])) > 0.2, "control: the pipe's gravity follows the wall");
+
+    /* Radial clamp, as the pipe's. */
+    build_track(half);
+    b = trough_body(45.0, -40.0);
+    b.vel[2] = q16(-6.0);
+    sh2z_vd_step2(&b, &track2, &veh, &rules, &none);
+    check(fabs(dist_from_line(&b) - RADIUS) < 0.01 || (b.flags & SH2Z_VD_OFF_ROAD), "half-pipe: a body past the radius is put back or is off");
+
+    /* A half-pipe that joins open road at both ends: the drive stays in contact; gravity stays the road's. */
+    r = drive_through_shape(SH2Z_VD_SHAPE_HALF_PIPE, 1, &worst, &h);
+    gdev_half = worst_gravity_dev;
+    r_pipe = drive_through_shape(SH2Z_VD_SHAPE_PIPE, 1, &worst_pipe, &h_pipe);
+    gdev_pipe = worst_gravity_dev;
+    printf("half-pipe join drive: worst height %.3f, gravity dev %.4g; pipe %.3f, %.4g; hash %016llx\n", worst, gdev_half,
+           worst_pipe, gdev_pipe, (unsigned long long)h);
+    check(r == 1 && r_pipe == 1, "half-pipe join: the body drives from road through the trough and out again");
+    check(gdev_half < 1e-9 && gdev_pipe > 0.01, "half-pipe join: gravity is the road's up all through; the pipe's blends");
+    check(h != h_pipe, "half-pipe join: not the pipe's drive");
+    check(h == UINT64_C(0x4f8a928c19eb9896), "golden state hash of the half-pipe join drive (fixed by the contract)");
+}
+
 int main(void) {
     build_vehicle();
     test_road_identity();
     test_pipe();
     test_cylinder();
     test_joins();
+    test_half_pipe();
     printf("vehicle-dynamics-2: %u checks passed\n", checks);
     return 0;
 }
