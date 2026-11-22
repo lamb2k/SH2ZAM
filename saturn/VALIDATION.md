@@ -17,6 +17,7 @@ and scope.
 - [line-field-1](validation/line-field-1.md): 2026-11-19 (line field, line-field-1)
 - [line-field-10](validation/line-field-10.md): 2026-11-22 (line field contact passes without repeated work, line-field-10)
 - [line-field-12](validation/line-field-12.md): 2026-11-22 (line field pace ranks, the driver's slowing and wall impacts, line-field-12)
+- [line-field-13](validation/line-field-13.md): 2026-11-22 (line field contact passes, less work per step, line-field-13)
 - [line-field-2](validation/line-field-2.md): 2026-11-20 (line field second-lap re-target, line-field-2)
 - [line-field-3](validation/line-field-3.md): 2026-11-20 (line field first-lap chase cap, line-field-3)
 - [line-field-4](validation/line-field-4.md): 2026-11-20 (line field surface zones, tube nodes and final dash, line-field-4)

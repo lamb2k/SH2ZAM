@@ -12,8 +12,10 @@
  * line-field-8 (contact found for vehicles that pass one another within a
  * step) and line-field-9 (no lateral holds beyond the reference driver's:
  * no post-contact room hold, no hold against cutting across a vehicle
- * alongside, no blocking hold) and line-field-10 (the contact passes share
- * one scan's pair list and one line sample a vehicle; results unchanged).
+ * alongside, no blocking hold), line-field-10 (the contact passes share
+ * one scan's pair list and one line sample a vehicle; results unchanged),
+ * line-field-12 (pace ranks that move, the driver's slowing, wall impacts)
+ * and line-field-13 (the contact passes do less work, results unchanged).
  *
  * Shared vehicle state. sh2z_vehicle_t is the line-space state of ANY vehicle
  * on the line: agents the field drives, and vehicles driven elsewhere (a
@@ -398,6 +400,25 @@ uint32_t sh2z_line_locate_far(const sh2z_line_t *line, int32_t dist);
  * changes which vehicles a scan meets, so the pass resumes as a full scan
  * from the position it reached and the next pass scans in full again. A pile
  * of more than 192 pairs in reach is not listed and its passes scan in full. */
+
+/* ---- Contract tag line-field-13 ----------------------------------------- */
+
+/* No new entry point and no new parameter; the results are line-field-12's, bit
+ * for bit. The contact passes of a step do less work for the same pairs:
+ *   - the rows of the order are read once into a packed array, and a step in
+ *     which no two neighbouring vehicles are within the contact reach along the
+ *     line has no pair in reach, so its passes do nothing (the common step);
+ *   - otherwise the first pass lists the pairs from the packed rows, and the
+ *     pairs are looked at in list order, as the scan met them;
+ *   - a pair whose vehicles do not overlap sideways changes nothing, and that
+ *     depends on the two laterals alone, which only a push changes: a later
+ *     pass skips a pair that did not overlap when it was last looked at until
+ *     a push has moved one of its two vehicles;
+ *   - a pair that does not overlap is rejected before the push code, and a
+ *     tube's circumference and a line's half width are taken where a pair
+ *     needs them, without the sample's speed cap and lateral.
+ * The step's stack grows by about 4.5 KB (per-vehicle arrays for 255 vehicles,
+ * the packed rows and a list of 192 pairs). */
 
 /* ---- Contract tag line-field-12 ----------------------------------------- */
 
