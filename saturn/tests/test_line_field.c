@@ -1260,6 +1260,209 @@ static void test_step_entries(void) {
     make_line(); params();
 }
 
+/* ---- line-field-12 --------------------------------------------------------------------------------- */
+
+/* Pace ranks, the nearest rank. Agents 0, 1 and 2 are ranked 1, 2 and 3 on paces 1300, 1400 and 1600; agent 3 is a chaser
+ * of agent 2 that keeps beside it. Released in the last lap, the chaser joins the ranking
+ * at the rank of the nearest ranked agent (agent 2: rank 3, so it takes 3 or 4), never at rank 1. The places close up:
+ * the live ranked agents hold exactly 1..n. With retire1 agent 1 is retired on the wall first: it holds 254 and the
+ * others close up past it. */
+static uint32_t nearest_race(int retire1, int *old_rank_of_nearest, int *new_rank, int *wide_margin) {
+    params();
+    P.laps = 3; P.margin = retire1 ? 0 : U(6);
+    memset(&RK, 0, sizeof RK);
+    RK.step = rk_step; RK.step_count = 4u; RK.base = 4300; RK.release_dist = (int32_t)line.length * 2 / 3;
+    P.ranks = &RK;
+    rng = 33u;
+    vehicle(0, 0, 1300); vehicle(1, 1, 1400); vehicle(2, 2, 1600); vehicle(3, 3, 1600);
+    for(uint32_t i = 0; i < 4u; ++i) brain[i].lane = 0;
+    brain[0].pace_rank = 1u; brain[1].pace_rank = 2u; brain[2].pace_rank = 3u;
+    brain[3].pace_rank = 0u; brain[3].chase = 2; brain[3].chase_lead = 30;
+    if(retire1) { veh[1].energy = U(1); brain[1].lane = U(900); }   /* steers at the wall with nothing to lose */
+    field(4, 9u);
+    uint32_t released = 0u;
+    for(uint32_t t = 0; t < 9000u && !released; ++t) {
+        if(t == 60u) sh2z_field_start(&F);
+        uint8_t before[4]; int32_t total[4];
+        for(uint32_t i = 0; i < 4u; ++i) { before[i] = brain[i].pace_rank; total[i] = sh2z_track_total(&line, &veh[i].t); }
+        sh2z_field_step(&F);
+        if(brain[3].pace_rank != 0u) {
+            released = t + 1u;
+            /* The nearest ranked agent by distance covered before the step (lower index on a tie). */
+            int32_t best = INT32_MAX, second = INT32_MAX; uint32_t near = 99u;
+            for(uint32_t j = 0; j < 3u; ++j) {
+                if(before[j] < 1u || before[j] >= 254u) continue;
+                const int32_t d = abs(total[j] - total[3]);
+                if(d < best) { second = best; best = d; near = j; } else if(d < second) second = d;
+            }
+            *old_rank_of_nearest = near < 3u ? before[near] : 0;
+            *new_rank = brain[3].pace_rank;
+            *wide_margin = best * 2 < second;
+        }
+    }
+    CHECK(released);
+    /* The live ranked agents hold exactly 1..n, and a retired one holds 254. */
+    uint32_t live = 0u, seen = 0u;
+    for(uint32_t i = 0; i < 4u; ++i) {
+        if(veh[i].flags & SH2Z_VEH_RETIRED) { CHECK(brain[i].pace_rank == 254u); continue; }
+        ++live; CHECK(brain[i].pace_rank >= 1u && brain[i].pace_rank <= 4u); seen |= UINT32_C(1) << brain[i].pace_rank;
+    }
+    for(uint32_t r = 1; r <= live; ++r) CHECK(seen & (UINT32_C(1) << r));
+    CHECK(__builtin_popcount(seen) == (int)live);
+    if(retire1) CHECK(veh[1].flags & SH2Z_VEH_RETIRED);
+    params();
+    return released;
+}
+
+static void test_ranks_nearest(void) {
+    int old_rank = 0, new_rank = 0, wide = 0;
+    nearest_race(0, &old_rank, &new_rank, &wide);
+    CHECK(wide);                                                    /* the fixture: one ranked agent is clearly the nearest */
+    CHECK(old_rank == 3);                                           /* and it is not rank 1 (the control for a rank-1 release) */
+    CHECK(new_rank == 3 || new_rank == 4);
+    nearest_race(1, &old_rank, &new_rank, &wide);                   /* with agent 1 retired on the wall */
+}
+
+/* A retiring ranked agent leaves the ranking (254); with ranks NULL its field is as line-field-10 left it. */
+static void test_ranks_retire(void) {
+    for(int with = 0; with < 2; ++with) {
+        params();
+        P.laps = 3; P.margin = 0;
+        memset(&RK, 0, sizeof RK);
+        RK.step = rk_step; RK.step_count = 4u; RK.base = 4300;
+        P.ranks = with ? &RK : (const sh2z_field_ranks_t *)0;
+        rng = 5u;
+        vehicle(0, 0, 1500); vehicle(1, 1, 1500);
+        brain[0].pace_rank = 1u; brain[1].pace_rank = 2u;
+        veh[1].energy = U(1); brain[1].lane = U(900);
+        field(2, 3u);
+        for(uint32_t t = 0; t < 600u; ++t) { if(t == 60u) sh2z_field_start(&F); sh2z_field_step(&F); }
+        CHECK(veh[1].flags & SH2Z_VEH_RETIRED);
+        CHECK(brain[1].pace_rank == (with ? 254u : 2u));
+        CHECK(brain[0].pace_rank == 1u);
+    }
+    params();
+}
+
+/* The ranked hash includes the rank; the unranked hash does not. */
+static void test_ranks_hash(void) {
+    uint32_t h[2][2];
+    for(int with = 0; with < 2; ++with) for(int r = 0; r < 2; ++r) {
+        params();
+        memset(&RK, 0, sizeof RK);
+        RK.step = rk_step; RK.step_count = 4u; RK.base = 4300;
+        P.ranks = with ? &RK : (const sh2z_field_ranks_t *)0;
+        rng = 7u;
+        vehicle(0, 0, 1500); vehicle(1, 1, 1500);
+        brain[0].pace_rank = 1u; brain[1].pace_rank = (uint8_t)(2 + r);
+        field(2, 3u);
+        h[with][r] = sh2z_field_hash(&F);
+    }
+    CHECK(h[0][0] == h[0][1]);                                      /* ranks NULL: the rank is not state the field reads */
+    CHECK(h[1][0] != h[1][1]);                                      /* ranks set: it is */
+    params();
+}
+
+/* Coast, floor and the after-drive. Agent 0 drives at 50 units a tick on a slow pace (3 units a tick); agent 1 is far behind. */
+static int32_t slow_scene(int32_t coast, int32_t floor, int32_t after, int finished, uint32_t ticks, int32_t *first) {
+    params();
+    P.laps = 3;
+    memset(&RK, 0, sizeof RK);
+    RK.step = rk_step; RK.step_count = 4u; RK.base = 90000; RK.coast = coast; RK.floor = floor; RK.after_speed = after;
+    P.ranks = &RK;
+    rng = 17u;
+    vehicle(0, 0, 6000); vehicle(1, 6, 6000);
+    brain[0].pace_rank = 1u; brain[1].pace_rank = 2u; brain[0].lane = brain[1].lane = 0;
+    veh[0].t.lateral = 0; veh[1].t.lateral = 0;
+    field(2, 1u);
+    sh2z_field_start(&F);
+    veh[0].t.speed = U(50);
+    veh[1].flags |= SH2Z_VEH_EXTERNAL; F.focus = 1;                  /* the focus is an outside driver, finished or not */
+    if(finished) veh[1].flags |= SH2Z_VEH_FINISHED;
+    for(uint32_t t = 0; t < ticks; ++t) { sh2z_field_step(&F); if(t == 9u) *first = veh[0].t.speed; }
+    const int32_t v = veh[0].t.speed;
+    params();
+    return v;
+}
+
+static void test_ranks_slow(void) {
+    int32_t ten, ten0, ten1;
+    /* Coast: each tick it loses coast of its speed (at least 1), not the vehicle's brake. */
+    int32_t expect = U(50);
+    for(int k = 0; k < 10; ++k) { const int32_t s = (int32_t)(((int64_t)expect * 190) >> 16); expect -= s > 1 ? s : 1; }
+    slow_scene(190, 0, 0, 0, 10u, &ten);
+    CHECK(ten == expect);
+    slow_scene(0, 0, 0, 0, 10u, &ten0);                              /* control: the brake, 96 a tick */
+    CHECK(ten0 == U(50) - 10 * 96);
+    CHECK(ten > ten0 + U(1));
+    /* Floor: it holds the floor once it is down; without one it carries on below it. */
+    const int32_t held = slow_scene(190, U(23), 0, 0, 700u, &ten1);
+    CHECK(held == U(23));
+    CHECK(slow_scene(190, 0, 0, 0, 700u, &ten1) < U(15));
+    /* After-drive: once the focus has finished it drives on at after_speed; before, or with none, it keeps its pace. */
+    CHECK(slow_scene(190, 0, U(36), 1, 700u, &ten1) == U(36));
+    CHECK(slow_scene(190, 0, U(36), 0, 700u, &ten1) < U(36) - U(10));   /* control: the focus has not finished */
+    CHECK(slow_scene(190, 0, 0, 1, 700u, &ten1) < U(36) - U(10));       /* control: no after_speed */
+}
+
+/* Wall impacts (behave->wall_impact). A pair is placed against the right wall, the front one pressed outward by half the
+ * overlap; it pays wall_impact of the speed it hits the wall at (its overlap's half, at most its steering speed), once,
+ * where line-field-5 charged wall_energy a call. An agent that rests on the edge pays nothing. */
+static int32_t wall_pair(int32_t impact, int32_t gap_lat, int32_t *calls_energy) {
+    params(); behave_reset(); B.wall_impact = impact; P.behave = &B;
+    P.hit_energy = 0; P.side_energy = 0; P.attack_energy = 0; P.steer_gain = 0; P.margin = 0;   /* nobody steers: the pair stays where it is put */
+    rng = 9u;
+    mark(0, NODES, 0, 300);
+    vehicle(0, 0, 2000); vehicle(1, 1, 2000);
+    veh[0].t.dist = U(5000) + U(5); veh[1].t.dist = U(5000);
+    veh[0].t.node = sh2z_line_locate(&line, veh[0].t.dist, 0); veh[1].t.node = sh2z_line_locate(&line, veh[1].t.dist, 0);
+    sh2z_line_sample_t at;
+    sh2z_line_sample(&line, veh[0].t.node, veh[0].t.dist, &at);
+    veh[0].t.lateral = at.half_width; veh[1].t.lateral = at.half_width - gap_lat;
+    veh[0].t.speed = veh[1].t.speed = U(30);
+    field(2, 1u);
+    sh2z_field_start(&F);
+    veh[0].accel = veh[1].accel = 0; veh[0].brake = veh[1].brake = 0; veh[0].grip = veh[1].grip = U(6);
+    brain[0].pace = brain[1].pace = 0;
+    const int32_t e0 = veh[0].energy;
+    sh2z_field_step(&F);
+    *calls_energy = e0 - veh[0].energy;
+    const int32_t lat = veh[0].t.lateral;
+    make_line(); params();
+    (void)lat;
+    return veh[0].t.lateral;
+}
+
+static int32_t rest_scene(int32_t impact, int32_t *speed) {
+    params(); behave_reset(); B.wall_impact = impact; P.behave = &B; P.margin = 0;
+    rng = 11u;
+    mark(0, NODES, 0, 300);
+    vehicle(0, 0, 2000); veh[0].t.speed = U(30); brain[0].lane = U(900);
+    veh[0].energy = veh[0].max_energy = U(500);
+    field(1, 1u);
+    for(uint32_t t = 0; t < 400u; ++t) { if(t == 60u) sh2z_field_start(&F); sh2z_field_step(&F); }
+    const int32_t lost = veh[0].max_energy - veh[0].energy;
+    *speed = veh[0].t.speed;
+    make_line(); params();
+    return lost;
+}
+
+static void test_wall_impact(void) {
+    int32_t deep, shallow, flat_deep, flat_shallow;
+    wall_pair(45875, U(10), &deep);                                  /* overlap 30: pushed 15 into the wall, steering speed 6 */
+    wall_pair(45875, U(34), &shallow);                               /* overlap 6: pushed 3 into the wall */
+    CHECK(deep > 0 && shallow > 0);
+    CHECK(deep > shallow);                                           /* a harder hit costs more */
+    CHECK(deep == (int32_t)(((int64_t)U(6) * 45875) >> 16));          /* its steering speed, 6, is the cap on the 15 it was pushed */
+    CHECK(shallow == (int32_t)(((int64_t)U(3) * 45875) >> 16));       /* 3 into the wall: 0.7 of 3 */
+    wall_pair(0, U(10), &flat_deep);                                 /* control: line-field-5, wall_energy a call */
+    wall_pair(0, U(34), &flat_shallow);
+    CHECK(flat_deep == flat_shallow && flat_deep % P.wall_energy == 0 && flat_deep > 0);
+    int32_t v;
+    CHECK(rest_scene(45875, &v) == 0 && v > U(8));                   /* at rest on the edge: no charge, no scrub */
+    CHECK(rest_scene(0, &v) > U(100));                               /* control: the flat charge every tick */
+}
+
 int main(void) {
     make_line();
     params();
@@ -1297,6 +1500,11 @@ int main(void) {
     test_step_entries();
     test_locate_far();
     test_seam_contact();
+    test_ranks_nearest();
+    test_ranks_retire();
+    test_ranks_hash();
+    test_ranks_slow();
+    test_wall_impact();
     printf("line field: %" PRIu64 " checks passed\n", checks);
     return 0;
 }

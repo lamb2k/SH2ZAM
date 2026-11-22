@@ -418,7 +418,18 @@ uint32_t sh2z_line_locate_far(const sh2z_line_t *line, int32_t dist);
  * retiring agent leaves the ranking (rank 254) and the places close up at the
  * next release. External vehicles are not ranked. NULL is line-field-10 step for
  * step, with its hashes; the hash gains pace_rank only with ranks set. One
- * integer division per re-target (a lap, or a rank change) and none otherwise. */
+ * integer division per re-target (a lap, or a rank change) and none otherwise.
+ *
+ * Three more rules of the same driver, in params->ranks. Slowing: a vehicle has no brake on a pace; when its target is
+ * below its speed it only lets the throttle go and coasts. With coast > 0, an agent whose target (not the road's cap)
+ * holds it below its speed loses coast of its speed a tick (at least 1) in place of the vehicle's brake. Floor: no target
+ * is below floor, after the road's cap. After-drive: once the focus vehicle has finished, every agent's target is
+ * after_speed (no paces, no chases, no new boosts). All three are inert at 0. */
+
+/* behave->wall_impact (line-field-12): the driver's wall costs by its impact, wall_impact x the speed an agent hits the edge at
+ * (how far a contact push or a step took it past the edge, at most its steering speed, grip), once, and scrubs speed
+ * only then; an agent resting on the edge pays nothing. 0 is line-field-5's wall_energy a call, which
+ * charged a pile pressed on the edge for every contact call (up to four a tick). */
 
 /** Pace ranks (params->ranks). */
 typedef struct sh2z_field_ranks {
