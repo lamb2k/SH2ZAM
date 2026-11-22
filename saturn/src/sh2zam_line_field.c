@@ -1,5 +1,5 @@
 /* Experimental line field (contract tags line-field-1 to line-field-5,
- * line-field-7 to line-field-9).
+ * line-field-7 to line-field-10).
  *
  * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
  * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
@@ -8,8 +8,10 @@
 
 #if defined(__GNUC__)
 #define FLD_INLINE static inline __attribute__((always_inline))
+#define FLD_NOINLINE __attribute__((noinline)) static
 #else
 #define FLD_INLINE static inline
+#define FLD_NOINLINE static
 #endif
 
 #define FLD_TOUCH_COOL 30u   /* ticks a contact incident lasts for energy accounting */
@@ -371,7 +373,7 @@ static void fld_cs(const sh2z_line_t *line, fld_cs_t *cs, const sh2z_vehicle_t *
 
 /* One pair in reach along the line (|gap| < contact_long, gap = i0 - i1 by distance): the sign of the gap says which
  * is ahead. Returns 1 when the pair overlaps sideways and was pushed, else 0. */
-__attribute__((noinline)) static uint32_t fld_pair(sh2z_field_t *f, const sh2z_field_behave_t *bh, fld_cs_t *cs,
+FLD_NOINLINE uint32_t fld_pair(sh2z_field_t *f, const sh2z_field_behave_t *bh, fld_cs_t *cs,
                                                    uint32_t i0, uint32_t i1, int32_t gap) {
     const sh2z_field_params_t *p = f->params;
     const sh2z_line_t *line = f->line;

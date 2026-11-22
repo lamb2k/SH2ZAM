@@ -12,7 +12,8 @@
  * line-field-8 (contact found for vehicles that pass one another within a
  * step) and line-field-9 (no lateral holds beyond the reference driver's:
  * no post-contact room hold, no hold against cutting across a vehicle
- * alongside, no blocking hold).
+ * alongside, no blocking hold) and line-field-10 (the contact passes share
+ * one scan's pair list and one line sample a vehicle; results unchanged).
  *
  * Shared vehicle state. sh2z_vehicle_t is the line-space state of ANY vehicle
  * on the line: agents the field drives, and vehicles driven elsewhere (a
@@ -381,6 +382,19 @@ uint32_t sh2z_line_locate_far(const sh2z_line_t *line, int32_t dist);
  * Avoidance of the vehicle ahead, its pass_hold and the side attack stay as
  * before. Races with close racing give different results from line-field-8.
  * pass_hold now only times the side chosen around the vehicle ahead. */
+
+/* ---- Contract tag line-field-10 ----------------------------------------- */
+
+/* No new entry point and no new parameter; the results are line-field-9's, bit
+ * for bit. The up to three contact passes of a step share what a contact does
+ * not change (a contact moves a vehicle sideways and changes its speed and
+ * energy, never its distance or node): the line sample under a vehicle is
+ * taken once a step, and the pairs within the contact reach along the line,
+ * in scan order, are listed by the first pass and walked by the later passes
+ * in place of rescanning the order. A vehicle that retires during a pass
+ * changes which vehicles a scan meets, so the pass resumes as a full scan
+ * from the position it reached and the next pass scans in full again. A pile
+ * of more than 192 pairs in reach is not listed and its passes scan in full. */
 
 #ifdef __cplusplus
 }
