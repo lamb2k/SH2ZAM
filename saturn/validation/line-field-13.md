@@ -33,8 +33,8 @@ The step's stack grows by about 4.5 KB (per-vehicle arrays for 255 vehicles, the
   and under GCC with ASan and UBSan; the whole CTest set passes under GCC and Clang (68 of 68). Every pin of the
   line-field-12 suite is unchanged. Two new checks record the line-field-12 step's results: 3000 random scenes
   (8 to 96 nodes, tube nodes, behaviours, 2 to 60 agents, external vehicles, retired, stopped and falling starts,
-  several contact reaches; one hash over every tick's agents and counters: 38,097 contacts, 8,483 retirements,
-  20 falls), and two agents half a line apart with the signed gap on the edge of its wrap, both ways round.
+  vehicles on the node next to the one holding their distance, several contact reaches; one hash over every tick's agents and counters: 38,053 contacts, 8,483 retirements,
+  19 falls), and two agents half a line apart with the signed gap on the edge of its wrap, both ways round.
   The same generator over 20000 scenes gives the same hash on the line-field-12 and line-field-13 sources.
 - **Controls:** a scene fewer hashes differently; the half-line pair differs from a shifted one.
 - **Mutation controls (31 applied, 30 caught, the other equivalent):** the stamp skip ignoring a pushed vehicle,

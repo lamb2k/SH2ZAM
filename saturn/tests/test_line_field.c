@@ -468,7 +468,10 @@ static uint64_t x13_fuzz(uint32_t first, uint32_t last) {
             for(uint32_t i = 0; i < n; ++i) if(x13_veh[i].flags & SH2Z_VEH_EXTERNAL) {   /* the owner moves its vehicles */
                 sh2z_track_advance(&x13_line, &x13_veh[i].t, 1u); x13_veh[i].t.speed = U(x13_in(10, 50));
                 x13_veh[i].t.lateral += x13_in(-256, 256); x13_veh[i].kick_lat = x13_veh[i].kick_speed = 0;
-                if(x13_rnd() % 8u == 0u) x13_veh[i].t.node = (uint32_t)x13_in(0, (int32_t)nn - 1);   /* a node that does not hold its distance */
+                if(x13_rnd() % 8u == 0u) {   /* a node next to the one holding the distance: the width fraction is read past either end */
+                    int32_t k = (int32_t)x13_veh[i].t.node + x13_in(-1, 1);
+                    x13_veh[i].t.node = (uint32_t)(k < 0 ? 0 : k > (int32_t)nn - 1 ? (int32_t)nn - 1 : k);
+                }
             }
             sh2z_field_step(&x13_f);
             for(uint32_t i = 0; i < n; ++i) {
@@ -485,7 +488,7 @@ static uint64_t x13_fuzz(uint32_t first, uint32_t last) {
 }
 #define X13_HALF_A UINT64_C(0x67b341dbc6003b06)   /* recorded from the line-field-12 step */
 #define X13_HALF_B UINT64_C(0x00b8eb37e1241206)
-#define X13_FUZZ_HASH UINT64_C(0xc0ee3c55bdd11469)   /* recorded from the line-field-12 step: scenes 0 to 2999 */
+#define X13_FUZZ_HASH UINT64_C(0x573e6070a7025194)   /* recorded from the line-field-12 step: scenes 0 to 2999 */
 /* Two agents a half line apart after the step, where the signed gap sits on the edge of its wrap: -length / 2 before the wrap
  * (swap 0) or +length / 2 (swap 1); the first comes out as +length / 2, and which agent counts as ahead sets what the bump takes. */
 static uint64_t x13_half_scene(int swap) {
