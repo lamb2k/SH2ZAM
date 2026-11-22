@@ -15,6 +15,7 @@ and scope.
 - [foundation-2026-11-13](validation/foundation-2026-11-13.md): 2026-11-13
 - [integer-kernels-1](validation/integer-kernels-1.md): 2026-11-15 (integer kernels)
 - [line-field-1](validation/line-field-1.md): 2026-11-19 (line field, line-field-1)
+- [line-field-10](validation/line-field-10.md): 2026-11-22 (line field contact passes without repeated work, line-field-10)
 - [line-field-2](validation/line-field-2.md): 2026-11-20 (line field second-lap re-target, line-field-2)
 - [line-field-3](validation/line-field-3.md): 2026-11-20 (line field first-lap chase cap, line-field-3)
 - [line-field-4](validation/line-field-4.md): 2026-11-20 (line field surface zones, tube nodes and final dash, line-field-4)

@@ -1,5 +1,5 @@
 /* Experimental line field (contract tags line-field-1 to line-field-5,
- * line-field-7 to line-field-9).
+ * line-field-7 to line-field-10).
  *
  * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
  * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
@@ -8,8 +8,10 @@
 
 #if defined(__GNUC__)
 #define FLD_INLINE static inline __attribute__((always_inline))
+#define FLD_NOINLINE __attribute__((noinline)) static
 #else
 #define FLD_INLINE static inline
+#define FLD_NOINLINE static
 #endif
 
 #define FLD_TOUCH_COOL 30u   /* ticks a contact incident lasts for energy accounting */
@@ -345,124 +347,199 @@ FLD_INLINE void fld_wall(sh2z_field_t *f, uint32_t i, const sh2z_field_behave_t 
     fld_damage(f, i, f->params->wall_energy, bh);
 }
 
-/* One pass over every pair in reach; returns the number of pairs pushed. */
-FLD_INLINE uint32_t fld_contacts(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
-    const sh2z_field_params_t *p = f->params;
-    /* No reach across: no pair can overlap (|dl| >= 0 >= contact_lat), so the walk would change nothing. */
-    if(p->contact_lat <= 0) return 0u;
-    const sh2z_line_t *line = f->line;
+/* line-field-10: the contact passes of one step share three things, because a contact moves a vehicle sideways and
+ * changes its speed and energy, never its distance or node. (1) The line sample under a vehicle (flags and half
+ * width) is taken once a step, not once a pair and a push. (2) The pairs that lie within the contact reach along
+ * the line, in scan order, are the same in every pass while no vehicle retires, so the passes after the first walk
+ * the first pass's list in place of rescanning the order. (3) If a vehicle retires during a pass (the only change
+ * to the scan's rules: fld_active), the next pass scans in full again. The result is the line-field-9 step's. */
+#define FLD_PAIR_MAX 192u    /* list capacity; a longer list is not kept and the passes scan in full */
+#define FLD_CS_MAX 32u       /* vehicles whose line sample is kept; the others are sampled where used */
+
+typedef struct {
+    uint32_t valid;               /* bit i: slot i holds the sample of vehicle i */
+    int32_t half_width[FLD_CS_MAX];
+    uint16_t flags[FLD_CS_MAX];
+} fld_cs_t;
+
+/* The sample under vehicle i at its distance (distance and node do not change during the passes). */
+static void fld_cs(const sh2z_line_t *line, fld_cs_t *cs, const sh2z_vehicle_t *v, uint32_t i, int32_t *half_width, uint16_t *flags) {
+    if(i < FLD_CS_MAX && (cs->valid & (UINT32_C(1) << i))) { *half_width = cs->half_width[i]; *flags = cs->flags[i]; return; }
     sh2z_line_sample_t at;
+    sh2z_line_sample(line, v->t.node, v->t.dist, &at);
+    *half_width = at.half_width; *flags = at.flags;
+    if(i < FLD_CS_MAX) { cs->valid |= UINT32_C(1) << i; cs->half_width[i] = at.half_width; cs->flags[i] = at.flags; }
+}
+
+/* One pair in reach along the line (|gap| < contact_long, gap = i0 - i1 by distance): the sign of the gap says which
+ * is ahead. Returns 1 when the pair overlaps sideways and was pushed, else 0. */
+FLD_NOINLINE uint32_t fld_pair(sh2z_field_t *f, const sh2z_field_behave_t *bh, fld_cs_t *cs,
+                                                   uint32_t i0, uint32_t i1, int32_t gap) {
+    const sh2z_field_params_t *p = f->params;
+    const sh2z_line_t *line = f->line;
+    uint32_t ia = i0, ib = i1;
+    if(gap < 0) { ia = i1; ib = i0; gap = -gap; }
+    sh2z_vehicle_t *a = &f->veh[ia], *b = &f->veh[ib];   /* a ahead of b */
+    int32_t dl = a->t.lateral - b->t.lateral;
+    int32_t hw; uint16_t fl;
+    /* line-field-4: across a tube's seam. line-field-7: the node's flags are the sample's, so only a tube
+     * node is sampled. */
+    if(fld_tube(p, line->nodes[a->t.node].flags)) {
+        fld_cs(line, cs, a, ia, &hw, &fl);
+        if(hw > 0) dl = fld_wrap(dl, fld_round(hw));
+    }
+    const int32_t adl = fld_abs(dl);
+    if(adl >= p->contact_lat) return 0u;
+    const int32_t overlap = p->contact_lat - adl;
+    const int32_t dir = dl >= 0 ? 1 : -1;
+    const int a_ext = (a->flags & SH2Z_VEH_EXTERNAL) != 0, b_ext = (b->flags & SH2Z_VEH_EXTERNAL) != 0;
+    const int32_t half = (overlap + 1) >> 1;
+    /* Push apart by the overlap. Each takes half; what one cannot take
+     * (the line's edge, or an external vehicle's own dynamics) goes to
+     * the other. An external vehicle receives its share as a kick. */
+    int32_t move_a = half, move_b = overlap - half;
+    for(int pass = 0; pass < 2; ++pass) {
+        int32_t left_a = 0, left_b = 0;
+        if(move_a) {
+            if(a_ext) a->kick_lat += dir * move_a;
+            else {
+                fld_cs(line, cs, a, ia, &hw, &fl);
+                const int32_t nl = a->t.lateral + dir * move_a;
+                if(fld_tube(p, fl) && hw > 0) a->t.lateral = fld_wrap(nl, fld_round(hw));
+                else {
+                    a->t.lateral = fld_clamp(nl, -hw, hw);
+                    left_a = fld_abs(nl - a->t.lateral);
+                    if(left_a && !pass) fld_wall(f, ia, bh);
+                }
+            }
+        }
+        if(move_b) {
+            if(b_ext) b->kick_lat -= dir * move_b;
+            else {
+                fld_cs(line, cs, b, ib, &hw, &fl);
+                const int32_t nl = b->t.lateral - dir * move_b;
+                if(fld_tube(p, fl) && hw > 0) b->t.lateral = fld_wrap(nl, fld_round(hw));
+                else {
+                    b->t.lateral = fld_clamp(nl, -hw, hw);
+                    left_b = fld_abs(nl - b->t.lateral);
+                    if(left_b && !pass) fld_wall(f, ib, bh);
+                }
+            }
+        }
+        if(!left_a && !left_b) break;
+        move_a = left_b; move_b = left_a;   /* hand each remainder across, once */
+    }
+    /* Bump: the trailing vehicle keeps only part of its speed advantage. */
+    const int32_t closing = b->t.speed - a->t.speed;
+    if(closing > 0) {
+        const int32_t keep = a->t.speed + fld_mul_q16(closing, p->bump_keep);
+        if(b_ext) b->kick_speed += keep - b->t.speed;
+        else b->t.speed = keep;
+    }
+    /* Energy: both pay for the hit; an attacker's victim pays extra. */
+    /* Energy is charged per incident (the impact), not while both keep touching. */
+    const int fresh = !(f->brain[ia].touch_cool && f->brain[ib].touch_cool);
+    a->flags |= SH2Z_VEH_TOUCH; b->flags |= SH2Z_VEH_TOUCH;
+    f->brain[ia].touch_cool = f->brain[ib].touch_cool = FLD_TOUCH_COOL;
+    /* line-field-9: no post-contact room hold. The contact is a push and
+     * an impact; neither vehicle is set to hold a side afterwards. */
+    if(fresh && bh) {   /* line-field-5: a contact incident with an external vehicle starts a knock-out age */
+        if(a_ext && !b_ext) { f->brain[ib].ko_by = (int16_t)ia; f->brain[ib].ko_age = 1u; }
+        if(b_ext && !a_ext) { f->brain[ia].ko_by = (int16_t)ib; f->brain[ia].ko_age = 1u; }
+    }
+    const int32_t hit = fresh ? p->side_energy + (closing > 0 ? fld_mul_q16(closing, p->hit_energy) : 0) : 0;
+    const int a_attacks = !a_ext && f->brain[ia].attack_ticks && f->brain[ia].attack_target == ib;
+    const int b_attacks = !b_ext && f->brain[ib].attack_ticks && f->brain[ib].attack_target == ia;
+    if(fresh && bh && bh->contact_norm > 0) {
+        /* line-field-5: the impact is the closing speed along the line between the two (longitudinal gap and
+         * lateral offset; the length by max + min / 2), shared: contact_norm of it each, and the whole
+         * 2 x contact_norm to an attacker's victim (the attacker pays nothing). */
+        const int32_t ax = fld_abs(gap), ay = adl, len = (ax > ay ? ax + (ay >> 1) : ay + (ax >> 1));
+        const int64_t dot = (int64_t)closing * gap + (int64_t)(b->t.lat_vel - a->t.lat_vel) * dl;
+        const int32_t norm = len > 0 ? (int32_t)((dot < 0 ? -dot : dot) / len) : fld_abs(closing);
+        const int32_t share = fld_mul_q16(norm, bh->contact_norm);
+        fld_damage(f, ia, a_attacks ? 0 : (b_attacks ? share * 2 : share), bh);
+        fld_damage(f, ib, b_attacks ? 0 : (a_attacks ? share * 2 : share), bh);
+    } else if(fresh) {
+        fld_damage(f, ia, a_attacks ? 0 : hit + (b_attacks ? p->attack_energy : 0), bh);
+        fld_damage(f, ib, b_attacks ? 0 : hit + (a_attacks ? p->attack_energy : 0), bh);
+    }
+    /* An attack that lands is over. */
+    if(a_attacks) f->brain[ia].attack_ticks = 0u;
+    if(b_attacks) f->brain[ib].attack_ticks = 0u;
+    f->contacts += (uint32_t)fresh;
+    return 1u;
+}
+
+/* The pairs of one full scan that lie within the contact reach along the line, in scan order, with the scan position
+ * (row s, column k) each was found at. */
+typedef struct {
+    uint8_t i0[FLD_PAIR_MAX], i1[FLD_PAIR_MAX], s[FLD_PAIR_MAX], k[FLD_PAIR_MAX];
+    uint32_t n;
+    uint32_t full;   /* the list overflowed and is not kept */
+} fld_pl_t;
+
+/* A scan of the order from row s0, column k0 (a full pass starts at 0, 1; a pass cut short by a retirement resumes
+ * at the next column of its row, whose first vehicle was checked when the row began). Returns the pairs pushed. */
+static uint32_t fld_scan(sh2z_field_t *f, const sh2z_field_behave_t *bh, fld_cs_t *cs, fld_pl_t *pl, uint32_t s0, uint32_t k0) {
+    const sh2z_field_params_t *p = f->params;
+    const sh2z_line_t *line = f->line;
     uint32_t pushed = 0u;
-    for(uint32_t s = 0u; s < f->count; ++s) {
+    for(uint32_t s = s0; s < f->count; ++s) {
         const uint32_t i0 = f->order[s];
-        if(!fld_active(&f->veh[i0]) || !fld_current(f, i0)) continue;
-        for(uint32_t k = 1u; k < f->count; ++k) {
+        const uint32_t kfirst = s == s0 ? k0 : 1u;
+        if(kfirst == 1u && (!fld_active(&f->veh[i0]) || !fld_current(f, i0))) continue;
+        for(uint32_t k = kfirst; k < f->count; ++k) {
             const uint32_t i1 = f->order[s + k < f->count ? s + k : s + k - f->count];
             if(!fld_active(&f->veh[i1])) continue;
             /* Only between vehicles that are both current this tick (a skipped
              * vehicle sits behind its true place and must not end the scan). */
             if(!fld_current(f, i1)) continue;
-            int32_t gap = sh2z_track_near_gap(line, &f->veh[i0].t, &f->veh[i1].t);
+            const int32_t gap = sh2z_track_near_gap(line, &f->veh[i0].t, &f->veh[i1].t);
             if(gap >= p->contact_long) break;
             /* The order is by distance along the line: where it wraps past the line's start, the vehicle later in
              * the order can be the one ahead, so the gap's sign decides. */
-            uint32_t ia = i0, ib = i1;
-            if(gap < 0) {
-                if(gap <= -p->contact_long) continue;
-                ia = i1; ib = i0; gap = -gap;
+            if(gap < 0 && gap <= -p->contact_long) continue;
+            if(pl) {
+                if(pl->n < FLD_PAIR_MAX) {
+                    pl->i0[pl->n] = (uint8_t)i0; pl->i1[pl->n] = (uint8_t)i1; pl->s[pl->n] = (uint8_t)s; pl->k[pl->n] = (uint8_t)k;
+                    ++pl->n;
+                } else pl->full = 1u;
             }
-            sh2z_vehicle_t *a = &f->veh[ia], *b = &f->veh[ib];   /* a ahead of b */
-            int32_t dl = a->t.lateral - b->t.lateral;
-            /* line-field-4: across a tube's seam. line-field-7: the node's flags are the sample's, so only a tube
-             * node is sampled. */
-            if(fld_tube(p, line->nodes[a->t.node].flags)) {
-                sh2z_line_sample(line, a->t.node, a->t.dist, &at);
-                if(at.half_width > 0) dl = fld_wrap(dl, fld_round(at.half_width));
-            }
-            const int32_t adl = fld_abs(dl);
-            if(adl >= p->contact_lat) continue;
-            const int32_t overlap = p->contact_lat - adl;
-            const int32_t dir = dl >= 0 ? 1 : -1;
-            const int a_ext = (a->flags & SH2Z_VEH_EXTERNAL) != 0, b_ext = (b->flags & SH2Z_VEH_EXTERNAL) != 0;
-            const int32_t half = (overlap + 1) >> 1;
-            /* Push apart by the overlap. Each takes half; what one cannot take
-             * (the line's edge, or an external vehicle's own dynamics) goes to
-             * the other. An external vehicle receives its share as a kick. */
-            int32_t move_a = half, move_b = overlap - half;
-            for(int pass = 0; pass < 2; ++pass) {
-                int32_t left_a = 0, left_b = 0;
-                if(move_a) {
-                    if(a_ext) a->kick_lat += dir * move_a;
-                    else {
-                        sh2z_line_sample(line, a->t.node, a->t.dist, &at);
-                        const int32_t nl = a->t.lateral + dir * move_a;
-                        if(fld_tube(p, at.flags) && at.half_width > 0) a->t.lateral = fld_wrap(nl, fld_round(at.half_width));
-                        else {
-                            a->t.lateral = fld_clamp(nl, -at.half_width, at.half_width);
-                            left_a = fld_abs(nl - a->t.lateral);
-                            if(left_a && !pass) fld_wall(f, ia, bh);
-                        }
-                    }
-                }
-                if(move_b) {
-                    if(b_ext) b->kick_lat -= dir * move_b;
-                    else {
-                        sh2z_line_sample(line, b->t.node, b->t.dist, &at);
-                        const int32_t nl = b->t.lateral - dir * move_b;
-                        if(fld_tube(p, at.flags) && at.half_width > 0) b->t.lateral = fld_wrap(nl, fld_round(at.half_width));
-                        else {
-                            b->t.lateral = fld_clamp(nl, -at.half_width, at.half_width);
-                            left_b = fld_abs(nl - b->t.lateral);
-                            if(left_b && !pass) fld_wall(f, ib, bh);
-                        }
-                    }
-                }
-                if(!left_a && !left_b) break;
-                move_a = left_b; move_b = left_a;   /* hand each remainder across, once */
-            }
-            /* Bump: the trailing vehicle keeps only part of its speed advantage. */
-            const int32_t closing = b->t.speed - a->t.speed;
-            if(closing > 0) {
-                const int32_t keep = a->t.speed + fld_mul_q16(closing, p->bump_keep);
-                if(b_ext) b->kick_speed += keep - b->t.speed;
-                else b->t.speed = keep;
-            }
-            /* Energy: both pay for the hit; an attacker's victim pays extra. */
-            /* Energy is charged per incident (the impact), not while both keep touching. */
-            const int fresh = !(f->brain[ia].touch_cool && f->brain[ib].touch_cool);
-            a->flags |= SH2Z_VEH_TOUCH; b->flags |= SH2Z_VEH_TOUCH;
-            f->brain[ia].touch_cool = f->brain[ib].touch_cool = FLD_TOUCH_COOL;
-            /* line-field-9: no post-contact room hold. The contact is a push and
-             * an impact; neither vehicle is set to hold a side afterwards. */
-            if(fresh && bh) {   /* line-field-5: a contact incident with an external vehicle starts a knock-out age */
-                if(a_ext && !b_ext) { f->brain[ib].ko_by = (int16_t)ia; f->brain[ib].ko_age = 1u; }
-                if(b_ext && !a_ext) { f->brain[ia].ko_by = (int16_t)ib; f->brain[ia].ko_age = 1u; }
-            }
-            const int32_t hit = fresh ? p->side_energy + (closing > 0 ? fld_mul_q16(closing, p->hit_energy) : 0) : 0;
-            const int a_attacks = !a_ext && f->brain[ia].attack_ticks && f->brain[ia].attack_target == ib;
-            const int b_attacks = !b_ext && f->brain[ib].attack_ticks && f->brain[ib].attack_target == ia;
-            if(fresh && bh && bh->contact_norm > 0) {
-                /* line-field-5: the impact is the closing speed along the line between the two (longitudinal gap and
-                 * lateral offset; the length by max + min / 2), shared: contact_norm of it each, and the whole
-                 * 2 x contact_norm to an attacker's victim (the attacker pays nothing). */
-                const int32_t ax = fld_abs(gap), ay = adl, len = (ax > ay ? ax + (ay >> 1) : ay + (ax >> 1));
-                const int64_t dot = (int64_t)closing * gap + (int64_t)(b->t.lat_vel - a->t.lat_vel) * dl;
-                const int32_t norm = len > 0 ? (int32_t)((dot < 0 ? -dot : dot) / len) : fld_abs(closing);
-                const int32_t share = fld_mul_q16(norm, bh->contact_norm);
-                fld_damage(f, ia, a_attacks ? 0 : (b_attacks ? share * 2 : share), bh);
-                fld_damage(f, ib, b_attacks ? 0 : (a_attacks ? share * 2 : share), bh);
-            } else if(fresh) {
-                fld_damage(f, ia, a_attacks ? 0 : hit + (b_attacks ? p->attack_energy : 0), bh);
-                fld_damage(f, ib, b_attacks ? 0 : hit + (a_attacks ? p->attack_energy : 0), bh);
-            }
-            /* An attack that lands is over. */
-            if(a_attacks) f->brain[ia].attack_ticks = 0u;
-            if(b_attacks) f->brain[ib].attack_ticks = 0u;
-            f->contacts += (uint32_t)fresh;
-            ++pushed;
+            pushed += fld_pair(f, bh, cs, i0, i1, gap);
         }
     }
     return pushed;
+}
+
+/* The contact passes of a step: at most three, ending after the first that pushes no more than one pair
+ * (pile-ups of three or more settle over the passes; energy is per incident, so nothing is charged twice). */
+FLD_INLINE void fld_contact_phase(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
+    const sh2z_field_params_t *p = f->params;
+    /* No reach across: no pair can overlap (|dl| >= 0 >= contact_lat), so the walk would change nothing. */
+    if(p->contact_lat <= 0) return;
+    const sh2z_line_t *line = f->line;
+    fld_cs_t cs;
+    fld_pl_t pl;
+    cs.valid = 0u;
+    uint32_t list_ok = 0u, ret_list = 0u;
+    for(int pass = 0; pass < 3; ++pass) {
+        uint32_t pushed = 0u;
+        if(list_ok && f->retired == ret_list) {
+            /* Nobody has retired since the list was scanned, so the scan would meet these pairs and no others. A
+             * retirement during this pass changes which vehicles the rest of the scan meets: it resumes in full. */
+            for(uint32_t n = 0u; n < pl.n; ++n) {
+                const uint32_t i0 = pl.i0[n], i1 = pl.i1[n];
+                pushed += fld_pair(f, bh, &cs, i0, i1, sh2z_track_near_gap(line, &f->veh[i0].t, &f->veh[i1].t));
+                if(f->retired != ret_list) { pushed += fld_scan(f, bh, &cs, (fld_pl_t *)0, pl.s[n], (uint32_t)pl.k[n] + 1u); break; }
+            }
+        } else {
+            ret_list = f->retired; pl.n = 0u; pl.full = 0u;
+            pushed = fld_scan(f, bh, &cs, &pl, 0u, 1u);
+            list_ok = !pl.full;
+        }
+        if(pushed <= 1u) break;
+    }
 }
 
 static void fld_laps(sh2z_field_t *f, uint32_t i) {
@@ -675,7 +752,7 @@ FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
     fld_order(f);
     /* Further passes settle pile-ups of three or more (energy is per incident,
      * so nothing is charged twice). At most three passes. */
-    for(int pass = 0; pass < 3; ++pass) if(fld_contacts(f, bh) <= 1u) break;
+    fld_contact_phase(f, bh);
     f->rank_changes += fld_rank(f);
 }
 
