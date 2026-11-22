@@ -47,6 +47,8 @@ functions has been done.
   - `cylinder_top`, `cylinder_side`, `cylinder_bottom`: the same on a cylinder.
   - `pipe_join`: a pipe on spans 1-2 that joins road at both ends, 400 ticks from the road through
     the pipe and out.
+  - `half_pipe_floor` and `half_pipe_join` (`vehicle-dynamics-5`): the same two scripts on a half-pipe,
+    240 ticks on the floor and 400 ticks from the road through the trough and out.
 
   Every other tick runs with SR.S set. Every tick's return and all 99 body words must equal the
   host build's. `step2Verified` counts the checks, `step2Rows` splits the cost by script and

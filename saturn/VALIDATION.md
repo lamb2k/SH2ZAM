@@ -42,6 +42,7 @@ and scope.
 - [vehicle-dynamics-2](validation/vehicle-dynamics-2.md): 2026-11-20 (track-bound vehicle dynamics with tubes, vehicle-dynamics-2)
 - [vehicle-dynamics-3](validation/vehicle-dynamics-3.md): 2026-11-19 (vehicle dynamics with contact, vehicle-dynamics-3)
 - [vehicle-dynamics-4](validation/vehicle-dynamics-4.md): 2026-11-22 (engine force carried in Q(16+n), vehicle-dynamics-4)
+- [vehicle-dynamics-5](validation/vehicle-dynamics-5.md): 2026-11-22 (half-pipe road shape, vehicle-dynamics-5)
 - [vehicle-kernels-1](validation/vehicle-kernels-1.md): 2026-11-17 (vehicle kernels, vehicle-kernels-1)
 - [view-camera-1](validation/view-camera-1.md): 2026-11-17 (view from a camera, view-camera-1)
 - [view-merge-2](validation/view-merge-2.md): 2026-11-17 (tier texture-merge planner, view-merge-2)

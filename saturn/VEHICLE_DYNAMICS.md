@@ -1,4 +1,4 @@
-# Track-bound vehicle dynamics (experimental, contract tags `vehicle-dynamics-1`, `-2` and `-4`)
+# Track-bound vehicle dynamics (experimental, contract tags `vehicle-dynamics-1`, `-2`, `-4` and `-5`)
 
 [`vehicle_dynamics_experimental.h`](include/sh2zam/vehicle_dynamics_experimental.h) steps one
 hovering vehicle on a closed road laid along a cardinal spline, one fixed tick at a time, in
@@ -48,21 +48,26 @@ The step includes its own closest-point search. A tick costs about 9,400 modelle
 0.33 ms at 28.6 MHz before memory waits.
 
 **vehicle-dynamics-2.** The same suite runs `sh2z_vd_step2` on the tube stadium of
-`tests/test_vehicle_dynamics2.c` and checks 2,440 ticks against the host build word for word:
+`tests/test_vehicle_dynamics2.c` and checks 3,080 ticks against the host build word for word:
 - walled road, where the host step2 body also equals `sh2z_vd_step`'s on every tick;
 - a pipe and a cylinder, with the body on three sides of each;
-- a drive from road through a joined pipe and out.
+- a drive from road through a joined pipe and out;
+- the half-pipe (`vehicle-dynamics-5`): 240 ticks on its floor and a drive from road through a joined trough and out.
 
 Half the ticks run with SR.S set. Same capture; the `sh2z_vd_step` rows above are unchanged value for
-value.
+value. With `vehicle-dynamics-5` the step2 object takes the half-pipe case, so the earlier step2
+scripts (same ticks, same results word for word) move by about 0.2% at most in cycles; the two
+half-pipe scripts are new rows.
 
 | Call | Mean cycles | Median | Max | Mean instructions |
 | --- | ---: | ---: | ---: | ---: |
-| `sh2z_vd_step2`, one tick (all tube scripts) | 8,942.8 | 8,743 | 16,317 | 7,572 |
-| `sh2z_vd_step2` on the road | 9,294.5 | | | |
-| `sh2z_vd_step2` in a pipe (three sides) | 8,761.2 to 8,797.0 | | | |
-| `sh2z_vd_step2` on a cylinder (three sides) | 8,774.6 to 8,817.1 | | | |
-| `sh2z_vd_step2` through a joined pipe | 8,968.2 | | | |
+| `sh2z_vd_step2`, one tick (all tube scripts) | 8,942.4 | 8,752 | 16,304 | 7,578 |
+| `sh2z_vd_step2` on the road | 9,284.3 | | | |
+| `sh2z_vd_step2` in a pipe (three sides) | 8,766.6 to 8,802.4 | | | |
+| `sh2z_vd_step2` on a cylinder (three sides) | 8,763.0 to 8,805.3 | | | |
+| `sh2z_vd_step2` through a joined pipe | 8,954.4 | | | |
+| `sh2z_vd_step2` on a half-pipe floor | 8,940.4 | | | |
+| `sh2z_vd_step2` through a joined half-pipe | 8,981.6 | | | |
 
 ## Engine force scale (`vehicle-dynamics-4`, `SH2Z_VD_FORCE_FRAC`)
 
@@ -146,6 +151,15 @@ node (`sh2z_vd_join_t`, or NULL) and the tube rule constants (`sh2z_vd_tube_rule
 - **Cylinder** (`SH2Z_VD_SHAPE_CYLINDER`): the ground is the outside of that circle.
   - The up vector points away from the line.
   - Beyond the radius plus `cyl_reach` the body has left the surface and falls as off a road.
+- **Half-pipe** (`SH2Z_VD_SHAPE_HALF_PIPE`, `vehicle-dynamics-5`): a trough, the pipe's ground with the
+  top open.
+  - Height, the up vector, the radial clamp and the joins are the pipe's.
+  - The body leaves the surface when its height over the line, less `pipe_rim`, plus
+    sin(22.5 degrees) of the radius (tapered over a join) reaches zero. The test applies on the whole
+    span, not only over a join.
+  - Gravity acts along the road's up everywhere, also over a join, where the pipe blends it.
+  - The constant sin(22.5 degrees) is part of the rule, not a parameter; `pipe_rim` is the same
+    record field as the pipe's.
 - **Joins:** a tube span tapers into an open neighbour over a join.
   - The share `s` is the span's arc-length share over the join's `scale`: 0 at the seam, 1 where
     the tube is whole.
@@ -165,6 +179,6 @@ flags).
 
 ## Not covered
 
-- Half-pipe road shapes are treated as an open road.
+- `sh2z_vd_step` (without tubes) treats the half-pipe as an open road; `sh2z_vd_step2` models it.
 - Vehicle-to-vehicle contact inside the model; the line-space field resolves contact and passes kicks.
 - Real memory timing (cache, SDRAM, bus contention) and a whole-frame measurement on hardware.

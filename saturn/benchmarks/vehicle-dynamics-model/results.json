@@ -108,11 +108,11 @@
   "meanInstructions": 325.33
  },
  "step2Verified": {
-  "ticks": 2440,
-  "ticksSrSet": 1220,
-  "bodyWordsCompared": 241560,
+  "ticks": 3080,
+  "ticksSrSet": 1540,
+  "bodyWordsCompared": 304920,
   "roadTicksEqualToStep": 600,
-  "joinTicksPastThePipe": 145,
+  "joinTicksPastThePipe": 291,
   "entries": "every tick of every tube script: sh2z_vd_step2's return and all 99 words of the SH-2 body against the host build of the same source; on the road script the host step2 body must also equal sh2z_vd_step's"
  },
  "step2Rows": {
@@ -120,102 +120,124 @@
    "description": "walled stadium, 600 ticks: ACCEL, a boost every 300 ticks, LEAN_R in bursts, the stick swept -50 / 0 / +50 (sh2z_vd_step's bits, checked on the host too)",
    "ticks": 600,
    "step2": {
-    "meanCycles": 9294.49,
-    "medianCycles": 9075.5,
-    "minCycles": 4433,
-    "maxCycles": 16317,
-    "meanInstructions": 7881.88
+    "meanCycles": 9284.26,
+    "medianCycles": 9062.5,
+    "minCycles": 4430,
+    "maxCycles": 16304,
+    "meanInstructions": 7875.86
    }
   },
   "pipe_bottom": {
    "description": "pipe on spans 0-3, 240 ticks of ACCEL on its floor",
    "ticks": 240,
    "step2": {
-    "meanCycles": 8797.05,
-    "medianCycles": 8751.5,
-    "minCycles": 8555,
-    "maxCycles": 10130,
-    "meanInstructions": 7449.16
+    "meanCycles": 8802.4,
+    "medianCycles": 8757.5,
+    "minCycles": 8558,
+    "maxCycles": 10136,
+    "meanInstructions": 7464.15
    }
   },
   "pipe_wall": {
    "description": "pipe on spans 0-3, 240 ticks of ACCEL on its left wall",
    "ticks": 240,
    "step2": {
-    "meanCycles": 8761.23,
-    "medianCycles": 8698.0,
-    "minCycles": 8561,
-    "maxCycles": 10051,
-    "meanInstructions": 7409.21
+    "meanCycles": 8766.58,
+    "medianCycles": 8703.5,
+    "minCycles": 8564,
+    "maxCycles": 10056,
+    "meanInstructions": 7424.2
    }
   },
   "pipe_ceiling": {
    "description": "pipe on spans 0-3, 240 ticks of ACCEL on its ceiling",
    "ticks": 240,
    "step2": {
-    "meanCycles": 8792.93,
-    "medianCycles": 8743.5,
-    "minCycles": 8563,
-    "maxCycles": 10117,
-    "meanInstructions": 7438.81
+    "meanCycles": 8798.13,
+    "medianCycles": 8748.5,
+    "minCycles": 8566,
+    "maxCycles": 10122,
+    "meanInstructions": 7453.81
    }
   },
   "cylinder_top": {
    "description": "cylinder on spans 0-3, 240 ticks of ACCEL on its top",
    "ticks": 240,
    "step2": {
-    "meanCycles": 8817.12,
-    "medianCycles": 8768.5,
-    "minCycles": 8573,
-    "maxCycles": 10172,
-    "meanInstructions": 7453.87
+    "meanCycles": 8805.33,
+    "medianCycles": 8757.0,
+    "minCycles": 8559,
+    "maxCycles": 10160,
+    "meanInstructions": 7448.86
    }
   },
   "cylinder_side": {
    "description": "cylinder on spans 0-3, 240 ticks of ACCEL on its side",
    "ticks": 240,
    "step2": {
-    "meanCycles": 8774.6,
-    "medianCycles": 8708.0,
-    "minCycles": 8565,
-    "maxCycles": 10015,
-    "meanInstructions": 7427.61
+    "meanCycles": 8762.96,
+    "medianCycles": 8696.5,
+    "minCycles": 8551,
+    "maxCycles": 10003,
+    "meanInstructions": 7422.6
    }
   },
   "cylinder_bottom": {
    "description": "cylinder on spans 0-3, 240 ticks of ACCEL underneath",
    "ticks": 240,
    "step2": {
-    "meanCycles": 8792.06,
-    "medianCycles": 8738.0,
-    "minCycles": 8555,
-    "maxCycles": 10101,
-    "meanInstructions": 7443.95
+    "meanCycles": 8780.39,
+    "medianCycles": 8726.0,
+    "minCycles": 8543,
+    "maxCycles": 10090,
+    "meanInstructions": 7438.94
    }
   },
   "pipe_join": {
    "description": "pipe on spans 1-2 joining road at both ends (joins over 30% of each span), 400 ticks of ACCEL from the road into the pipe and out",
    "ticks": 400,
    "step2": {
-    "meanCycles": 8968.24,
-    "medianCycles": 8640.5,
-    "minCycles": 8144,
-    "maxCycles": 13804,
-    "meanInstructions": 7595.1
+    "meanCycles": 8954.41,
+    "medianCycles": 8639.0,
+    "minCycles": 8129,
+    "maxCycles": 13790,
+    "meanInstructions": 7587.15
+   }
+  },
+  "half_pipe_floor": {
+   "description": "half-pipe on spans 0-3, 240 ticks of ACCEL on its floor",
+   "ticks": 240,
+   "step2": {
+    "meanCycles": 8940.39,
+    "medianCycles": 8952.0,
+    "minCycles": 8660,
+    "maxCycles": 10127,
+    "meanInstructions": 7574.57
+   }
+  },
+  "half_pipe_join": {
+   "description": "half-pipe on spans 1-2 joining road at both ends (joins over 30% of each span), 400 ticks of ACCEL from the road into the trough and out",
+   "ticks": 400,
+   "step2": {
+    "meanCycles": 8981.61,
+    "medianCycles": 8688.5,
+    "minCycles": 8089,
+    "maxCycles": 13870,
+    "meanInstructions": 7609.88
    }
   }
  },
  "step2": {
-  "meanCycles": 8942.78,
-  "medianCycles": 8743.0,
-  "minCycles": 4433,
-  "maxCycles": 16317,
-  "meanInstructions": 7572.37
+  "meanCycles": 8942.35,
+  "medianCycles": 8752.0,
+  "minCycles": 4430,
+  "maxCycles": 16304,
+  "meanInstructions": 7577.55
  },
  "label": "MODELLED: executed SH-2 instructions in the Yabause interpreter; flat RAM, no caches or wait states; not Saturn hardware",
- "sourceCommit": "2c4730ee1045bad2f8f43d3be1ee2998c5c8874a",
- "elfSha256": "82234b60fbfe8b7adbcd2ba6971550a8048f55afafb6c4bb098fae997b3231bd",
+ "sourceCommit": "29b76935904322c3625fc21e3db4ca06f0aaf8a6",
+ "elfSha256": "0670b2f27fd523de51754a7f2460d9b5e2b94f566a3274aa58fae1e0aa9abc82",
  "toolchain": "Yaul project image ijacquez/yaul@sha256:b6d272204767cd0a734139dd3a2ab298ef5912fb7b7224b78e6d9fac1a7825a6 (sh-elf GCC)",
- "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/44675995095",
+ "evidenceUrl": "https://github.com/lamb2k/SH2ZAM/actions/runs/45057141779",
  "yabauseCommit": "7e38821dbac265490f115e163c523a939acda759"
 }
