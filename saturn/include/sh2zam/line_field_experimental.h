@@ -184,6 +184,7 @@ typedef struct {
     int16_t ko_by;             /**< line-field-5: external vehicle of the last contact incident, -1 none. */
     int16_t ko_credit;         /**< line-field-5: vehicle credited with this agent's fall, -1 none. */
     uint16_t ko_age;           /**< line-field-5: steps since that incident began (saturates at 65535). */
+    uint8_t pace_rank;         /**< line-field-12: pace rank, 1.. ranked, 0 not ranked yet (a chaser), 254 out (retired). Caller's start value. */
 } sh2z_field_brain_t;
 
 /** Field tuning. */
@@ -223,6 +224,7 @@ typedef struct {
     int32_t dash_from;         /**< line-field-4: Q8 distance into the final lap from which agents race for the line; 0 = never. */
     int32_t dash_pace;         /**< line-field-4: Q16 share of its pace an agent targets at least in the final dash. */
     const struct sh2z_field_behave *behave; /**< line-field-5: tube roll, inertia, falls, knock-out credit; NULL for none. */
+    const struct sh2z_field_ranks *ranks;   /**< line-field-12: pace ranks that move; NULL for none. */
 } sh2z_field_params_t;
 
 /** The field. The caller owns every array (count entries each). */
@@ -395,6 +397,36 @@ uint32_t sh2z_line_locate_far(const sh2z_line_t *line, int32_t dist);
  * changes which vehicles a scan meets, so the pass resumes as a full scan
  * from the position it reached and the next pass scans in full again. A pile
  * of more than 192 pairs in reach is not listed and its passes scan in full. */
+
+/* ---- Contract tag line-field-12 ----------------------------------------- */
+
+/* Pace ranks that move. params->ranks, when set, replaces line-field-2's one
+ * finish target by a target that follows the pace rank, as racing games that
+ * pace a field by rank do. A ranked agent's finish target, in ticks from the
+ * race start, is
+ *     base - share * (race length - distance covered) / race length + step[rank - 1],
+ * worked out when the agent completes a lap and whenever its rank changes; its
+ * pace is then the remaining laps over the time left after its first lap, and
+ * its expectation the schedule's position now. An agent with pace_rank 0 (a
+ * chaser) is released from its chase when it has completed a lap and either
+ * it is in the last lap past release_dist, or the vehicle it chases has retired;
+ * it takes the rank of the nearest ranked agent (by distance covered; the lower
+ * index on a tie, rank 1 with none), and every ranked agent is renumbered in the
+ * order (rank, then the larger distance covered first), so each agent behind the
+ * released one moves down a place and its target moves later by a step. A
+ * retiring agent leaves the ranking (rank 254) and the places close up at the
+ * next release. External vehicles are not ranked. NULL is line-field-10 step for
+ * step, with its hashes; the hash gains pace_rank only with ranks set. One
+ * integer division per re-target (a lap, or a rank change) and none otherwise. */
+
+/** Pace ranks (params->ranks). */
+typedef struct sh2z_field_ranks {
+    const int32_t *step;       /**< Ticks added to the finish target at rank r (index r - 1), non-decreasing. */
+    uint32_t step_count;       /**< Entries in step; a rank beyond them takes the last. */
+    int32_t base;              /**< Ticks: the finish target at no distance remaining and rank 1. */
+    int32_t share;             /**< Ticks the target is earlier by at the race start (it falls with the distance remaining). */
+    int32_t release_dist;      /**< Q8 distance into the last lap past which chasers are released; 0 = never by distance. */
+} sh2z_field_ranks_t;
 
 #ifdef __cplusplus
 }

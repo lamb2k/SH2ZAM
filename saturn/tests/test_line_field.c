@@ -520,6 +520,47 @@ static void test_retarget(void) {
     params();
 }
 
+/* line-field-12: pace ranks. Agents 0 and 1 are paced (ranks 1 and 2); agent 2 is a chaser of agent 0 that starts
+ * between them. With ranks a chaser released in the last lap joins the ranking at the rank of the nearest ranked
+ * agent and the agent behind it moves down a place: its finish target moves later by a step. */
+static sh2z_field_ranks_t RK;
+static const int32_t rk_step[] = { 0, 500, 1000, 1500 };
+static int32_t ranks_race(int with_ranks, int with_chaser, int32_t release, int32_t *first_finish) {
+    params();
+    P.laps = 3;
+    memset(&RK, 0, sizeof RK);
+    RK.step = rk_step; RK.step_count = 4u; RK.base = 4300; RK.share = 0; RK.release_dist = release;
+    P.ranks = with_ranks ? &RK : (const sh2z_field_ranks_t *)0;
+    rng = 21u;
+    vehicle(0, 0, 1450); vehicle(1, 2, 1450); vehicle(2, 1, 1450);
+    for(uint32_t i = 0; i < 3u; ++i) brain[i].lane = 0;
+    brain[0].pace_rank = 1u; brain[1].pace_rank = 2u;
+    if(with_chaser) { brain[2].chase = 0; brain[2].chase_lead = 0; brain[2].pace_rank = 0u; }
+    else { brain[2].pace = line.length / 1450; brain[2].pace_rank = 3u; }
+    field(3, 9u);
+    for(uint32_t t = 0; t < 9000 && !(veh[1].flags & SH2Z_VEH_FINISHED); ++t) {
+        if(t == 60) sh2z_field_start(&F);
+        sh2z_field_step(&F);
+    }
+    CHECK(veh[1].flags & SH2Z_VEH_FINISHED);
+    *first_finish = brain[0].finish_tick;
+    return brain[1].finish_tick;
+}
+
+static void test_ranks(void) {
+    int32_t f0, g0;
+    const int32_t off = ranks_race(0, 1, 0, &g0);                 /* line-field-10 races: ranks NULL */
+    const int32_t never = ranks_race(1, 1, 0, &f0);               /* ranks, the chaser is never released */
+    const int32_t freed = ranks_race(1, 1, 3 * 0 + (int32_t)line.length * 2 / 3, &f0);   /* released past two thirds of the last lap */
+    /* The control: a chaser that is never released leaves agent 1's target where its start rank put it. */
+    CHECK(never > 4300 + 500 - 150 && never < 4300 + 500 + 150);
+    /* Released ahead of it, the chaser takes rank 2 (the nearest ranked agent) and agent 1 becomes rank 3: later. */
+    CHECK(freed > never + 100);
+    CHECK(freed < never + 500 + 150);
+    CHECK(off != never);                                          /* ranks do change a race that has a finish target */
+    params();
+}
+
 /* line-field-3: a chaser starting behind a fast leader. With a first-lap cap its target never passes the
  * cap before its first lap is done, and it does after; the control (no cap) passes it on the first lap. */
 static int32_t chase_race(int32_t cap, int32_t *after) {
@@ -1235,6 +1276,7 @@ int main(void) {
     test_lod();
     test_retire();
     test_retarget();
+    test_ranks();
     test_first_lap_cap();
     test_surface_identity();
     test_plate();

@@ -167,6 +167,73 @@ static int32_t fld_ahead(const sh2z_field_t *f, uint32_t i) {
     return -1;
 }
 
+/* ---- line-field-12: pace ranks ---- */
+/* Finish target of ranked agent i from its rank and distance covered; its pace and expectation follow. */
+static void fld_retarget(sh2z_field_t *f, uint32_t i) {
+    const sh2z_field_ranks_t *rk = f->params->ranks;
+    sh2z_vehicle_t *v = &f->veh[i];
+    sh2z_field_brain_t *b = &f->brain[i];
+    if(b->pace_rank == 0u || b->pace_rank >= 254u || b->laps_seen < 1 || b->lap_tick[0] < 0 || rk->step_count == 0u) return;
+    if(v->flags & (SH2Z_VEH_EXTERNAL | SH2Z_VEH_RETIRED | SH2Z_VEH_FINISHED)) return;
+    const int32_t whole = (int32_t)f->params->laps * f->line->length;
+    int32_t left_dist = whole - sh2z_track_total(f->line, &v->t);
+    if(left_dist < 0) left_dist = 0;
+    const uint32_t r = b->pace_rank - 1u < rk->step_count ? b->pace_rank - 1u : rk->step_count - 1u;
+    const int32_t finish = rk->base - (int32_t)(((int64_t)rk->share * left_dist) / whole) + rk->step[r];
+    const int32_t left = finish - b->lap_tick[0];
+    if(left <= 0) return;
+    b->finish_ticks = finish;
+    b->pace = ((int32_t)f->params->laps - 1) * f->line->length / left;
+    b->expect = f->line->length + ((int32_t)(f->tick - f->start_tick) - b->lap_tick[0]) * b->pace;
+}
+
+/* Renumber the ranked agents 1.. in the order (rank, larger distance covered first, lower index). */
+static void fld_renumber(sh2z_field_t *f) {
+    uint8_t idx[256];
+    uint32_t n = 0u;
+    for(uint32_t i = 0u; i < f->count; ++i) {
+        const sh2z_field_brain_t *b = &f->brain[i];
+        if(b->pace_rank >= 1u && b->pace_rank < 254u && !(f->veh[i].flags & SH2Z_VEH_EXTERNAL)) idx[n++] = (uint8_t)i;
+    }
+    for(uint32_t a = 1u; a < n; ++a) {   /* insertion sort, stable */
+        const uint8_t x = idx[a];
+        const int32_t xt = sh2z_track_total(f->line, &f->veh[x].t);
+        uint32_t k = a;
+        while(k > 0u) {
+            const uint8_t y = idx[k - 1u];
+            const int32_t yt = sh2z_track_total(f->line, &f->veh[y].t);
+            const int before = f->brain[x].pace_rank < f->brain[y].pace_rank ||
+                               (f->brain[x].pace_rank == f->brain[y].pace_rank && xt > yt);
+            if(!before) break;
+            idx[k] = y; --k;
+        }
+        idx[k] = x;
+    }
+    for(uint32_t a = 0u; a < n; ++a) {
+        sh2z_field_brain_t *b = &f->brain[idx[a]];
+        const uint8_t nr = (uint8_t)(a + 1u);
+        if(b->pace_rank != nr) { b->pace_rank = nr; fld_retarget(f, idx[a]); }
+    }
+}
+
+/* A chaser joins the ranking at the rank of the nearest ranked agent. */
+static void fld_release(sh2z_field_t *f, uint32_t i) {
+    sh2z_field_brain_t *b = &f->brain[i];
+    const int32_t mine = sh2z_track_total(f->line, &f->veh[i].t);
+    int32_t best = 0x7fffffff;
+    uint8_t rank = 1u;
+    for(uint32_t j = 0u; j < f->count; ++j) {
+        const sh2z_field_brain_t *c = &f->brain[j];
+        if(j == i || c->pace_rank < 1u || c->pace_rank >= 254u || (f->veh[j].flags & SH2Z_VEH_EXTERNAL)) continue;
+        int32_t d = sh2z_track_total(f->line, &f->veh[j].t) - mine;
+        if(d < 0) d = -d;
+        if(d < best) { best = d; rank = c->pace_rank; }
+    }
+    b->pace_rank = rank;
+    fld_renumber(f);
+    fld_retarget(f, i);
+}
+
 FLD_INLINE void fld_think(sh2z_field_t *f, uint32_t i, uint32_t due, const sh2z_line_sample_t *at,
                           const sh2z_field_behave_t *bh) {
     const sh2z_field_params_t *p = f->params;
@@ -184,14 +251,25 @@ FLD_INLINE void fld_think(sh2z_field_t *f, uint32_t i, uint32_t due, const sh2z_
     int32_t want;
     const int32_t cap = fld_mul_q16(b->pace, p->pace_max);
     int32_t behind = b->expect - total;
-    const int chasing = b->chase >= 0 && (uint32_t)b->chase < f->count &&
+    int chasing = b->chase >= 0 && (uint32_t)b->chase < f->count &&
                         !(f->veh[b->chase].flags & (SH2Z_VEH_RETIRED | SH2Z_VEH_FINISHED));
+    int released = 0;
+    if(p->ranks && chasing && b->pace_rank == 0u && b->laps_seen >= 1 && p->ranks->release_dist > 0 &&
+       v->t.lap == (int32_t)p->laps - 1 && v->t.dist > p->ranks->release_dist) {
+        /* line-field-12: a chaser in the last lap past the release distance joins the ranking. */
+        b->chase = -1;
+        chasing = 0;
+        fld_release(f, i);
+        released = 1;
+    }
     if(!chasing && b->chase >= 0) {
         /* The chased vehicle is gone: carry on at our own pace from here. */
         b->chase = -1;
         b->expect = total;
         behind = 0;
+        if(p->ranks && b->pace_rank == 0u && b->laps_seen >= 1) { fld_release(f, i); released = 1; }
     }
+    if(released) behind = b->expect - total;
     if(dash) {
         /* At least dash_pace of its pace, whatever its expectation. */
         want = sh2z_pace_target(b->pace, b->expect, total, p->pace_gain, b->pace >> 1, cap);
@@ -310,6 +388,7 @@ FLD_INLINE void fld_damage(sh2z_field_t *f, uint32_t i, int32_t amount, const sh
     }
     if(v->energy <= 0) {
         v->energy = 0;
+        if(f->params->ranks) f->brain[i].pace_rank = 254u;
         v->flags |= SH2Z_VEH_RETIRED;
         v->flags &= (uint16_t)~SH2Z_VEH_BOOST;
         f->brain[i].retire_tick = (int32_t)(f->tick - f->start_tick);
@@ -550,7 +629,9 @@ static void fld_laps(sh2z_field_t *f, uint32_t i) {
         b->laps_seen = (int16_t)(b->laps_seen + 1);
         const int32_t done = (int32_t)b->laps_seen;          /* laps completed */
         if(done >= 1 && done <= 4) b->lap_tick[done - 1] = (int32_t)(f->tick - f->start_tick);
-        if(done == 1 && b->finish_ticks > 0 && f->params->laps > 1u && !(v->flags & (SH2Z_VEH_EXTERNAL | SH2Z_VEH_RETIRED))) {
+        if(f->params->ranks && b->pace_rank >= 1u && b->pace_rank < 254u && done >= 1 && done < (int32_t)f->params->laps) {
+            fld_retarget(f, i);   /* line-field-12 */
+        } else if(done == 1 && b->finish_ticks > 0 && f->params->laps > 1u && !(v->flags & (SH2Z_VEH_EXTERNAL | SH2Z_VEH_RETIRED))) {
             /* line-field-2: cover the remaining laps evenly by the finish target, expecting one lap now. */
             const int32_t left = b->finish_ticks - b->lap_tick[0];
             if(left > 0) {
@@ -614,6 +695,7 @@ FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
                 v->flags = (uint16_t)((v->flags | SH2Z_VEH_RETIRED | SH2Z_VEH_STOPPED) & ~(SH2Z_VEH_BOOST | SH2Z_VEH_FALLING));
                 v->t.speed = 0;
                 b->retire_tick = (int32_t)(f->tick - f->start_tick);
+                if(p->ranks) b->pace_rank = 254u;
                 ++f->retired;
             }
             ++f->steps;
@@ -784,6 +866,7 @@ uint32_t sh2z_field_hash(const sh2z_field_t *f) {
         FLD_MIX(b->pass_ticks); FLD_MIX(b->attack_ticks); FLD_MIX(f->rank_order[i]);
         if(b->finish_ticks) FLD_MIX(b->finish_ticks); /* line-field-1 states hash as before */
         if(b->first_lap_cap) FLD_MIX(b->first_lap_cap);
+        if(f->params->ranks) FLD_MIX(b->pace_rank);
         if(f->params->behave) { FLD_MIX(b->fall_tick); FLD_MIX(b->air_drift); FLD_MIX(b->roll); FLD_MIX(b->ko_by); FLD_MIX(b->ko_credit); FLD_MIX(b->ko_age); }
     }
     if(f->params->behave) { FLD_MIX(f->falls); FLD_MIX(f->kos); }
