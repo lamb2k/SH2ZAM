@@ -291,6 +291,81 @@ static void test_overtake_contact(void) {
     params();
 }
 
+/* line-field-10: the contact passes of a step share the line samples and, while nobody retires, the list of pairs in
+ * reach. A pile of five frozen agents stacked on one spot: the first pass pushes several pairs, the second pass runs, and
+ * a vehicle that retires in the first pass (its energy is nearly spent) is left out of the later passes, as a scan of the
+ * order leaves it out. `LF10_PRINT` prints the scene's result for recording it against another build. */
+static uint64_t pile_scene(uint32_t low_energy_mask, int print) {
+    params();
+    rng = 21u;
+    static const int32_t at[5] = { 5000, 4996, 4992, 4988, 4984 }, lat[5] = { 0, 12, -14, 22, -6 };
+    for(uint32_t i = 0; i < 5u; ++i) {
+        vehicle(i, i, 2000);
+        veh[i].accel = veh[i].brake = 0; veh[i].grip = 0; brain[i].pace = 0; brain[i].lane = 0;
+        veh[i].t.dist = U(at[i]); veh[i].t.lateral = U(lat[i]); veh[i].t.speed = U(20 + (int32_t)i * 3);
+        veh[i].t.node = sh2z_line_locate(&line, veh[i].t.dist, 0);
+        if(low_energy_mask & (UINT32_C(1) << i)) veh[i].energy = U(3);
+    }
+    field(5, 1u);
+    sh2z_field_start(&F);
+    sh2z_field_step(&F);
+    uint64_t h = 1469598103934665603ull;
+    for(uint32_t i = 0; i < 5u; ++i) {
+        const int32_t w[5] = { veh[i].t.lateral, veh[i].t.speed, veh[i].energy, (int32_t)veh[i].flags, 0 };
+        for(int k = 0; k < 4; ++k) h = (h ^ (uint32_t)w[k]) * 1099511628211ull;
+        if(print) printf("pile %u: lat %d speed %d energy %d flags %x\n", i, w[0], w[1], w[2], (unsigned)w[3]);
+    }
+    h = (h ^ F.contacts) * 1099511628211ull; h = (h ^ F.retired) * 1099511628211ull;
+    if(print) printf("pile: contacts %u retired %u hash %llx\n", (unsigned)F.contacts, (unsigned)F.retired, (unsigned long long)h);
+    params();
+    return h;
+}
+
+/* Many random piles (4..8 agents within 60 of each other, low energy so that some retire in the first or a later pass):
+ * one hash over every agent's lateral, speed, energy and flags after a started step, and the field's counters. */
+static uint64_t pile_fuzz(uint32_t scenes) {
+    uint64_t h = 1469598103934665603ull;
+    for(uint32_t sc = 1; sc <= scenes; ++sc) {
+        params();
+        rng = sc * 7919u + 3u;
+        const uint32_t n = (sc % 11u == 0u) ? 28u + rnd() % 5u : 4u + rnd() % 7u;   /* every eleventh pile overflows the pair list */
+        const int32_t base = (sc % 5u == 0u) ? U(8) : U(5000);   /* every fifth pile straddles the line's start */
+        const uint32_t spread = (sc % 3u == 0u || n > 10u) ? (uint32_t)U(25) : (uint32_t)U(60);
+        for(uint32_t i = 0; i < n; ++i) {
+            vehicle(i, i, 2000);
+            veh[i].accel = veh[i].brake = 0; veh[i].grip = 0; brain[i].pace = 0; brain[i].lane = 0;
+            int32_t d = base - (int32_t)(rnd() % spread);
+            if(d < 0) d += line.length;
+            veh[i].t.dist = d; veh[i].t.lateral = (int32_t)(rnd() % (uint32_t)U(120)) - U(60);
+            veh[i].t.speed = U(20) + (int32_t)(rnd() % (uint32_t)U(20));
+            veh[i].t.node = sh2z_line_locate(&line, veh[i].t.dist, 0);
+            veh[i].energy = U(2) + (int32_t)(rnd() % (uint32_t)U(12));
+            if(i && rnd() % 9u == 0u) veh[i].flags |= SH2Z_VEH_EXTERNAL;
+        }
+        field(n, 1u);
+        sh2z_field_start(&F);
+        sh2z_field_step(&F);
+        for(uint32_t i = 0; i < n; ++i) {
+            const int32_t w[6] = { veh[i].t.lateral, veh[i].t.speed, veh[i].energy, (int32_t)veh[i].flags, veh[i].kick_lat, veh[i].kick_speed };
+            for(int k = 0; k < 6; ++k) h = (h ^ (uint32_t)w[k]) * 1099511628211ull;
+        }
+        h = (h ^ F.contacts) * 1099511628211ull; h = (h ^ F.retired) * 1099511628211ull;
+    }
+    params();
+    return h;
+}
+#define PILE_FUZZ_HASH UINT64_C(0xed014f8596b4f52d)   /* recorded from the line-field-9 step */
+static void test_pile_passes(void) {
+    /* The results are those of the line-field-9 step (recorded from it): every pass scans the order in full there. */
+    CHECK(pile_scene(0u, 0) == UINT64_C(0x44dbf3bf4ac40a53));     /* nobody retires: the later passes walk the list */
+    CHECK(pile_scene(2u, 0) == UINT64_C(0x73952fec64b830e2));     /* one retires in the first pass: later passes leave it out */
+    CHECK(pile_scene(6u, 0) == UINT64_C(0xbe7725040c9854c7));     /* two retire */
+    CHECK(pile_scene(31u, 0) == UINT64_C(0xd15443e4a3aa6366));    /* all five retire (the scan finds nobody) */
+    CHECK(pile_scene(0u, 0) != pile_scene(2u, 0));                /* control: a retirement changes the result */
+    CHECK(pile_fuzz(3000u) == PILE_FUZZ_HASH);                    /* retirements in the first and in a later pass */
+    CHECK(pile_fuzz(2999u) != PILE_FUZZ_HASH);                    /* control: one scene fewer is another hash */
+}
+
 /* line-field-9 scenes: frozen agents (no speed or lateral change of their own), lane 0, placed relative to their
  * racing line at dist `at`. Returns that line's lateral there. */
 static int32_t frozen_pair(int32_t at, int32_t lat0, int32_t speed0, int32_t gap1, int32_t lat1, int32_t speed1) {
@@ -1153,6 +1228,7 @@ int main(void) {
     test_contact();
     test_contact_off();
     test_overtake_contact();
+    test_pile_passes();
     test_no_room_hold();
     test_no_cut_hold();
     test_no_block_hold();
