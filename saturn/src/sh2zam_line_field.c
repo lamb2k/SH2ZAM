@@ -37,6 +37,16 @@ FLD_INLINE int fld_tube(const sh2z_field_params_t *p, uint16_t flags) {
 }
 /* Round a tube of radius half_width: the circumference (411775 = 2 pi in Q16, rounded). */
 FLD_INLINE int32_t fld_round(int32_t half_width) { return fld_mul_q16(half_width, 411775); }
+/* line-field-12: the line sample under a vehicle. With behave->line_room the road is at least as wide as the line is
+ * off its middle, plus line_room (the line is where the original's driver steers, so the road holds it). */
+FLD_INLINE void fld_sample(const sh2z_field_t *f, uint32_t node, int32_t dist, sh2z_line_sample_t *out) {
+    sh2z_line_sample(f->line, node, dist, out);
+    const sh2z_field_behave_t *bh = f->params->behave;
+    if(bh && bh->line_room > 0 && out->half_width > 0 && !fld_tube(f->params, out->flags)) {
+        const int32_t need = fld_abs(out->lateral) + bh->line_room;
+        if(out->half_width < need) out->half_width = need;
+    }
+}
 /* A lateral (or a lateral difference) wrapped into [-c/2, c - c/2) for a circumference c > 0. */
 FLD_INLINE int32_t fld_wrap(int32_t lat, int32_t c) {
     const int32_t h = c >> 1;
@@ -270,7 +280,14 @@ FLD_INLINE void fld_think(sh2z_field_t *f, uint32_t i, uint32_t due, const sh2z_
         if(p->ranks && b->pace_rank == 0u && b->laps_seen >= 1) { fld_release(f, i); released = 1; }
     }
     if(released) behind = b->expect - total;
-    if(dash) {
+    const int after = p->ranks && p->ranks->after_speed > 0 && f->focus >= 0 && (uint32_t)f->focus < f->count &&
+                      (f->veh[f->focus].flags & SH2Z_VEH_FINISHED) && !(f->veh[f->focus].flags & SH2Z_VEH_RETIRED);
+    if(after) {
+        /* line-field-12: the focus vehicle has finished: no paces and no chases, every agent drives on at full throttle. */
+        want = p->ranks->after_speed;
+        if(want > v->top_speed) want = v->top_speed;
+        behind = 0;
+    } else if(dash) {
         /* At least dash_pace of its pace, whatever its expectation. */
         want = sh2z_pace_target(b->pace, b->expect, total, p->pace_gain, b->pace >> 1, cap);
         const int32_t floor = fld_mul_q16(b->pace, p->dash_pace);
@@ -288,7 +305,7 @@ FLD_INLINE void fld_think(sh2z_field_t *f, uint32_t i, uint32_t due, const sh2z_
         if(want > v->top_speed) want = v->top_speed;
     }
     /* ---- boost ---- */
-    if(!(v->flags & SH2Z_VEH_BOOST) && v->t.lap >= (int32_t)p->boost_from_lap && (dash || behind > p->boost_behind) &&
+    if(!after && !(v->flags & SH2Z_VEH_BOOST) && v->t.lap >= (int32_t)p->boost_from_lap && (dash || behind > p->boost_behind) &&
        at->speed_cap >= p->boost_min_cap &&
        (int64_t)v->energy * 65536 > (int64_t)v->max_energy * p->boost_min_share && v->energy > p->boost_energy) {
         v->flags |= SH2Z_VEH_BOOST;
@@ -419,9 +436,17 @@ FLD_INLINE void fld_follow_speed(const sh2z_line_t *line, const sh2z_follow_para
 }
 
 /* Pushed into the line's edge: scrub speed and charge energy. */
-FLD_INLINE void fld_wall(sh2z_field_t *f, uint32_t i, const sh2z_field_behave_t *bh) {
+FLD_INLINE void fld_wall(sh2z_field_t *f, uint32_t i, const sh2z_field_behave_t *bh, int32_t into) {
     sh2z_vehicle_t *v = &f->veh[i];
     v->flags |= SH2Z_VEH_WALL;
+    if(bh && bh->wall_impact > 0) {
+        /* line-field-12: an impact costs by the speed it arrives at; resting on the edge costs nothing. */
+        if(into <= 0) return;
+        if(into > v->grip) into = v->grip;   /* no agent moves sideways faster than it steers: a push's overlap is not a speed */
+        v->t.speed = fld_mul_q16(v->t.speed, f->params->wall_keep);
+        fld_damage(f, i, fld_mul_q16(into, bh->wall_impact), bh);
+        return;
+    }
     v->t.speed = fld_mul_q16(v->t.speed, f->params->wall_keep);
     fld_damage(f, i, f->params->wall_energy, bh);
 }
@@ -442,10 +467,10 @@ typedef struct {
 } fld_cs_t;
 
 /* The sample under vehicle i at its distance (distance and node do not change during the passes). */
-static void fld_cs(const sh2z_line_t *line, fld_cs_t *cs, const sh2z_vehicle_t *v, uint32_t i, int32_t *half_width, uint16_t *flags) {
+static void fld_cs(const sh2z_field_t *f, fld_cs_t *cs, const sh2z_vehicle_t *v, uint32_t i, int32_t *half_width, uint16_t *flags) {
     if(i < FLD_CS_MAX && (cs->valid & (UINT32_C(1) << i))) { *half_width = cs->half_width[i]; *flags = cs->flags[i]; return; }
     sh2z_line_sample_t at;
-    sh2z_line_sample(line, v->t.node, v->t.dist, &at);
+    fld_sample(f, v->t.node, v->t.dist, &at);
     *half_width = at.half_width; *flags = at.flags;
     if(i < FLD_CS_MAX) { cs->valid |= UINT32_C(1) << i; cs->half_width[i] = at.half_width; cs->flags[i] = at.flags; }
 }
@@ -464,7 +489,7 @@ FLD_NOINLINE uint32_t fld_pair(sh2z_field_t *f, const sh2z_field_behave_t *bh, f
     /* line-field-4: across a tube's seam. line-field-7: the node's flags are the sample's, so only a tube
      * node is sampled. */
     if(fld_tube(p, line->nodes[a->t.node].flags)) {
-        fld_cs(line, cs, a, ia, &hw, &fl);
+        fld_cs(f, cs, a, ia, &hw, &fl);
         if(hw > 0) dl = fld_wrap(dl, fld_round(hw));
     }
     const int32_t adl = fld_abs(dl);
@@ -482,26 +507,26 @@ FLD_NOINLINE uint32_t fld_pair(sh2z_field_t *f, const sh2z_field_behave_t *bh, f
         if(move_a) {
             if(a_ext) a->kick_lat += dir * move_a;
             else {
-                fld_cs(line, cs, a, ia, &hw, &fl);
+                fld_cs(f, cs, a, ia, &hw, &fl);
                 const int32_t nl = a->t.lateral + dir * move_a;
                 if(fld_tube(p, fl) && hw > 0) a->t.lateral = fld_wrap(nl, fld_round(hw));
                 else {
                     a->t.lateral = fld_clamp(nl, -hw, hw);
                     left_a = fld_abs(nl - a->t.lateral);
-                    if(left_a && !pass) fld_wall(f, ia, bh);
+                    if(left_a && !pass) fld_wall(f, ia, bh, left_a);
                 }
             }
         }
         if(move_b) {
             if(b_ext) b->kick_lat -= dir * move_b;
             else {
-                fld_cs(line, cs, b, ib, &hw, &fl);
+                fld_cs(f, cs, b, ib, &hw, &fl);
                 const int32_t nl = b->t.lateral - dir * move_b;
                 if(fld_tube(p, fl) && hw > 0) b->t.lateral = fld_wrap(nl, fld_round(hw));
                 else {
                     b->t.lateral = fld_clamp(nl, -hw, hw);
                     left_b = fld_abs(nl - b->t.lateral);
-                    if(left_b && !pass) fld_wall(f, ib, bh);
+                    if(left_b && !pass) fld_wall(f, ib, bh, left_b);
                 }
             }
         }
@@ -714,7 +739,7 @@ FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
             b->ko_age = (uint16_t)(age > 0xffffu ? 0xffffu : age);
         }
         sh2z_line_sample_t at;
-        sh2z_line_sample(line, v->t.node, v->t.dist, &at);
+        fld_sample(f, v->t.node, v->t.dist, &at);
         /* line-field-4: the zone under the agent as its step starts. */
         const sh2z_field_surface_t *sf = p->surface;
         const uint32_t zone = (sf && sf->zone_count) ? fld_zone(sf, &v->t) : 0u;
@@ -737,6 +762,16 @@ FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
         if(target > top) target = top;
         if(zone == SH2Z_FIELD_ZONE_SLIP) fp.steer_gain = fld_mul_q16(fp.steer_gain, sf->slip_steer);
         else if(zone == SH2Z_FIELD_ZONE_ROUGH && !(v->flags & SH2Z_VEH_BOOST)) target = fld_mul_q16(target, sf->rough_keep);
+        if(p->ranks && !(v->flags & (SH2Z_VEH_RETIRED | SH2Z_VEH_FINISHED | SH2Z_VEH_EXTERNAL))) {
+            /* line-field-12: a racer whose target holds it below its speed only coasts (the throttle is off), and no target
+             * is below the floor. A road cap that holds it is a braking limit, as before. */
+            const sh2z_field_ranks_t *rk = p->ranks;
+            if(rk->floor > 0 && target < rk->floor) target = rk->floor;
+            if(rk->coast > 0 && target < v->t.speed && target < at.speed_cap) {
+                const int32_t slow = fld_mul_q16(v->t.speed, rk->coast);
+                fp.brake = slow > 1 ? slow : 1;
+            }
+        }
         /* line-field-4: in a tube there is no edge, and the short way round is taken. */
         const int tube = fld_tube(p, at.flags) && at.half_width > 0;
         int32_t target_lat = b->target_lat;
@@ -784,7 +819,7 @@ FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
         /* On the edge: scrub speed and charge energy. */
         {   /* The line may narrow under the vehicle: stay inside at the new position. */
             sh2z_line_sample_t now;
-            sh2z_line_sample(line, v->t.node, v->t.dist, &now);
+            fld_sample(f, v->t.node, v->t.dist, &now);
             const int now_tube = fld_tube(p, now.flags) && now.half_width > 0;
             /* line-field-5: in the air beyond an open edge, the agent leaves the line. On a drop node it also leaves
              * the line when it comes out of a tube beyond the open edge (launched, launch_chance), or, on a drop tube, when it is
@@ -816,9 +851,9 @@ FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
             if(now_tube) v->t.lateral = fld_wrap(v->t.lateral, fld_round(now.half_width));
             else if(tube) v->t.lateral = fld_clamp(v->t.lateral, -now.half_width, now.half_width);   /* out of a tube */
             else if(air) { }   /* line-field-5: in the air, above any wall; it lands (or falls) later */
-            else if(v->t.lateral > now.half_width) { v->t.lateral = now.half_width; fld_wall(f, i, bh); if(own_lateral) v->t.lat_vel = -(v->t.lat_vel >> 1); }
-            else if(v->t.lateral < -now.half_width) { v->t.lateral = -now.half_width; fld_wall(f, i, bh); if(own_lateral) v->t.lat_vel = -(v->t.lat_vel >> 1); }
-            else if(fld_abs(v->t.lateral) >= at.half_width - 1 && at.half_width > 0) fld_wall(f, i, bh);
+            else if(v->t.lateral > now.half_width) { const int32_t into = v->t.lateral - now.half_width; v->t.lateral = now.half_width; fld_wall(f, i, bh, into); if(own_lateral) v->t.lat_vel = -(v->t.lat_vel >> 1); }
+            else if(v->t.lateral < -now.half_width) { const int32_t into = -now.half_width - v->t.lateral; v->t.lateral = -now.half_width; fld_wall(f, i, bh, into); if(own_lateral) v->t.lat_vel = -(v->t.lat_vel >> 1); }
+            else if(fld_abs(v->t.lateral) >= at.half_width - 1 && at.half_width > 0) fld_wall(f, i, bh, 0);
         }
         if((v->flags & SH2Z_VEH_RETIRED) && v->t.speed == 0) v->flags |= SH2Z_VEH_STOPPED;
         if(v->t.lap != (int32_t)b->laps_seen) fld_laps(f, i);

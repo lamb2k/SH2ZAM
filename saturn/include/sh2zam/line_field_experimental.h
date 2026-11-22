@@ -334,6 +334,8 @@ typedef struct sh2z_field_behave {
     int32_t drop_chance;       /**< Q16 chance per step that an agent beyond drop_lat drops off (0 = never). */
     int32_t launch_chance;     /**< Q16 chance that an agent out of a tube beyond the open edge of a drop node is launched off (65536 = always). */
     int32_t contact_norm;      /**< Q16: > 0 charges a contact incident by its closing speed along the line between the two, contact_norm each (twice to an attacker's victim, nothing to the attacker), instead of side_energy, hit_energy and attack_energy. */
+    int32_t wall_impact;       /**< line-field-12, Q16: > 0 charges a wall impact by the speed it hits the edge at (how far a push or a step took it past the edge), wall_impact of it, once per impact, and scrubs speed only then; an agent that rests on the edge pays nothing. 0 = wall_energy a call, line-field-5's. */
+    int32_t line_room;         /**< line-field-12, Q8: > 0 makes the road at least |line lateral| + line_room wide under every ground agent (the baked half width can be narrower than the line that a driver follows); 0 = the baked half width. */
 } sh2z_field_behave_t;
 
 /* ---- Contract tag line-field-7 ------------------------------------------ */
@@ -426,6 +428,9 @@ typedef struct sh2z_field_ranks {
     int32_t base;              /**< Ticks: the finish target at no distance remaining and rank 1. */
     int32_t share;             /**< Ticks the target is earlier by at the race start (it falls with the distance remaining). */
     int32_t release_dist;      /**< Q8 distance into the last lap past which chasers are released; 0 = never by distance. */
+    int32_t coast;             /**< Q16 share of its speed an agent loses a tick while its target holds it below its speed; 0 = the vehicle's brake. */
+    int32_t floor;             /**< Q8 least target speed (applies after the road's cap); 0 = none. */
+    int32_t after_speed;       /**< Q8 target speed of every agent once the focus vehicle has finished; 0 = it races on to its own target. */
 } sh2z_field_ranks_t;
 
 #ifdef __cplusplus
