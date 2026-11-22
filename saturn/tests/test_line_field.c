@@ -1,4 +1,4 @@
-/* Line field (contract tags line-field-1 to line-field-5 and line-field-7 to line-field-9) checks.
+/* Line field (contract tags line-field-1 to line-field-5, line-field-7 to line-field-10, line-field-12 and line-field-13) checks.
  * Invariants over long random races, an independent grid formula, exact
  * contact arithmetic on hand-placed pairs, determinism, level of detail, and
  * a control for every behavioural claim (the same scene with the feature off
@@ -364,6 +364,164 @@ static void test_pile_passes(void) {
     CHECK(pile_scene(0u, 0) != pile_scene(2u, 0));                /* control: a retirement changes the result */
     CHECK(pile_fuzz(3000u) == PILE_FUZZ_HASH);                    /* retirements in the first and in a later pass */
     CHECK(pile_fuzz(2999u) != PILE_FUZZ_HASH);                    /* control: one scene fewer is another hash */
+}
+
+/* line-field-13: random fields on tube and road lines, run for many ticks, hashed every tick. The line field's contact
+ * passes are checked here against the line-field-12 step's results (recorded from it, as the pile fuzz above is from
+ * line-field-9's): lines of 8 to 96 nodes of uneven spans and widths (some of no width), runs of pipe, cylinder, air and
+ * drop nodes or none; behaviours on and off; piles of 2 to 60 agents, every fifth on the start grid and every third
+ * spread over a few hundred units; external vehicles driven by the scene; agents starting retired, stopped or falling;
+ * low energy, so retirements fall in the first pass, in a later pass and in the walk of a list; contact reaches from
+ * none to 300 units; level of detail on and off. A pile of 33 or more agents lists more than the pair list holds. */
+#define X13_VMAX 64u
+#define X13_NODES 96u
+static sh2z_line_node_t x13_nodes[X13_NODES];
+static sh2z_line_t x13_line;
+static sh2z_vehicle_t x13_veh[X13_VMAX];
+static sh2z_field_brain_t x13_brain[X13_VMAX];
+static uint8_t x13_order[X13_VMAX], x13_slot[X13_VMAX], x13_rank[X13_VMAX];
+static sh2z_field_params_t x13_p;
+static sh2z_field_surface_t x13_surf;
+static sh2z_field_behave_t x13_b;
+static sh2z_field_t x13_f;
+static uint64_t x13_s;
+static uint32_t x13_rnd(void) { x13_s ^= x13_s << 13; x13_s ^= x13_s >> 7; x13_s ^= x13_s << 17; return (uint32_t)(x13_s >> 11); }
+static int32_t x13_in(int32_t lo, int32_t hi) { return lo + (int32_t)(x13_rnd() % (uint32_t)(hi - lo + 1)); }
+static uint64_t x13_mix(uint64_t h, uint32_t w) { return (h ^ w) * 1099511628211ull; }
+static uint64_t x13_stats[4];   /* contacts, retirements, falls, steps of the whole run: the scenes must not be idle */
+
+static uint64_t x13_fuzz(uint32_t first, uint32_t last) {
+    uint64_t h = 1469598103934665603ull;
+    for(uint32_t sc = first; sc < last; ++sc) {
+        x13_s = UINT64_C(0x9e3779b97f4a7c15) * (sc + 1u); for(int k = 0; k < 4; ++k) (void)x13_rnd();
+        const uint32_t nn = (uint32_t)x13_in(8, 96);
+        const int tubes = x13_rnd() % 4u != 0u;
+        int32_t start = 0; uint16_t run = 0u; uint32_t left = 0u;
+        for(uint32_t i = 0; i < nn; ++i) {
+            int32_t span = (x13_rnd() % 8u == 0u) ? x13_in(2, 600) : x13_in(U(60), U(300));
+            if(left == 0u) {
+                static const uint16_t kinds[8] = { 0x0080, 0x0080, 0x00c0, 0x0000, 0x0180, 0x0280, 0x02c0, 0x0000 };
+                run = tubes ? kinds[x13_rnd() % 8u] : 0u; left = (uint32_t)x13_in(1, 20);
+            }
+            --left;
+            x13_nodes[i].start = start; start += span;
+            x13_nodes[i].lateral = (int16_t)x13_in(-100, 100);
+            x13_nodes[i].speed_cap = (uint16_t)x13_in(30 * 16, 70 * 16);
+            x13_nodes[i].half_width = (uint16_t)((x13_rnd() % 10u == 0u) ? x13_in(0, 6) : x13_in(60, 220));
+            x13_nodes[i].flags = run;
+            x13_nodes[i].inv_span = sh2z_line_node_inv_span(span);
+        }
+        x13_line.nodes = x13_nodes; x13_line.count = nn; x13_line.length = start;
+        memset(&x13_p, 0, sizeof x13_p); memset(&x13_surf, 0, sizeof x13_surf); memset(&x13_b, 0, sizeof x13_b);
+        x13_p.pace_gain = 3277; x13_p.pace_max = 81920; x13_p.chase_gain = 655; x13_p.steer_gain = 9830; x13_p.margin = U(x13_in(0, 8));
+        x13_p.avoid_long = U(92); x13_p.avoid_lat = U(69); x13_p.avoid_offset = U(92); x13_p.avoid_ticks = x13_in(0, 40); x13_p.pass_hold = 60;
+        x13_p.contact_long = x13_rnd() % 8u == 0u ? U(x13_in(1, 400)) : U(46);
+        x13_p.contact_lat = x13_rnd() % 16u == 0u ? 0 : (x13_rnd() % 4u == 0u ? U(x13_in(1, 300)) : U(40));
+        x13_p.bump_keep = 16384; x13_p.hit_energy = 32768; x13_p.side_energy = U(2); x13_p.attack_energy = U(10); x13_p.wall_energy = U(3);
+        x13_p.wall_keep = 62259; x13_p.attack_long = U(184); x13_p.attack_lat = U(92); x13_p.boost_speed = U(6); x13_p.boost_energy = U(10);
+        x13_p.boost_min_share = 19661; x13_p.boost_behind = U(150); x13_p.cruise = U(30); x13_p.rank_lead = U(8);
+        const int lod = (int)(x13_rnd() % 2u);
+        if(lod) { x13_p.lod_near[0] = U(3000); x13_p.lod_near[1] = U(8000); x13_p.lod_near[2] = U(16000); }
+        else x13_p.lod_near[0] = x13_p.lod_near[1] = x13_p.lod_near[2] = INT32_MAX;
+        x13_p.boost_ticks = 90; x13_p.laps = (uint8_t)x13_in(1, 3); x13_p.boost_from_lap = 1;
+        if(tubes) { x13_surf.wrap_mask = 0x0180u; x13_surf.wrap_value = 0x0080u; x13_p.surface = &x13_surf; }
+        const int behave = x13_rnd() % 4u != 0u;
+        if(behave) {
+            x13_b.roll_chance = 1024; x13_b.roll_latch = 32768; x13_b.roll_min = 20; x13_b.roll_span = 16; x13_b.roll_lead = 26214;
+            x13_b.hold_lead = 7864; x13_b.roll_well = 52429; x13_b.hold_mask = 0x01c0u; x13_b.hold_value = 0x00c0u;
+            x13_b.exit_mask = 0x01c0u; x13_b.exit_value = 0x0080u; x13_b.roll_exit_ahead = U(3000);
+            x13_b.lat_accel = x13_rnd() % 3u ? 192 : 0; x13_b.air_mask = 0x01c0u; x13_b.air_value = 0x0180u;
+            x13_b.open_mask = 0x01c0u; x13_b.open_value = 0x0000u; x13_b.air_spread = 2600; x13_b.fall_margin = U(30); x13_b.fall_ticks = 95;
+            x13_b.ko_window = 120; x13_b.ko_near = x13_rnd() % 2u ? U(1500) : 0; x13_b.ko_floor = 26;
+            x13_b.drop_mask = 0x0200u; x13_b.drop_value = 0x0200u; x13_b.drop_lat = 117965; x13_b.drop_chance = 16; x13_b.launch_chance = 4096;
+            x13_b.contact_norm = x13_rnd() % 2u ? 36045 : 0; x13_b.wall_impact = x13_rnd() % 3u == 0u ? 20000 : 0;
+            x13_p.behave = &x13_b;
+        }
+        const uint32_t n = x13_rnd() % 5u == 0u ? (uint32_t)x13_in(33, 60) : (uint32_t)x13_in(2, 32);
+        const int grid = x13_rnd() % 5u == 0u;
+        const uint32_t width = x13_rnd() % 3u == 0u ? (uint32_t)U(x13_in(100, 3000)) : (uint32_t)U(x13_in(20, 400));
+        const int32_t base = x13_rnd() % 3u == 0u ? U(x13_in(0, 40)) : x13_in(0, x13_line.length - 1);
+        for(uint32_t i = 0; i < n; ++i) {
+            memset(&x13_veh[i], 0, sizeof x13_veh[i]); memset(&x13_brain[i], 0, sizeof x13_brain[i]);
+            x13_veh[i].energy = x13_veh[i].max_energy = x13_rnd() % 5u == 0u ? U(x13_in(2, 20)) : U(160);
+            x13_veh[i].accel = 40; x13_veh[i].brake = 96; x13_veh[i].top_speed = U(55) + x13_in(0, 8) * 64;
+            x13_veh[i].grip = x13_rnd() % 8u ? U(6) : 0; x13_veh[i].armor = 256;
+            x13_brain[i].pace = x13_rnd() % 8u ? x13_line.length / x13_in(1500, 3000) : 0; x13_brain[i].lane = x13_in(-30, 30) * 256; x13_brain[i].chase = -1;
+            if(grid) sh2z_field_grid_slot(&x13_line, i, U(146), U(100), U(50), 4, &x13_veh[i].t);
+            else {
+                int32_t d = base - (int32_t)(x13_rnd() % (width + 1u));
+                while(d < 0) d += x13_line.length;
+                while(d >= x13_line.length) d -= x13_line.length;
+                x13_veh[i].t.dist = d; x13_veh[i].t.node = sh2z_line_locate(&x13_line, d, 0);
+                x13_veh[i].t.lateral = x13_in(-U(120), U(120)); x13_veh[i].t.speed = U(x13_in(0, 55)); x13_veh[i].t.lat_vel = x13_in(-256, 256);
+            }
+            if(i && x13_rnd() % 9u == 0u) x13_veh[i].flags |= SH2Z_VEH_EXTERNAL;
+            if(i && x13_rnd() % 25u == 0u) { x13_veh[i].flags |= SH2Z_VEH_RETIRED; x13_veh[i].energy = 0; }
+            if(i && x13_rnd() % 40u == 0u) x13_veh[i].flags |= SH2Z_VEH_STOPPED | SH2Z_VEH_RETIRED;
+            if(behave && i && x13_rnd() % 40u == 0u) x13_veh[i].flags |= SH2Z_VEH_FALLING;
+        }
+        sh2z_field_init(&x13_f, &x13_line, &x13_p, x13_veh, x13_brain, x13_order, x13_slot, x13_rank, n, 1u + sc);
+        if(lod) x13_f.focus = 0;
+        sh2z_field_start(&x13_f);
+        const uint32_t ticks = (uint32_t)x13_in(1, 40);
+        for(uint32_t t = 0; t < ticks; ++t) {
+            for(uint32_t i = 0; i < n; ++i) if(x13_veh[i].flags & SH2Z_VEH_EXTERNAL) {   /* the owner moves its vehicles */
+                sh2z_track_advance(&x13_line, &x13_veh[i].t, 1u); x13_veh[i].t.speed = U(x13_in(10, 50));
+                x13_veh[i].t.lateral += x13_in(-256, 256); x13_veh[i].kick_lat = x13_veh[i].kick_speed = 0;
+                if(x13_rnd() % 8u == 0u) x13_veh[i].t.node = (uint32_t)x13_in(0, (int32_t)nn - 1);   /* a node that does not hold its distance */
+            }
+            sh2z_field_step(&x13_f);
+            for(uint32_t i = 0; i < n; ++i) {
+                const sh2z_vehicle_t *v = &x13_veh[i];
+                h = x13_mix(h, (uint32_t)v->t.dist); h = x13_mix(h, (uint32_t)v->t.lateral); h = x13_mix(h, (uint32_t)v->t.speed);
+                h = x13_mix(h, (uint32_t)v->t.lat_vel); h = x13_mix(h, (uint32_t)v->t.lap); h = x13_mix(h, (uint32_t)v->energy);
+                h = x13_mix(h, v->flags); h = x13_mix(h, (uint32_t)v->kick_lat); h = x13_mix(h, (uint32_t)v->kick_speed);
+            }
+            h = x13_mix(h, x13_f.contacts); h = x13_mix(h, x13_f.retired); h = x13_mix(h, x13_f.falls); h = x13_mix(h, sh2z_field_hash(&x13_f));
+        }
+        x13_stats[0] += x13_f.contacts; x13_stats[1] += x13_f.retired; x13_stats[2] += x13_f.falls; x13_stats[3] += x13_f.steps;
+    }
+    return h;
+}
+#define X13_HALF_A UINT64_C(0x67b341dbc6003b06)   /* recorded from the line-field-12 step */
+#define X13_HALF_B UINT64_C(0x00b8eb37e1241206)
+#define X13_FUZZ_HASH UINT64_C(0xc0ee3c55bdd11469)   /* recorded from the line-field-12 step: scenes 0 to 2999 */
+/* Two agents a half line apart after the step, where the signed gap sits on the edge of its wrap: -length / 2 before the wrap
+ * (swap 0) or +length / 2 (swap 1); the first comes out as +length / 2, and which agent counts as ahead sets what the bump takes. */
+static uint64_t x13_half_scene(int swap) {
+    params(); make_line(); P.contact_long = U(9700);
+    rng = 31u;
+    for(uint32_t i = 0; i < 2u; ++i) {
+        vehicle(i, i, 2000);
+        veh[i].accel = veh[i].brake = 0; veh[i].grip = 0; brain[i].pace = 0; brain[i].lane = 0;
+        veh[i].t.speed = i ? U(40) : U(20);
+        veh[i].t.dist = (swap ? (i ? 0 : line.length / 2) : (i ? line.length / 2 : 0)) + U(100) - veh[i].t.speed;   /* where the step leaves it */
+        veh[i].t.lateral = i ? U(8) : 0;
+        veh[i].t.node = sh2z_line_locate(&line, veh[i].t.dist, 0);
+    }
+    field(2, 1u);
+    sh2z_field_start(&F);
+    sh2z_field_step(&F);
+    uint64_t h = 1469598103934665603ull;
+    for(uint32_t i = 0; i < 2u; ++i) {
+        const int32_t w[4] = { veh[i].t.lateral, veh[i].t.speed, veh[i].energy, (int32_t)veh[i].flags };
+        for(int k = 0; k < 4; ++k) h = (h ^ (uint32_t)w[k]) * 1099511628211ull;
+    }
+    h = (h ^ F.contacts) * 1099511628211ull;
+    params();
+    return h;
+}
+static void test_contact_passes13(void) {
+    memset(x13_stats, 0, sizeof x13_stats);
+    const uint64_t h = x13_fuzz(0u, 3000u);
+#ifdef X13_RECORD
+    printf("x13 fuzz hash 0x%016" PRIx64 " contacts %" PRIu64 " retired %" PRIu64 " falls %" PRIu64 " steps %" PRIu64 "\n", h, x13_stats[0], x13_stats[1], x13_stats[2], x13_stats[3]);
+    printf("x13 half 0x%016" PRIx64 " 0x%016" PRIx64 "\n", x13_half_scene(0), x13_half_scene(1));
+#endif
+    CHECK(h == X13_FUZZ_HASH);
+    CHECK(x13_half_scene(0) == X13_HALF_A && x13_half_scene(1) == X13_HALF_B);   /* a gap on the edge of its wrap, both ways round */
+    CHECK(x13_stats[0] > 10000u && x13_stats[1] > 2000u && x13_stats[2] > 10u);   /* the scenes touch, retire and fall */
+    CHECK(x13_fuzz(1u, 3000u) != X13_FUZZ_HASH);                                 /* control: a scene fewer is another hash */
 }
 
 /* line-field-9 scenes: frozen agents (no speed or lateral change of their own), lane 0, placed relative to their
@@ -1473,6 +1631,7 @@ int main(void) {
     test_contact_off();
     test_overtake_contact();
     test_pile_passes();
+    test_contact_passes13();
     test_no_room_hold();
     test_no_cut_hold();
     test_no_block_hold();
