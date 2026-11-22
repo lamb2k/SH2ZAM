@@ -15,6 +15,7 @@ and scope.
 - [foundation-2026-11-13](validation/foundation-2026-11-13.md): 2026-11-13
 - [integer-kernels-1](validation/integer-kernels-1.md): 2026-11-15 (integer kernels)
 - [line-field-1](validation/line-field-1.md): 2026-11-19 (line field, line-field-1)
+- [line-field-10](validation/line-field-10.md): 2026-11-22 (line field contact passes without repeated work, line-field-10)
 - [line-field-2](validation/line-field-2.md): 2026-11-20 (line field second-lap re-target, line-field-2)
 - [line-field-3](validation/line-field-3.md): 2026-11-20 (line field first-lap chase cap, line-field-3)
 - [line-field-4](validation/line-field-4.md): 2026-11-20 (line field surface zones, tube nodes and final dash, line-field-4)
@@ -22,7 +23,6 @@ and scope.
 - [line-field-7](validation/line-field-7.md): 2026-11-21 (line field step entry points and exact step cuts, line-field-7)
 - [line-field-8](validation/line-field-8.md): 2026-11-21 (line field contact order within a step, line-field-8)
 - [line-field-9](validation/line-field-9.md): 2026-11-21 (line field without the extra lateral holds, line-field-9)
-- [line-field-10](validation/line-field-10.md): 2026-11-22 (line field contact passes share the pair list and line samples, line-field-10)
 - [line-follower-1](validation/line-follower-1.md): 2026-11-19 (racing-line follower, line-follower-1)
 - [memo-1](validation/memo-1.md): 2026-11-17 (block memo kernels, memo-1)
 - [pose-1](validation/pose-1.md): 2026-11-17 (model pose from binary32 state, pose-1)
