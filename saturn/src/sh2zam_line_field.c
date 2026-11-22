@@ -540,15 +540,13 @@ static uint32_t fld_scan(sh2z_field_t *f, const sh2z_field_behave_t *bh, fld_cs_
 
 /* The contact passes of a step: at most three, ending after the first that pushes no more than one pair
  * (pile-ups of three or more settle over the passes; energy is per incident, so nothing is charged twice). */
-FLD_INLINE void fld_contact_phase(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
+FLD_INLINE void fld_contact_phase(sh2z_field_t *f, const sh2z_field_behave_t *bh, fld_cs_t *cs) {
     const sh2z_field_params_t *p = f->params;
     /* No reach across: no pair can overlap (|dl| >= 0 >= contact_lat), so the walk would change nothing. */
     if(p->contact_lat <= 0) return;
     const sh2z_line_t *line = f->line;
-    fld_cs_t cs;
     fld_pl_t pl;
     fld_rows_t rows;
-    cs.valid = 0u;
     fld_rows_read(f, &rows);
     uint32_t list_ok = 0u, ret_list = 0u;
     for(int pass = 0; pass < 3; ++pass) {
@@ -558,12 +556,12 @@ FLD_INLINE void fld_contact_phase(sh2z_field_t *f, const sh2z_field_behave_t *bh
              * retirement during this pass changes which vehicles the rest of the scan meets: it resumes in full. */
             for(uint32_t n = 0u; n < pl.n; ++n) {
                 const uint32_t i0 = pl.i0[n], i1 = pl.i1[n];
-                pushed += fld_pair(f, bh, &cs, i0, i1, sh2z_track_near_gap(line, &f->veh[i0].t, &f->veh[i1].t));
-                if(f->retired != ret_list) { pushed += fld_scan(f, bh, &cs, (fld_pl_t *)0, &rows, pl.s[n], (uint32_t)pl.k[n] + 1u); break; }
+                pushed += fld_pair(f, bh, cs, i0, i1, sh2z_track_near_gap(line, &f->veh[i0].t, &f->veh[i1].t));
+                if(f->retired != ret_list) { pushed += fld_scan(f, bh, cs, (fld_pl_t *)0, &rows, pl.s[n], (uint32_t)pl.k[n] + 1u); break; }
             }
         } else {
             ret_list = f->retired; pl.n = 0u; pl.full = 0u;
-            pushed = fld_scan(f, bh, &cs, &pl, &rows, 0u, 1u);
+            pushed = fld_scan(f, bh, cs, &pl, &rows, 0u, 1u);
             list_ok = !pl.full;
         }
         if(pushed <= 1u) break;
@@ -622,6 +620,8 @@ FLD_INLINE void fld_order(sh2z_field_t *f) {
 FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
     const sh2z_field_params_t *p = f->params;
     const sh2z_line_t *line = f->line;
+    fld_cs_t cs;
+    cs.valid = 0u;
     ++f->tick;
     fld_order(f);
     if(!f->started) return;
@@ -731,6 +731,9 @@ FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
         {   /* The line may narrow under the vehicle: stay inside at the new position. */
             sh2z_line_sample_t now;
             sh2z_line_sample(line, v->t.node, v->t.dist, &now);
+            /* line-field-11: nothing after this moves the vehicle along the line, so this is the sample under it that
+             * the contact phase would take (line-field-10 keeps one a vehicle there). */
+            if(i < FLD_CS_MAX) { cs.valid |= UINT32_C(1) << i; cs.half_width[i] = now.half_width; cs.flags[i] = now.flags; }
             const int now_tube = fld_tube(p, now.flags) && now.half_width > 0;
             /* line-field-5: in the air beyond an open edge, the agent leaves the line. On a drop node it also leaves
              * the line when it comes out of a tube beyond the open edge (launched, launch_chance), or, on a drop tube, when it is
@@ -780,7 +783,7 @@ FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
     fld_order(f);
     /* Further passes settle pile-ups of three or more (energy is per incident,
      * so nothing is charged twice). At most three passes. */
-    fld_contact_phase(f, bh);
+    fld_contact_phase(f, bh, &cs);
     f->rank_changes += fld_rank(f);
 }
 
