@@ -37,16 +37,6 @@ FLD_INLINE int fld_tube(const sh2z_field_params_t *p, uint16_t flags) {
 }
 /* Round a tube of radius half_width: the circumference (411775 = 2 pi in Q16, rounded). */
 FLD_INLINE int32_t fld_round(int32_t half_width) { return fld_mul_q16(half_width, 411775); }
-/* line-field-12: the line sample under a vehicle. With behave->line_room the road is at least as wide as the line is
- * off its middle, plus line_room (the line is where the original's driver steers, so the road holds it). */
-FLD_INLINE void fld_sample(const sh2z_field_t *f, uint32_t node, int32_t dist, sh2z_line_sample_t *out) {
-    sh2z_line_sample(f->line, node, dist, out);
-    const sh2z_field_behave_t *bh = f->params->behave;
-    if(bh && bh->line_room > 0 && out->half_width > 0 && !fld_tube(f->params, out->flags)) {
-        const int32_t need = fld_abs(out->lateral) + bh->line_room;
-        if(out->half_width < need) out->half_width = need;
-    }
-}
 /* A lateral (or a lateral difference) wrapped into [-c/2, c - c/2) for a circumference c > 0. */
 FLD_INLINE int32_t fld_wrap(int32_t lat, int32_t c) {
     const int32_t h = c >> 1;
@@ -467,10 +457,10 @@ typedef struct {
 } fld_cs_t;
 
 /* The sample under vehicle i at its distance (distance and node do not change during the passes). */
-static void fld_cs(const sh2z_field_t *f, fld_cs_t *cs, const sh2z_vehicle_t *v, uint32_t i, int32_t *half_width, uint16_t *flags) {
+static void fld_cs(const sh2z_line_t *line, fld_cs_t *cs, const sh2z_vehicle_t *v, uint32_t i, int32_t *half_width, uint16_t *flags) {
     if(i < FLD_CS_MAX && (cs->valid & (UINT32_C(1) << i))) { *half_width = cs->half_width[i]; *flags = cs->flags[i]; return; }
     sh2z_line_sample_t at;
-    fld_sample(f, v->t.node, v->t.dist, &at);
+    sh2z_line_sample(line, v->t.node, v->t.dist, &at);
     *half_width = at.half_width; *flags = at.flags;
     if(i < FLD_CS_MAX) { cs->valid |= UINT32_C(1) << i; cs->half_width[i] = at.half_width; cs->flags[i] = at.flags; }
 }
@@ -489,7 +479,7 @@ FLD_NOINLINE uint32_t fld_pair(sh2z_field_t *f, const sh2z_field_behave_t *bh, f
     /* line-field-4: across a tube's seam. line-field-7: the node's flags are the sample's, so only a tube
      * node is sampled. */
     if(fld_tube(p, line->nodes[a->t.node].flags)) {
-        fld_cs(f, cs, a, ia, &hw, &fl);
+        fld_cs(line, cs, a, ia, &hw, &fl);
         if(hw > 0) dl = fld_wrap(dl, fld_round(hw));
     }
     const int32_t adl = fld_abs(dl);
@@ -507,7 +497,7 @@ FLD_NOINLINE uint32_t fld_pair(sh2z_field_t *f, const sh2z_field_behave_t *bh, f
         if(move_a) {
             if(a_ext) a->kick_lat += dir * move_a;
             else {
-                fld_cs(f, cs, a, ia, &hw, &fl);
+                fld_cs(line, cs, a, ia, &hw, &fl);
                 const int32_t nl = a->t.lateral + dir * move_a;
                 if(fld_tube(p, fl) && hw > 0) a->t.lateral = fld_wrap(nl, fld_round(hw));
                 else {
@@ -520,7 +510,7 @@ FLD_NOINLINE uint32_t fld_pair(sh2z_field_t *f, const sh2z_field_behave_t *bh, f
         if(move_b) {
             if(b_ext) b->kick_lat -= dir * move_b;
             else {
-                fld_cs(f, cs, b, ib, &hw, &fl);
+                fld_cs(line, cs, b, ib, &hw, &fl);
                 const int32_t nl = b->t.lateral - dir * move_b;
                 if(fld_tube(p, fl) && hw > 0) b->t.lateral = fld_wrap(nl, fld_round(hw));
                 else {
@@ -739,7 +729,7 @@ FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
             b->ko_age = (uint16_t)(age > 0xffffu ? 0xffffu : age);
         }
         sh2z_line_sample_t at;
-        fld_sample(f, v->t.node, v->t.dist, &at);
+        sh2z_line_sample(line, v->t.node, v->t.dist, &at);
         /* line-field-4: the zone under the agent as its step starts. */
         const sh2z_field_surface_t *sf = p->surface;
         const uint32_t zone = (sf && sf->zone_count) ? fld_zone(sf, &v->t) : 0u;
@@ -819,7 +809,7 @@ FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
         /* On the edge: scrub speed and charge energy. */
         {   /* The line may narrow under the vehicle: stay inside at the new position. */
             sh2z_line_sample_t now;
-            fld_sample(f, v->t.node, v->t.dist, &now);
+            sh2z_line_sample(line, v->t.node, v->t.dist, &now);
             const int now_tube = fld_tube(p, now.flags) && now.half_width > 0;
             /* line-field-5: in the air beyond an open edge, the agent leaves the line. On a drop node it also leaves
              * the line when it comes out of a tube beyond the open edge (launched, launch_chance), or, on a drop tube, when it is

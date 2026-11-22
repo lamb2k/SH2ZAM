@@ -335,7 +335,6 @@ typedef struct sh2z_field_behave {
     int32_t launch_chance;     /**< Q16 chance that an agent out of a tube beyond the open edge of a drop node is launched off (65536 = always). */
     int32_t contact_norm;      /**< Q16: > 0 charges a contact incident by its closing speed along the line between the two, contact_norm each (twice to an attacker's victim, nothing to the attacker), instead of side_energy, hit_energy and attack_energy. */
     int32_t wall_impact;       /**< line-field-12, Q16: > 0 charges a wall impact by the speed it hits the edge at (how far a push or a step took it past the edge), wall_impact of it, once per impact, and scrubs speed only then; an agent that rests on the edge pays nothing. 0 = wall_energy a call, line-field-5's. */
-    int32_t line_room;         /**< line-field-12, Q8: > 0 makes the road at least |line lateral| + line_room wide under every ground agent (the baked half width can be narrower than the line that a driver follows); 0 = the baked half width. */
 } sh2z_field_behave_t;
 
 /* ---- Contract tag line-field-7 ------------------------------------------ */
