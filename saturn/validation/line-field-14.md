@@ -56,4 +56,12 @@ gap (and so retires) had no way to say so.
 - **Instruction model:** none; there is no instruction model for the line field, so no cycle count is claimed. The
   added code is an integer scan of at most 64 node flags, and only for an agent in the air with the field set.
 - **Objects:** no libc `memcpy`, `memset` or `memmove` in the SH-2 objects (CI checks).
+- **Consumer (not this repository):** a Saturn racing engine's native field on a reference course where every reference agent
+  falls short of one gap and retires. HOST, the harness built from this branch's sources, a band and a rule frozen before the
+  runs (reach 19 ticks, fall 127 ticks; every one of 29 agents retires, sorted retirement ticks within 40 rank by rank, at
+  least 24 of 29 within 60 tick by agent): on 8 fresh seeds, each against its own reference run of the original code and
+  with its pace taken from that run, 8 of 8 pass with a worst sorted error of 10 to 17 ticks and 29 of 29 agents within 60
+  ticks on every seed; the same field with the rule off or at a reach of 40 ticks retires 0 or 1 of 29 (every run clears
+  the gap), with a fall of 60 ticks the sorted error is 74 to 81 ticks, and with one pace for all agents 41 to 50 ticks, so
+  each control fails. The development prototype and this branch retire every agent on the same tick (two seeds compared).
 - **Not done:** console execution.
