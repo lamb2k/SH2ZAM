@@ -1,4 +1,4 @@
-# Track-bound vehicle dynamics (experimental, contract tags `vehicle-dynamics-1` and `-2`)
+# Track-bound vehicle dynamics (experimental, contract tags `vehicle-dynamics-1`, `-2` and `-5`)
 
 [`vehicle_dynamics_experimental.h`](include/sh2zam/vehicle_dynamics_experimental.h) steps one
 hovering vehicle on a closed road laid along a cardinal spline, one fixed tick at a time, in
@@ -126,6 +126,15 @@ node (`sh2z_vd_join_t`, or NULL) and the tube rule constants (`sh2z_vd_tube_rule
 - **Cylinder** (`SH2Z_VD_SHAPE_CYLINDER`): the ground is the outside of that circle.
   - The up vector points away from the line.
   - Beyond the radius plus `cyl_reach` the body has left the surface and falls as off a road.
+- **Half-pipe** (`SH2Z_VD_SHAPE_HALF_PIPE`, `vehicle-dynamics-5`): a trough, the pipe's ground with the
+  top open.
+  - Height, the up vector, the radial clamp and the joins are the pipe's.
+  - The body leaves the surface when its height over the line, less `pipe_rim`, plus
+    sin(22.5 degrees) of the radius (tapered over a join) reaches zero. The test applies on the whole
+    span, not only over a join.
+  - Gravity acts along the road's up everywhere, also over a join, where the pipe blends it.
+  - The constant sin(22.5 degrees) is part of the rule, not a parameter; `pipe_rim` is the same
+    record field as the pipe's.
 - **Joins:** a tube span tapers into an open neighbour over a join.
   - The share `s` is the span's arc-length share over the join's `scale`: 0 at the seam, 1 where
     the tube is whole.
@@ -145,6 +154,6 @@ flags).
 
 ## Not covered
 
-- Half-pipe road shapes are treated as an open road.
+- `sh2z_vd_step` (without tubes) treats the half-pipe as an open road; `sh2z_vd_step2` models it.
 - Vehicle-to-vehicle contact inside the model; the line-space field resolves contact and passes kicks.
 - Real memory timing (cache, SDRAM, bus contention) and a whole-frame measurement on hardware.

@@ -369,8 +369,8 @@ static sh2z_vd_body_t tube_body(int surface,int axis,int sign,double h,double t)
  b.energy=veh.max_energy;b.hover=q16(13.0);b.wall_bounce=veh.wall_bounce;b.lap=1;b.laps_done=1;b.height=q16(h);
  return b;
 }
-enum {T_ROAD,T_PIPE_BOTTOM,T_PIPE_WALL,T_PIPE_CEILING,T_CYL_TOP,T_CYL_SIDE,T_CYL_BOTTOM,T_JOIN,TSCRIPTS};
-static const char *const tube_name[TSCRIPTS]={"road","pipe_bottom","pipe_wall","pipe_ceiling","cylinder_top","cylinder_side","cylinder_bottom","pipe_join"};
+enum {T_ROAD,T_PIPE_BOTTOM,T_PIPE_WALL,T_PIPE_CEILING,T_CYL_TOP,T_CYL_SIDE,T_CYL_BOTTOM,T_JOIN,T_HALF_FLOOR,T_HALF_JOIN,TSCRIPTS};
+static const char *const tube_name[TSCRIPTS]={"road","pipe_bottom","pipe_wall","pipe_ceiling","cylinder_top","cylinder_side","cylinder_bottom","pipe_join","half_pipe_floor","half_pipe_join"};
 static const char *const tube_text[TSCRIPTS]={
  "walled stadium, 600 ticks: ACCEL, a boost every 300 ticks, LEAN_R in bursts, the stick swept -50 / 0 / +50 (sh2z_vd_step's bits, checked on the host too)",
  "pipe on spans 0-3, 240 ticks of ACCEL on its floor",
@@ -379,15 +379,20 @@ static const char *const tube_text[TSCRIPTS]={
  "cylinder on spans 0-3, 240 ticks of ACCEL on its top",
  "cylinder on spans 0-3, 240 ticks of ACCEL on its side",
  "cylinder on spans 0-3, 240 ticks of ACCEL underneath",
- "pipe on spans 1-2 joining road at both ends (joins over 30% of each span), 400 ticks of ACCEL from the road into the pipe and out"};
+ "pipe on spans 1-2 joining road at both ends (joins over 30% of each span), 400 ticks of ACCEL from the road into the pipe and out",
+ "half-pipe on spans 0-3, 240 ticks of ACCEL on its floor",
+ "half-pipe on spans 1-2 joining road at both ends (joins over 30% of each span), 400 ticks of ACCEL from the road into the trough and out"};
 static unsigned tube_cycles[TSCRIPTS][600],tube_all[TSCRIPTS*600],tube_ticks[TSCRIPTS],n_tube;
 static uint64_t tube_instr[TSCRIPTS],tube_all_instr,tube_sr_set,road_same_as_step,tube_join_node3;
 static void run_tube_script(int s) {
  static const uint8_t pipe[N]={SH2Z_VD_SHAPE_PIPE,SH2Z_VD_SHAPE_PIPE,SH2Z_VD_SHAPE_PIPE,SH2Z_VD_SHAPE_PIPE};
  static const uint8_t cyl[N]={SH2Z_VD_SHAPE_CYLINDER,SH2Z_VD_SHAPE_CYLINDER,SH2Z_VD_SHAPE_CYLINDER,SH2Z_VD_SHAPE_CYLINDER};
  static const uint8_t join[N]={0,SH2Z_VD_SHAPE_PIPE,SH2Z_VD_SHAPE_PIPE};
+ static const uint8_t half[N]={SH2Z_VD_SHAPE_HALF_PIPE,SH2Z_VD_SHAPE_HALF_PIPE,SH2Z_VD_SHAPE_HALF_PIPE,SH2Z_VD_SHAPE_HALF_PIPE};
+ static const uint8_t half_join[N]={0,SH2Z_VD_SHAPE_HALF_PIPE,SH2Z_VD_SHAPE_HALF_PIPE};
  sh2z_vd_body_t b,road;
  unsigned limit=240;
+ const uint64_t join_before=tube_join_node3;
  memset(&road,0,sizeof road);
  if(s==T_ROAD){build_tube_track(NULL);load_tube_track(false);b=road=tube_body(ON_ROAD,1,1,13.0,0.05);limit=600;}
  else if(s<=T_PIPE_CEILING){
@@ -398,8 +403,11 @@ static void run_tube_script(int s) {
   build_tube_track(cyl);load_tube_track(false);
   const int side=s-T_CYL_TOP,axis=side==1?0:1,sign=side==2?-1:1;
   b=tube_body(ON_CYLINDER,axis,sign,13.0,0.05);
+ } else if(s==T_HALF_FLOOR){
+  build_tube_track(half);load_tube_track(false);
+  b=tube_body(ON_PIPE,1,-1,13.0,0.05);
  } else {
-  build_tube_track(join);
+  build_tube_track(s==T_HALF_JOIN?half_join:join);
   nodes[0].shape=SH2Z_VD_SHAPE_ROAD;nodes[3].shape=SH2Z_VD_SHAPE_ROAD;
   joins[1]=(sh2z_vd_join_t){q30(0.3),q30(1.0),q30(0.3)};
   joins[2]=(sh2z_vd_join_t){0,q30(0.7),q30(0.3)};
@@ -433,10 +441,10 @@ static void run_tube_script(int s) {
   if(!same_body("body",&b))bad(tube_name[s],i);
   tube_cycles[s][tube_ticks[s]++]=r.cycles;tube_instr[s]+=r.instructions;
   tube_all[n_tube++]=r.cycles;tube_all_instr+=r.instructions;
-  if(s==T_JOIN&&b.node==3)tube_join_node3++;
+  if((s==T_JOIN||s==T_HALF_JOIN)&&b.node==3)tube_join_node3++;
   if(b.flags&SH2Z_VD_FALLING)bad("a tube script fell off the track",i);
  }
- if(s==T_JOIN&&!tube_join_node3)bad("the join drive did not leave the pipe",0);
+ if((s==T_JOIN||s==T_HALF_JOIN)&&tube_join_node3==join_before)bad("the join drive did not leave the pipe",0);
 }
 
 int main(int argc,char**argv) {

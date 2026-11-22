@@ -450,6 +450,64 @@ static void shape_pipe(sh2z_vd_body_t *b, const sh2z_vd_track2_t *k2, const sh2z
     tube_band(b, r);
 }
 
+/* Half-pipe rim gain: sin(22.5 degrees) of the (join-tapered) radius is added to the rim test. */
+#define HALF_PIPE_RIM_Q30 INT32_C(0x187DE284)
+
+/* Inside a half-pipe (vehicle-dynamics-5): the pipe's ground, circle of radius
+ * half_left round the line with up to the line, but a trough, open above. The
+ * body leaves it when its height over the line, less tube.pipe_rim, plus
+ * HALF_PIPE_RIM_Q30 of the tapered radius reaches zero: that test applies on the
+ * whole span, not only over a join. Gravity always acts along the road's up; the
+ * pipe's joins taper in the same way, with the same road plane. */
+static void shape_half_pipe(sh2z_vd_body_t *b, const sh2z_vd_track2_t *k2, const sh2z_vd_rules_t *r) {
+    const int32_t radius = b->half_left;
+    int32_t share, floor_r, above, dist = vlen(b->disp);
+    const int side = join_at(b, k2, &share);
+    int i;
+    floor_r = side ? mu(radius, share) : radius;
+    b->height = radius - dist;
+    if(dist > k2->tube.min_dist) {
+        int32_t u[3];
+        if(normalize(u, b->disp)) for(i = 0; i < 3; i++) b->ground_up[i] = -u[i];
+    }
+    above = dotu(b->road[1], b->disp) - k2->tube.pipe_rim + mu(floor_r, HALF_PIPE_RIM_Q30);
+    if(b->flags & SH2Z_VD_OFF_ROAD) {
+        if(above >= 0 || radius < dist) { airborne_up(b, r); return; }
+        b->flags &= ~SH2Z_VD_OFF_ROAD;
+    } else if(above >= 0) {
+        leave_surface(b, r);
+        return;
+    }
+    if(side) {
+        const int32_t lean = side > 0 ? radius : -radius;
+        const int32_t plane = floor_r + dotu(b->road[1], b->disp);
+        int32_t v[3];
+        if(plane < b->height) {
+            b->height = plane;
+            vcopy(b->ground_up, b->road[1]);
+            for(i = 0; i < 3; i++) v[i] = mu(k2->tube.join_lever, b->road[1][i]) + mu(lean, b->road[0][i]);
+            if(normalize(v, v)) vcopy(b->tilt_up, v);
+            if(b->height < 0) {
+                int32_t vn;
+                move_by(b, b->height, b->road[1]);
+                dist = vlen(b->disp);
+                b->height = 0;
+                vn = dotu(b->road[1], b->vel);
+                if(vn < 0) for(i = 0; i < 3; i++) b->vel[i] -= mu(vn, b->road[1][i]);
+            }
+        } else {
+            vcopy(b->tilt_up, b->ground_up);
+        }
+        for(i = 0; i < 3; i++) v[i] = sh2z_u30_mul(b->tilt_up[i] - b->road[1][i], share) + b->road[1][i];
+        if(vlen(v) > k2->tube.min_unit && normalize(v, v)) vcopy(b->tilt_up, v);
+    } else {
+        vcopy(b->tilt_up, b->ground_up);
+    }
+    vcopy(b->gravity_up, b->road[1]);
+    if(radius < dist) radial_clamp(b, dist, radius);
+    tube_band(b, r);
+}
+
 /* Outside a cylinder: the ground is the circle of radius half_left (tapered
  * to the line in a join); up points away from the axis. Beyond the radius
  * plus tube.cyl_reach the body has left the surface. */
@@ -510,6 +568,7 @@ static void road_contact(sh2z_vd_body_t *b, const sh2z_vd_track_t *k, const sh2z
     /* k is the base of a sh2z_vd_track2_t (sh2z_vd_step2). */
     case SH2Z_VD_SHAPE_PIPE: shape_pipe(b, (const sh2z_vd_track2_t *)(const void *)k, r); break;
     case SH2Z_VD_SHAPE_CYLINDER: shape_cylinder(b, (const sh2z_vd_track2_t *)(const void *)k, r); break;
+    case SH2Z_VD_SHAPE_HALF_PIPE: shape_half_pipe(b, (const sh2z_vd_track2_t *)(const void *)k, r); break;
 #endif
     default: shape_road(b, r, r->air_road); break;
     }
