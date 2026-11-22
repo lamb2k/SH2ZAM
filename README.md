@@ -408,6 +408,18 @@ Integer only, with no libc. Host-tested against
 float references and the general forms (no console run). See
 [the rotation sprite guide](saturn/ROTATION_SPRITES.md).
 
+## Sprite cell records
+
+[`sh2zam/cell_records_experimental.h`](saturn/include/sh2zam/cell_records_experimental.h)
+(contract tag `cell-records-1`) expands delta coded multi-tile sprite records into 8-byte cell list entries:
+- `sh2z_cellrec_expand` checks its arguments; `sh2z_cellrec_expand_trusted` does not, for callers that validate one parameter block for many calls;
+- twelve forms: byte or word offsets, optional horizontal mirror, and attribute rules (keep, replace, add to the low byte);
+- the running position carries across calls, so a long list can be expanded in pieces.
+
+Integer only, with no libc, divide or multiply. Host-tested and modelled (no console run). It sits beside
+`cell16.h`, which places and clips blocks of identical 16x16 cells; this kernel does not clip. See
+[the cell records guide](saturn/CELL_RECORDS.md).
+
 ## Effect pool
 
 [`sh2zam/effect_pool_experimental.h`](saturn/include/sh2zam/effect_pool_experimental.h)
@@ -430,7 +442,17 @@ Integer only, with no libc. Host-tested (no console run). See
   `line-field-3` a first-lap cap on chasing vehicles, `line-field-4` surface zones,
   tube nodes and a final dash, and `line-field-5` tube roll, lateral inertia, falls and
   drops with a knock-out credit, a near-focus knock-out gate and impact damage;
-  `line-field-7` splits the step into plain and behaviour entry points.
+  `line-field-7` splits the step into plain and behaviour entry points;
+  `line-field-8` orders the field again before the contact passes, so a vehicle that passes another
+  within a step is checked against the one it reaches; `line-field-9` drops three lateral holds
+  (after a contact, behind a vehicle in the way, and for a faster vehicle close behind);
+  `line-field-10` shares one pair list and one line sample a vehicle across the contact passes;
+  `line-field-12` adds finish targets that follow pace ranks, a coast and a floor on the target,
+  and a wall impact charged once by the speed it is hit at, each inert at zero; and
+  `line-field-13` does less contact work a step. `line-field-8` and `line-field-9` change results;
+  `line-field-10`, `line-field-12` (new parameters at zero) and `line-field-13` match the step
+  before them bit for bit. The untagged `line-field-quiet` release skips the contact passes when
+  `contact_lat` is 0 or less, with results unchanged.
 - [`sh2zam/vehicle_dynamics_experimental.h`](saturn/include/sh2zam/vehicle_dynamics_experimental.h)
   (`vehicle-dynamics-1`) steps one hovering vehicle on a spline road, one fixed tick at a time.
   A host build and an SH-2 build give the same bits. `vehicle-dynamics-2` adds pipes (inside a
@@ -442,7 +464,7 @@ Integer only, with no libc. Host-tested (no console run). See
   a push while they close, attackers and contact credit. `vehicle-dynamics-3` feeds it into the
   vehicle step (`sh2z_vd_step_contact`).
 
-All four are integer only and deterministic. See [the line guide](saturn/LINE_FOLLOWER.md),
+All four are integer only and deterministic. The line field is host-tested, and `line-field-13`'s contact phase is also modelled in an instruction model; there is no console run. See [the line guide](saturn/LINE_FOLLOWER.md),
 [the vehicle dynamics guide](saturn/VEHICLE_DYNAMICS.md) and [the body contact guide](saturn/BODY_CONTACT.md).
 
 ## Link only what you call
