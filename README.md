@@ -452,8 +452,8 @@ Integer only, with no libc. Host-tested (no console run). See
   `line-field-13` does less contact work a step; and `line-field-14` drops an agent in the air that
   has covered its reach without landing (`gap_reach_ticks`, inert at zero). `line-field-8` and
   `line-field-9` change results; `line-field-10`, `line-field-12` and `line-field-14` (new parameters
-  at zero) and `line-field-13` match the step before them bit for bit. The untagged `line-field-quiet` release skips the contact passes when
-  `contact_lat` is 0 or less, with results unchanged.
+  at zero) and `line-field-13` match the step before them bit for bit. The untagged `line-field-quiet`
+  release skips the contact passes when `contact_lat` is 0 or less, with results unchanged.
 - [`sh2zam/vehicle_dynamics_experimental.h`](saturn/include/sh2zam/vehicle_dynamics_experimental.h)
   (`vehicle-dynamics-1`) steps one hovering vehicle on a spline road, one fixed tick at a time.
   A host build and an SH-2 build give the same bits. `vehicle-dynamics-2` adds pipes (inside a
