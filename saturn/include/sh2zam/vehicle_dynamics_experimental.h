@@ -8,6 +8,9 @@
  * still change until the tag is published). Contract tag vehicle-dynamics-2
  * adds sh2z_vd_step2: the same tick with pipe and cylinder road shapes and the
  * joins that taper them into their neighbours.
+ * Contract tag vehicle-dynamics-4 adds the build-time force scale
+ * SH2Z_VD_FORCE_FRAC (see below): the engine force carried with more fraction
+ * bits, so a constant such as 0.10027 is not rounded to a multiple of 2^-16.
  *
  * Model. Each tick (sh2z_vd_step) runs, in order: the pad, the surface zone
  * under the vehicle, steering, body-frame damping, boost, mines and launch
@@ -36,6 +39,21 @@
 #define SH2ZAM_VEHICLE_DYNAMICS_EXPERIMENTAL_H
 
 #include "sh2zam.h"
+
+/* Contract tag vehicle-dynamics-4. Fraction bits of the engine force: the vehicle
+ * constants force_low, force_slide, force_high and top_force, and the body's
+ * accel_force, are Q(SH2Z_VD_FORCE_FRAC). The default 16 is vehicle-dynamics-1's
+ * Q16 and builds the object code of the earlier tags byte for byte; 17..28 select
+ * a library build whose force chain is evaluated in that scale (products in
+ * int64, rounded once, ties up, saturating to int32; the force added to the
+ * acceleration is converted to Q16 once, at the force application). The caller's
+ * constants must use the same scale. Every other field keeps its format. */
+#ifndef SH2Z_VD_FORCE_FRAC
+#define SH2Z_VD_FORCE_FRAC 16
+#endif
+#if SH2Z_VD_FORCE_FRAC < 16 || SH2Z_VD_FORCE_FRAC > 28
+#error "SH2Z_VD_FORCE_FRAC must be 16..28"
+#endif
 
 #ifdef __cplusplus
 extern "C" {

@@ -748,6 +748,8 @@ static void grip(sh2z_vd_body_t *b, const sh2z_vd_vehicle_t *v, const sh2z_vd_ru
     }
 }
 
+#if SH2Z_VD_FORCE_FRAC == 16
+
 static void engine(sh2z_vd_body_t *b, const sh2z_vd_vehicle_t *v, const sh2z_vd_rules_t *r, uint16_t held,
                    uint16_t released, int32_t change) {
     int32_t lo, hi, mul, fv, x;
@@ -814,6 +816,89 @@ static void engine(sh2z_vd_body_t *b, const sh2z_vd_vehicle_t *v, const sh2z_vd_
         for(i = 0; i < 3; i++) b->acc[i] += w[i] - mu(g, b->gravity_up[i]);
     }
 }
+
+#else /* SH2Z_VD_FORCE_FRAC > 16 (vehicle-dynamics-4) */
+
+/* The engine force chain in QF = Q(SH2Z_VD_FORCE_FRAC): force_low, force_slide,
+ * force_high, top_force and accel_force carry SH2Z_VD_FORCE_FRAC fraction bits,
+ * the multipliers and shape factors stay Q16 and Q30. Products are int64 and
+ * rounded once (ties up, saturating). The only conversion back to Q16 is the
+ * acceleration the force adds along the body's forward axis. */
+#define VD_FX (SH2Z_VD_FORCE_FRAC - 16)
+
+/* QF x Q16 -> QF. */
+static int32_t mf(int32_t a, int32_t b) { return vd_round((int64_t)a * b, 16); }
+/* Q16 x Q30 -> QF. */
+static int32_t muf(int32_t a, int32_t u) { return vd_round((int64_t)a * u, 30 - VD_FX); }
+
+static void engine(sh2z_vd_body_t *b, const sh2z_vd_vehicle_t *v, const sh2z_vd_rules_t *r, uint16_t held,
+                   uint16_t released, int32_t change) {
+    int32_t lo, hi, mul, fv, x;
+    int i;
+    if(b->slide_boost != 0) {
+        lo = v->force_slide;
+        hi = v->force_high;
+        mul = m16(v->slide_mul, b->slide_boost) + ONE16;
+        b->slide_boost -= v->slide_decay;
+        if(b->slide_boost < 0) b->slide_boost = 0;
+    } else {
+        lo = v->force_low;
+        hi = v->force_high;
+        mul = ONE16;
+    }
+    if(b->boost_timer != 0) {
+        if(b->flags & SH2Z_VD_PLATE_BOOST) {
+            if(mul < v->plate_mul) mul = v->plate_mul;
+        } else {
+            if(mul < v->boost_mul) mul = v->boost_mul;
+            b->energy -= v->boost_cost;
+            if(b->energy < 0) {
+                b->boost_timer = 1;
+                b->energy = 0;
+            }
+        }
+        if(--b->boost_timer == 0) b->flags &= ~SH2Z_VD_PLATE_BOOST;
+    }
+    lo = mf(lo, mul);
+    hi = mf(hi, mul);
+    x = ((b->flags & SH2Z_VD_ZONE_MASK) == SH2Z_VD_ZONE_ICE) ? b->speed : b->bvel[2];
+    if(!(((held | released) & SH2Z_VD_BTN_ACCEL) && b->speed < v->accel_cutoff)) {
+        b->accel_force = 0;
+        return;
+    }
+    if(x <= 0) {
+        x = 0;
+        fv = lo;
+    } else if(x < v->crossover) {
+        const int32_t a = vd_divq(x, v->crossover, 16);
+        const int32_t e = 2 * a - ONE16;
+        int32_t bump = ONE16 - m16(e, e);
+        bump = mf(mf(lo < hi ? hi - lo : lo - hi, v->bump), bump);
+        fv = mf(hi - lo, a) + lo + bump;
+    } else {
+        fv = v->top_mix == 0 ? hi : mf(v->top_force - hi, v->top_mix) + hi;
+    }
+    fv -= muf(change, r->turn_cost) + muf(b->lean_force, r->lean_cost);
+    if(fv < 0) {
+        b->accel_force = 0;
+        return;
+    }
+    if(fv <= b->accel_force) {
+        b->accel_force = fv;
+    } else {
+        x = m16(x, v->slew_gain);
+        x = x < ONE16 ? m16(v->slew_slope, x) + v->slew_base : ONE16;
+        b->accel_force += mf(fv - b->accel_force, x);
+    }
+    {
+        int32_t w[3], g;
+        for(i = 0; i < 3; i++) w[i] = vd_round((int64_t)b->accel_force * b->body[0][i], 30 + VD_FX);
+        g = dotu(b->gravity_up, w);
+        for(i = 0; i < 3; i++) b->acc[i] += w[i] - mu(g, b->gravity_up[i]);
+    }
+}
+
+#endif
 
 static void race_clock(sh2z_vd_body_t *b, const sh2z_vd_track_t *k, const sh2z_vd_vehicle_t *v,
                        const sh2z_vd_rules_t *r, int32_t prev) {
