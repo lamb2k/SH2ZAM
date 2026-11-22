@@ -354,6 +354,7 @@ FLD_INLINE void fld_wall(sh2z_field_t *f, uint32_t i, const sh2z_field_behave_t 
  * the first pass's list in place of rescanning the order. (3) If a vehicle retires during a pass (the only change
  * to the scan's rules: fld_active), the next pass scans in full again. The result is the line-field-9 step's. */
 #define FLD_PAIR_MAX 192u    /* list capacity; a longer list is not kept and the passes scan in full */
+#define FLD_ROWS_MAX 255u    /* rows of the order: the field's vehicle limit */
 #define FLD_CS_MAX 32u       /* vehicles whose line sample is kept; the others are sampled where used */
 
 typedef struct {
@@ -479,27 +480,51 @@ typedef struct {
     uint32_t full;   /* the list overflowed and is not kept */
 } fld_pl_t;
 
+/* line-field-11: what a scan reads of each row of the order, packed: the distance of the vehicle in the row and
+ * whether it takes part (active and current this tick: only between vehicles that are both current this tick, since a
+ * skipped vehicle sits behind its true place and must not end the scan). A scan then walks two small arrays in place
+ * of the vehicle and brain records. Distances do not change in a step's contact phase; whether a vehicle takes part
+ * changes only when one retires, which is when the arrays are read again (ret is the retired count they were read at). */
+typedef struct {
+    uint32_t ret;
+    int32_t d[FLD_ROWS_MAX];
+    uint8_t ok[FLD_ROWS_MAX];
+} fld_rows_t;
+
+static void fld_rows_read(const sh2z_field_t *f, fld_rows_t *r) {
+    r->ret = f->retired;
+    for(uint32_t s = 0u; s < f->count; ++s) {
+        const uint32_t i = f->order[s];
+        r->d[s] = f->veh[i].t.dist;
+        r->ok[s] = (uint8_t)(fld_active(&f->veh[i]) && fld_current(f, i));
+    }
+}
+
 /* A scan of the order from row s0, column k0 (a full pass starts at 0, 1; a pass cut short by a retirement resumes
  * at the next column of its row, whose first vehicle was checked when the row began). Returns the pairs pushed. */
-static uint32_t fld_scan(sh2z_field_t *f, const sh2z_field_behave_t *bh, fld_cs_t *cs, fld_pl_t *pl, uint32_t s0, uint32_t k0) {
+static uint32_t fld_scan(sh2z_field_t *f, const sh2z_field_behave_t *bh, fld_cs_t *cs, fld_pl_t *pl, fld_rows_t *r,
+                         uint32_t s0, uint32_t k0) {
     const sh2z_field_params_t *p = f->params;
-    const sh2z_line_t *line = f->line;
+    const int32_t length = f->line->length, half = length >> 1, reach = p->contact_long;
+    const uint32_t count = f->count;
     uint32_t pushed = 0u;
-    for(uint32_t s = s0; s < f->count; ++s) {
-        const uint32_t i0 = f->order[s];
+    if(r->ret != f->retired) fld_rows_read(f, r);
+    for(uint32_t s = s0; s < count; ++s) {
         const uint32_t kfirst = s == s0 ? k0 : 1u;
-        if(kfirst == 1u && (!fld_active(&f->veh[i0]) || !fld_current(f, i0))) continue;
-        for(uint32_t k = kfirst; k < f->count; ++k) {
-            const uint32_t i1 = f->order[s + k < f->count ? s + k : s + k - f->count];
-            if(!fld_active(&f->veh[i1])) continue;
-            /* Only between vehicles that are both current this tick (a skipped
-             * vehicle sits behind its true place and must not end the scan). */
-            if(!fld_current(f, i1)) continue;
-            const int32_t gap = sh2z_track_near_gap(line, &f->veh[i0].t, &f->veh[i1].t);
-            if(gap >= p->contact_long) break;
+        if(kfirst == 1u && !r->ok[s]) continue;
+        const uint32_t i0 = f->order[s];
+        const int32_t d0 = r->d[s];
+        for(uint32_t k = kfirst; k < count; ++k) {
+            const uint32_t row = s + k < count ? s + k : s + k - count;
+            if(!r->ok[row]) continue;
+            int32_t gap = d0 - r->d[row];   /* sh2z_track_near_gap */
+            if(gap > half) gap -= length;
+            else if(gap <= -half) gap += length;
+            if(gap >= reach) break;
             /* The order is by distance along the line: where it wraps past the line's start, the vehicle later in
              * the order can be the one ahead, so the gap's sign decides. */
-            if(gap < 0 && gap <= -p->contact_long) continue;
+            if(gap < 0 && gap <= -reach) continue;
+            const uint32_t i1 = f->order[row];
             if(pl) {
                 if(pl->n < FLD_PAIR_MAX) {
                     pl->i0[pl->n] = (uint8_t)i0; pl->i1[pl->n] = (uint8_t)i1; pl->s[pl->n] = (uint8_t)s; pl->k[pl->n] = (uint8_t)k;
@@ -507,6 +532,7 @@ static uint32_t fld_scan(sh2z_field_t *f, const sh2z_field_behave_t *bh, fld_cs_
                 } else pl->full = 1u;
             }
             pushed += fld_pair(f, bh, cs, i0, i1, gap);
+            if(r->ret != f->retired) fld_rows_read(f, r);   /* a retirement changes who takes part in the rest of the scan */
         }
     }
     return pushed;
@@ -521,7 +547,9 @@ FLD_INLINE void fld_contact_phase(sh2z_field_t *f, const sh2z_field_behave_t *bh
     const sh2z_line_t *line = f->line;
     fld_cs_t cs;
     fld_pl_t pl;
+    fld_rows_t rows;
     cs.valid = 0u;
+    fld_rows_read(f, &rows);
     uint32_t list_ok = 0u, ret_list = 0u;
     for(int pass = 0; pass < 3; ++pass) {
         uint32_t pushed = 0u;
@@ -531,11 +559,11 @@ FLD_INLINE void fld_contact_phase(sh2z_field_t *f, const sh2z_field_behave_t *bh
             for(uint32_t n = 0u; n < pl.n; ++n) {
                 const uint32_t i0 = pl.i0[n], i1 = pl.i1[n];
                 pushed += fld_pair(f, bh, &cs, i0, i1, sh2z_track_near_gap(line, &f->veh[i0].t, &f->veh[i1].t));
-                if(f->retired != ret_list) { pushed += fld_scan(f, bh, &cs, (fld_pl_t *)0, pl.s[n], (uint32_t)pl.k[n] + 1u); break; }
+                if(f->retired != ret_list) { pushed += fld_scan(f, bh, &cs, (fld_pl_t *)0, &rows, pl.s[n], (uint32_t)pl.k[n] + 1u); break; }
             }
         } else {
             ret_list = f->retired; pl.n = 0u; pl.full = 0u;
-            pushed = fld_scan(f, bh, &cs, &pl, 0u, 1u);
+            pushed = fld_scan(f, bh, &cs, &pl, &rows, 0u, 1u);
             list_ok = !pl.full;
         }
         if(pushed <= 1u) break;

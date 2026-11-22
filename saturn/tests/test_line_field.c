@@ -366,6 +366,59 @@ static void test_pile_passes(void) {
     CHECK(pile_fuzz(2999u) != PILE_FUZZ_HASH);                    /* control: one scene fewer is another hash */
 }
 
+/* line-field-11: the contact scan walks the order from packed rows (distance and whether a vehicle takes part). Many
+ * random fields in which the packing must give the line-field-10 results: 2..32 vehicles clustered round a point (some
+ * across the line's start), some external, stopped, retired or falling, some skipped by the level of detail (so not
+ * current this tick), low energy so that retirements happen in the first pass and in later ones, one to three steps.
+ * One hash over every vehicle's state and the field's counters. */
+static uint64_t row_fuzz(uint32_t scenes) {
+    uint64_t h = 1469598103934665603ull;
+    for(uint32_t sc = 1; sc <= scenes; ++sc) {
+        params();
+        rng = sc * 104729u + 11u;
+        const uint32_t n = 2u + rnd() % 31u;
+        if(rnd() % 3u == 0u) { P.lod_near[0] = U(40); P.lod_near[1] = U(90); P.lod_near[2] = U(200); }
+        const int32_t base = (sc % 4u == 0u) ? U(6) : (int32_t)(rnd() % (uint32_t)(line.length - U(4000))) + U(2000);
+        const uint32_t spread = (uint32_t)U(10 + (int32_t)(rnd() % 90u));
+        for(uint32_t i = 0; i < n; ++i) {
+            vehicle(i, i, 2000);
+            veh[i].accel = veh[i].brake = 0; veh[i].grip = 0; brain[i].pace = 0; brain[i].lane = 0;
+            int32_t d = base - (int32_t)(rnd() % spread);
+            if(i && rnd() % 5u == 0u) d = veh[rnd() % i].t.dist + (rnd() % 2u ? line.length >> 1 : -(line.length >> 1));   /* exactly half a lap off */
+            if(d < 0) d += line.length;
+            if(d >= line.length) d -= line.length;
+            veh[i].t.dist = d; veh[i].t.lateral = (int32_t)(rnd() % (uint32_t)U(120)) - U(60);
+            veh[i].t.speed = U(20) + (int32_t)(rnd() % (uint32_t)U(20));
+            veh[i].t.node = sh2z_line_locate(&line, veh[i].t.dist, 0);
+            veh[i].energy = (rnd() % 3u == 0u) ? U(2) + (int32_t)(rnd() % (uint32_t)U(12)) : U(160);
+            const uint32_t kind = rnd() % 16u;
+            if(i && kind == 0u) veh[i].flags |= SH2Z_VEH_EXTERNAL;
+            else if(kind == 1u) { veh[i].flags |= SH2Z_VEH_RETIRED; veh[i].energy = 0; }
+            else if(kind == 2u) { veh[i].flags |= SH2Z_VEH_RETIRED | SH2Z_VEH_STOPPED; veh[i].energy = 0; }
+            else if(kind == 3u) veh[i].flags |= SH2Z_VEH_FALLING;
+        }
+        field(n, 1u);
+        F.focus = (rnd() % 4u == 0u) ? -1 : (int32_t)(rnd() % n);
+        sh2z_field_start(&F);
+        const uint32_t steps = 1u + rnd() % 3u;
+        for(uint32_t t = 0; t < steps; ++t) sh2z_field_step(&F);
+        for(uint32_t i = 0; i < n; ++i) {
+            const int32_t w[8] = { veh[i].t.lateral, veh[i].t.speed, veh[i].energy, (int32_t)veh[i].flags, veh[i].kick_lat, veh[i].kick_speed,
+                                   veh[i].t.dist, (int32_t)brain[i].last_tick };
+            for(int k = 0; k < 8; ++k) h = (h ^ (uint32_t)w[k]) * 1099511628211ull;
+        }
+        h = (h ^ F.contacts) * 1099511628211ull; h = (h ^ F.retired) * 1099511628211ull; h = (h ^ F.rank_changes) * 1099511628211ull;
+    }
+    params();
+    return h;
+}
+#define ROW_FUZZ_HASH UINT64_C(0x36a573863143bc59)   /* recorded from the line-field-10 step */
+static void test_row_scan(void) {
+    if(getenv("LF11_PRINT")) printf("row_fuzz %llx\n", (unsigned long long)row_fuzz(4000u));
+    CHECK(row_fuzz(4000u) == ROW_FUZZ_HASH);
+    CHECK(row_fuzz(3999u) != ROW_FUZZ_HASH);                   /* control: one scene fewer is another hash */
+}
+
 /* line-field-9 scenes: frozen agents (no speed or lateral change of their own), lane 0, placed relative to their
  * racing line at dist `at`. Returns that line's lateral there. */
 static int32_t frozen_pair(int32_t at, int32_t lat0, int32_t speed0, int32_t gap1, int32_t lat1, int32_t speed1) {
@@ -1229,6 +1282,7 @@ int main(void) {
     test_contact_off();
     test_overtake_contact();
     test_pile_passes();
+    test_row_scan();
     test_no_room_hold();
     test_no_cut_hold();
     test_no_block_hold();
