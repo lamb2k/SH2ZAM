@@ -1,4 +1,4 @@
-# Track-bound vehicle dynamics (experimental, contract tags `vehicle-dynamics-1`, `-2` and `-5`)
+# Track-bound vehicle dynamics (experimental, contract tags `vehicle-dynamics-1`, `-2`, `-4` and `-5`)
 
 [`vehicle_dynamics_experimental.h`](include/sh2zam/vehicle_dynamics_experimental.h) steps one
 hovering vehicle on a closed road laid along a cardinal spline, one fixed tick at a time, in
@@ -63,6 +63,26 @@ value.
 | `sh2z_vd_step2` in a pipe (three sides) | 8,761.2 to 8,797.0 | | | |
 | `sh2z_vd_step2` on a cylinder (three sides) | 8,774.6 to 8,817.1 | | | |
 | `sh2z_vd_step2` through a joined pipe | 8,968.2 | | | |
+
+## Engine force scale (`vehicle-dynamics-4`, `SH2Z_VD_FORCE_FRAC`)
+
+The engine force constants (`force_low`, `force_slide`, `force_high`, `top_force`) and the body's `accel_force`
+are Q16 by default, so a constant such as 0.10027 is stored as the nearest multiple of 2^-16 (a stored 6571 for an
+exact 6571.245). Held at top speed the vehicle settles at force / (1 - damp), so the error is a standing speed offset
+(damp 0.997: 333 times the constant's error). `SH2Z_VD_FORCE_FRAC` (build time, 16 to 28, default 16) carries those
+five words with that many fraction bits instead:
+
+- Default 16: the object code of `vehicle-dynamics-1` to `-3` is unchanged (51 of 51 SH-2 objects byte-identical).
+- Above 16 (24 is the tested scale): the force chain (selection by boost and slide turbo, the crossover curve and
+  bump, the turn and lean costs, the slew) is evaluated in that scale, each product in int64 rounded once to nearest
+  with ties up, saturating to int32; the force added to the acceleration is converted to Q16 once, at the force
+  application (`accel_force x body axis`, rounded once at `30 + F - 16` bits), so the acceleration stays Q16.
+- Range: Q(16+8) holds forces up to 128 (units of the caller's speed); a larger force saturates at INT32_MAX
+  and never wraps.
+- Every translation unit of one image must use the same value (the header sets the default); the caller's constants
+  and the body's `accel_force` are in that scale. A caller that reads packs converts at load.
+- The cost is one slightly smaller object (the chain has fewer conversions): 23,996 against 24,148 bytes for
+  `sh2zam_vehicle_dynamics.o` at 24 (SH-2, `-m2 -mb -O2`).
 
 ## Formats
 
