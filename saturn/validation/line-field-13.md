@@ -50,7 +50,13 @@ The step's stack grows by about 4.5 KB (per-vehicle arrays for 255 vehicles, the
   phase of four scenes (a loose field to a pile), cycles before and after: 32,387 to 30,056 (loose field, -7%), 67,065 to
   51,891 (-23%), 84,188 to 61,165 (-27%) and 97,038 to 68,705 (-29%, a pile). The hash chains of the model
   runs are identical.
-- **Consumer (not this repository):** see the hand-over of the consuming engine; a Saturn racing engine's native
-  field, six courses, seeds 1 to 6, behaviours on and off, built on the line-field-12 and line-field-13 sources
-  (HOST), and the same engine in an emulator (EMULATOR, timing MODELLED).
+- **Consumer (not this repository):** a Saturn racing engine's native field.
+  - HOST: six courses, seeds 1 to 6, behaviours on and off, built on the line-field-12 and line-field-13 sources:
+    72 of 72 reports equal (final state hash, contacts, falls, knock-outs and every counter).
+  - EMULATOR (Ymir, timing MODELLED): the engine's six-round Grand Prix run with the library the only difference
+    (SH2ZAM main and this branch overlaid, not the engine's pin): the field's state hash and contact count are equal at
+    all 21,307 race ticks; the HOST checkpoints of its Mute City, Sand Ocean and Big Blue races are equal (36/36,
+    24/24, 32/32) and its stack margin is 101 KB or more. The frame's critical-path 99th percentile on round 3 (a tube
+    course) fell from 28.14 to 27.01 ms (master 27.94 to 25.93) and on round 5 (a tube course) from 26.06 to 25.11 ms
+    (master 26.04 to 25.02); the other rounds moved by 0.0 to 0.5 ms. Every interval stayed at two fields.
 - **Not done:** console execution.
