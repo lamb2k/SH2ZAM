@@ -1,5 +1,5 @@
 /* Experimental line field (contract tags line-field-1 to line-field-5,
- * line-field-7 to line-field-10, line-field-12 and line-field-13).
+ * line-field-7 to line-field-10, line-field-12 to line-field-14).
  *
  * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
  * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
@@ -821,6 +821,20 @@ FLD_INLINE void fld_order(sh2z_field_t *f) {
 /* The step, with the behaviour block as a parameter (line-field-7). Each entry point below inlines it once: with
  * bh a constant NULL every line-field-5 branch folds away, so the NULL step is line-field-4's code, and the
  * behaviour step carries none of the NULL tests. */
+/* line-field-14: an agent in the air on a run too long for its reach leaves the line. The run is the contiguous nodes that
+ * match the air mask, from the agent's own back to its start (at most FLD_AIR_SCAN nodes, never across the line's start);
+ * the agent must be on one. Reach is speed * gap_reach_ticks in the line's own units (Q8, speed a tick). The agent leaves once it has
+ * covered the reach from the run's start. It is then still inside the run, so the run is longer than the reach; a run exactly
+ * as long as the reach is cleared, the agent is past its end by the time it has covered it. Stateless. */
+#define FLD_AIR_SCAN 64u
+FLD_INLINE int fld_air_node(const sh2z_field_behave_t *bh, uint16_t flags) { return fld_match(flags, bh->air_mask, bh->air_value); }
+FLD_INLINE int fld_gap_short(const sh2z_line_t *line, const sh2z_field_behave_t *bh, const sh2z_vehicle_t *v) {
+    if(bh->gap_reach_ticks <= 0 || v->t.speed <= 0 || !fld_air_node(bh, line->nodes[v->t.node].flags)) return 0;
+    uint32_t a = v->t.node;
+    for(uint32_t k = 0u; a > 0u && k < FLD_AIR_SCAN && fld_air_node(bh, line->nodes[a - 1u].flags); ++k) --a;
+    return (int64_t)(v->t.dist - line->nodes[a].start) >= (int64_t)v->t.speed * bh->gap_reach_ticks;
+}
+
 FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
     const sh2z_field_params_t *p = f->params;
     const sh2z_line_t *line = f->line;
@@ -952,7 +966,7 @@ FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
             if(bh && !(v->flags & (SH2Z_VEH_RETIRED | SH2Z_VEH_FINISHED))) {
                 const int open = !now_tube && fld_match(now.flags, bh->open_mask, bh->open_value) &&
                                  fld_abs(v->t.lateral) > now.half_width + bh->fall_margin;
-                if(air) leaves = open;
+                if(air) leaves = open || fld_gap_short(line, bh, v);
                 else if(fld_match(now.flags, bh->drop_mask, bh->drop_value)) {
                     if(tube && !now_tube) leaves = open && (bh->launch_chance >= 65536 || (int32_t)(fld_rand(f) & 0xffffu) < bh->launch_chance);
                     else if(now_tube && bh->drop_chance > 0 && fld_match(now.flags, bh->hold_mask, bh->hold_value) &&
