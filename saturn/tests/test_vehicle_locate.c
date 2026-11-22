@@ -221,8 +221,8 @@ int main(void) {
         }
     }
     }
-    printf("vehicle-locate: %u cases, %u equal to the library (%u overshot above 128 units and recovered), %u stopped (%u after more than 20 passes)\n",
-           cases, same, recovered, stopped, long_runs);
+    printf("vehicle-locate: %u cases, %u equal to the library (%u above 128 units at some pass and recovered, %u of them for 3 to 7 passes in a row), %u stopped (%u after more than 20 passes)\n",
+           cases, same, recovered, runs37, stopped, long_runs);
     check(stopped >= 50, "the set holds circling searches");
     check(runs37 >= 20, "the set holds searches that stayed above 128 units for 3 to 7 passes in a row and came back");
     printf("vehicle-locate: %u checks passed\n", checks);
