@@ -1,4 +1,4 @@
-/* Line field (contract tags line-field-1 to line-field-5, line-field-7 to line-field-10, line-field-12 and line-field-13) checks.
+/* Line field (contract tags line-field-1 to line-field-5, line-field-7 to line-field-10 and line-field-12 to line-field-14) checks.
  * Invariants over long random races, an independent grid formula, exact
  * contact arithmetic on hand-placed pairs, determinism, level of detail, and
  * a control for every behavioural claim (the same scene with the feature off
@@ -388,6 +388,7 @@ static uint64_t x13_s;
 static uint32_t x13_rnd(void) { x13_s ^= x13_s << 13; x13_s ^= x13_s >> 7; x13_s ^= x13_s << 17; return (uint32_t)(x13_s >> 11); }
 static int32_t x13_in(int32_t lo, int32_t hi) { return lo + (int32_t)(x13_rnd() % (uint32_t)(hi - lo + 1)); }
 static uint64_t x13_mix(uint64_t h, uint32_t w) { return (h ^ w) * 1099511628211ull; }
+static int32_t x13_gap;   /* behave->gap_reach_ticks of the fuzz's behaviour blocks (0: the line-field-13 step) */
 static uint64_t x13_stats[4];   /* contacts, retirements, falls, steps of the whole run: the scenes must not be idle */
 
 static uint64_t x13_fuzz(uint32_t first, uint32_t last) {
@@ -435,6 +436,7 @@ static uint64_t x13_fuzz(uint32_t first, uint32_t last) {
             x13_b.ko_window = 120; x13_b.ko_near = x13_rnd() % 2u ? U(1500) : 0; x13_b.ko_floor = 26;
             x13_b.drop_mask = 0x0200u; x13_b.drop_value = 0x0200u; x13_b.drop_lat = 117965; x13_b.drop_chance = 16; x13_b.launch_chance = 4096;
             x13_b.contact_norm = x13_rnd() % 2u ? 36045 : 0; x13_b.wall_impact = x13_rnd() % 3u == 0u ? 20000 : 0;
+            x13_b.gap_reach_ticks = x13_gap;
             x13_p.behave = &x13_b;
         }
         const uint32_t n = x13_rnd() % 5u == 0u ? (uint32_t)x13_in(33, 60) : (uint32_t)x13_in(2, 32);
@@ -1624,6 +1626,135 @@ static void test_wall_impact(void) {
     CHECK(rest_scene(0, &v) > U(100));                               /* control: the flat charge every tick */
 }
 
+/* line-field-14 on the line-field-13 scenes: with the field 0 the 3000 scenes hash as the line-field-13 step does (X13_FUZZ_HASH, above,
+ * recorded from line-field-12); with it set the air runs drop agents, and the hash (recorded from this step) is another, as is its fall count. */
+#define X14_FUZZ_HASH UINT64_C(0x7b30807aaf75668e)   /* recorded from this step, gap_reach_ticks 6 */
+static void test_gap_fuzz(void) {
+    memset(x13_stats, 0, sizeof x13_stats);
+    x13_gap = 0;
+    CHECK(x13_fuzz(0u, 3000u) == X13_FUZZ_HASH);
+    const uint64_t falls_off = x13_stats[2];
+    memset(x13_stats, 0, sizeof x13_stats);
+    x13_gap = 6;
+    const uint64_t h = x13_fuzz(0u, 3000u);
+    const uint64_t falls_on = x13_stats[2];
+    x13_gap = 0;
+#ifdef X13_RECORD
+    printf("x14 fuzz hash 0x%016" PRIx64 " falls off %" PRIu64 " on %" PRIu64 "\n", h, falls_off, falls_on);
+#endif
+    CHECK(h != X13_FUZZ_HASH && h == X14_FUZZ_HASH);
+    CHECK(falls_on > falls_off + 3000u);                                         /* the rule drops agents the open edges did not */
+}
+
+/* ---- line-field-14: a gap too long to clear -------------------------------------------------------- */
+/* Nodes 0..29 walled road (0x40), an air run (0x180) of `run` nodes of 200 units from node 30, open road after. One agent
+ * flies at a constant speed (no accel, no brake): its distance a tick is its speed, so the rule is plain arithmetic. */
+typedef struct { int fell; int32_t fall_tick, retire_tick, covered, last_dist; uint32_t falls, retired, laps; int32_t energy_at_retire; } gap_out_t;
+static gap_out_t gap_scene(uint32_t run_from, uint32_t run, int32_t reach, int32_t speed, int32_t start_dist, int32_t fall_ticks, uint32_t ticks) {
+    gap_out_t o; memset(&o, 0, sizeof o); o.fall_tick = o.retire_tick = -1;
+    params(); behave_reset();
+    B.air_mask = 0x01c0u; B.air_value = 0x0180u; B.fall_margin = U(10); B.fall_ticks = fall_ticks; B.gap_reach_ticks = reach;
+    P.behave = &B; P.boost_from_lap = 4;
+    make_line(); mark(0, NODES, 0x0040u, 200); mark(run_from, run_from + run, 0x0180u, 200);
+    mark(run_from + run, NODES, 0x0000u, 200);
+    lone(start_dist, 0, 3000);
+    veh[0].t.speed = speed; veh[0].accel = 0; veh[0].brake = 0; brain[0].lane = 0;
+    for(uint32_t t = 0; t < ticks; ++t) {
+        const uint16_t was = veh[0].flags;
+        sh2z_field_step(&F);
+        if((veh[0].flags & SH2Z_VEH_FALLING) && !(was & SH2Z_VEH_FALLING)) {
+            CHECK(!o.fell);                                         /* the fall transition is applied once */
+            o.fell = 1; o.fall_tick = (int32_t)t; o.covered = veh[0].t.dist - nodes[run_from].start;
+            CHECK(F.falls == 1u && brain[0].fall_tick == (int32_t)(F.tick - F.start_tick));
+        }
+        if(veh[0].flags & SH2Z_VEH_FALLING) CHECK(veh[0].energy > 0 && brain[0].laps_seen == 0);
+        if((veh[0].flags & SH2Z_VEH_RETIRED) && !(was & SH2Z_VEH_RETIRED)) { CHECK(o.retire_tick < 0); o.retire_tick = (int32_t)t; o.energy_at_retire = veh[0].energy; }
+    }
+    o.falls = F.falls; o.retired = F.retired; o.laps = (uint32_t)brain[0].laps_seen; o.last_dist = veh[0].t.dist;
+    make_line(); params();
+    return o;
+}
+#define GAP_SPEED 10240   /* 40 units a tick: a run of n nodes (51200 each) is n * 5 ticks long */
+static void test_gap_fall(void) {
+    const int32_t from = nodes[30].start;
+    /* The 3-node run is 153600 long; at speed 10240 a reach of 15 ticks is exactly its length. */
+    gap_out_t o = gap_scene(30, 3, 0, GAP_SPEED, U(200 * 28), 95, 400);
+    CHECK(!o.fell && o.falls == 0u && o.retired == 0u);               /* off: the agent crosses the run and lands */
+    o = gap_scene(30, 3, 16, GAP_SPEED, U(200 * 28), 95, 400);
+    CHECK(!o.fell && o.falls == 0u && o.retired == 0u);               /* reach beyond the run: cleared */
+    o = gap_scene(30, 3, 15, GAP_SPEED, U(200 * 28), 95, 400);
+    CHECK(!o.fell && o.falls == 0u && o.retired == 0u);               /* a run exactly as long as the reach is cleared */
+    o = gap_scene(30, 3, 14, GAP_SPEED, U(200 * 28), 95, 400);        /* just too long (by one tick of flight) */
+    CHECK(o.fell && o.falls == 1u && o.retired == 1u && o.laps == 0u);
+    CHECK(o.covered >= GAP_SPEED * 14 && o.covered < GAP_SPEED * 15);  /* dropped on the first tick the reach is covered */
+    CHECK(o.retire_tick == o.fall_tick + 95 && o.energy_at_retire == 0);   /* retires once, fall_ticks later, through the normal path */
+    o = gap_scene(30, 3, 14, GAP_SPEED, from - 4 * GAP_SPEED + GAP_SPEED - 1, 95, 400);   /* one unit short of the reach on the tick before: not yet */
+    CHECK(o.fell && o.covered == (GAP_SPEED - 1) + 14 * GAP_SPEED);
+    o = gap_scene(30, 3, 14, GAP_SPEED, from - 4 * GAP_SPEED, 95, 400);                   /* exactly the reach on a tick: dropped on that tick */
+    CHECK(o.fell && o.covered == 14 * GAP_SPEED);
+    gap_out_t o1 = gap_scene(30, 3, 1, GAP_SPEED, U(200 * 28), 95, 400);   /* a short reach: dropped as soon as the run starts */
+    CHECK(o1.fell && o1.falls == 1u && o1.retired == 1u && o1.covered >= GAP_SPEED && o1.covered < 2 * GAP_SPEED);
+    CHECK(o1.fall_tick < o.fall_tick);
+    /* Control: no air nodes, the rule has nothing to act on. */
+    {   params(); behave_reset(); B.air_mask = 0x01c0u; B.air_value = 0x0180u; B.gap_reach_ticks = 1; B.fall_ticks = 95; P.behave = &B; P.boost_from_lap = 4;
+        make_line(); mark(0, NODES, 0x0040u, 200);
+        lone(U(200 * 28), 0, 3000); veh[0].t.speed = GAP_SPEED; veh[0].accel = 0; veh[0].brake = 0;
+        for(uint32_t t = 0; t < 300; ++t) sh2z_field_step(&F);
+        CHECK(F.falls == 0u && F.retired == 0u && !(veh[0].flags & SH2Z_VEH_AIR));
+        make_line(); params(); }
+    /* The run is the contiguous air nodes: a ground node between two 3-node runs makes two runs, each cleared; the same 6 air
+     * nodes together are one run and drop the agent. */
+    {   params(); behave_reset(); B.air_mask = 0x01c0u; B.air_value = 0x0180u; B.fall_margin = U(10); B.fall_ticks = 95; B.gap_reach_ticks = 15;
+        P.behave = &B; P.boost_from_lap = 4; make_line(); mark(0, NODES, 0x0040u, 200); mark(30, 33, 0x0180u, 200); mark(34, 37, 0x0180u, 200); mark(33, 34, 0x0000u, 200); mark(37, NODES, 0, 200);
+        lone(U(200 * 28), 0, 3000); veh[0].t.speed = GAP_SPEED; veh[0].accel = 0; veh[0].brake = 0;
+        for(uint32_t t = 0; t < 300; ++t) sh2z_field_step(&F);
+        CHECK(F.falls == 0u);
+        make_line(); params(); }
+    o = gap_scene(30, 6, 15, GAP_SPEED, U(200 * 28), 95, 400);
+    CHECK(o.fell && o.falls == 1u && o.covered >= GAP_SPEED * 15 && o.covered < GAP_SPEED * 16);   /* control: one run of 6 */
+    /* A long run past the 64-node scan limit on both sides: the agent is dropped, the scan stays bounded. */
+    o = gap_scene(2, 90, 15, GAP_SPEED, U(200), 95, 400);
+    CHECK(o.fell && o.falls == 1u);
+    /* Agents differ by their speed: the same run, the slower one's reach is shorter. */
+    o = gap_scene(30, 3, 15, GAP_SPEED / 2, U(200 * 28), 95, 600);
+    CHECK(o.fell && o.falls == 1u);
+    /* A stopped agent does not fly. */
+    o = gap_scene(30, 3, 15, 0, nodes[30].start + 100, 95, 300);
+    CHECK(!o.fell && o.falls == 0u);
+    /* A run at the end of the line is cut by the line's length (it never continues across the start). */
+    o = gap_scene(93, 3, 15, GAP_SPEED, U(200 * 90), 95, 600);
+    CHECK(!o.fell && o.falls == 0u);                                  /* exactly reachable at the end of the line */
+    o = gap_scene(93, 3, 14, GAP_SPEED, U(200 * 90), 95, 600);
+    CHECK(o.fell && o.falls == 1u);
+    /* Oracle: a lone agent at a constant speed over a run of n nodes. It enters the run on some tick and flies speed a tick; it
+     * falls at the first tick on which it has covered speed * reach from the run's start, if that tick's distance is still inside
+     * the run, and otherwise lands. 3000 random scenes, every tenth with the agent landing exactly on the run's start and a run
+     * exactly the reach long (cleared). */
+    uint32_t falls = 0u, agree = 0u, edge = 0u;
+    uint32_t sr = 0x2545f491u;
+    for(uint32_t k = 0; k < 3000u; ++k) {
+        sr ^= sr << 13; sr ^= sr >> 17; sr ^= sr << 5; uint32_t run = 1u + sr % 40u;
+        sr ^= sr << 13; sr ^= sr >> 17; sr ^= sr << 5; int32_t speed = 2048 + (int32_t)(sr % 20000u);
+        sr ^= sr << 13; sr ^= sr >> 17; sr ^= sr << 5; int32_t reach = 1 + (int32_t)(sr % 60u);
+        sr ^= sr << 13; sr ^= sr >> 17; sr ^= sr << 5; int32_t off = (int32_t)(sr % (uint32_t)speed);   /* where the first tick in the run lands */
+        if(k % 10u == 0u) { run = 1u + run % 11u; speed = GAP_SPEED; reach = (int32_t)run * 5; off = 0; }
+        const int32_t start = from - 4 * speed + off;
+        const int32_t run_len = (int32_t)run * U(200), want = speed * reach;
+        int32_t d = start; while(d < from) d += speed;                  /* the first tick in the run */
+        int32_t first_past = d; while(first_past - from < want) first_past += speed;
+        const int expect = first_past - from < run_len;
+        gap_out_t g = gap_scene(30, run, reach, speed, start, 95, (uint32_t)(run_len / speed) + 100u);
+        falls += (uint32_t)g.fell;
+        if((int)g.fell == expect) ++agree;
+        if(first_past - from == run_len) ++edge;                       /* control: the scenes include a flight ending exactly on the run's end */
+    }
+    CHECK(agree == 3000u);                                            /* the rule is the oracle's, scene for scene */
+    CHECK(falls > 400u && falls < 2600u);                             /* both outcomes are plentiful */
+    CHECK(edge >= 250u);
+    /* Zero brain growth: the step keeps no state for the rule. */
+    CHECK(sizeof(sh2z_field_brain_t) == 92u);   /* the line-field-13 brain, byte for byte in size */
+}
+
 int main(void) {
     make_line();
     params();
@@ -1667,6 +1798,8 @@ int main(void) {
     test_ranks_hash();
     test_ranks_slow();
     test_wall_impact();
+    test_gap_fall();
+    test_gap_fuzz();
     printf("line field: %" PRIu64 " checks passed\n", checks);
     return 0;
 }
