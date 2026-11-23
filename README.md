@@ -460,6 +460,8 @@ Integer only, with no libc. Host-tested (no console run). See
   tube) and cylinders (outside one), with joins into open road; `vehicle-dynamics-5` adds the half-pipe
   (a pipe's ground, open above). `vehicle-dynamics-4` is a build-time
   scale (`SH2Z_VD_FORCE_FRAC`) that carries the engine force with more fraction bits (default 16: unchanged code).
+  `vehicle-dynamics-6` is a build-time stop (`SH2Z_VD_LOCATE_FAR`) for a closest-point search that circles when the
+  body is far off the line, as over a gap (default 0: unchanged code).
 - [`sh2zam/body_contact_experimental.h`](saturn/include/sh2zam/body_contact_experimental.h)
   (`body-contact-1`) resolves contact between vehicles that touch as spheres: shared impact damage,
   a push while they close, attackers and contact credit. `vehicle-dynamics-3` feeds it into the

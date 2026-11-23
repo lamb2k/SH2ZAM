@@ -89,6 +89,31 @@ five words with that many fraction bits instead:
 - The cost is one slightly smaller object (the chain has fewer conversions): 23,996 against 24,148 bytes for
   `sh2zam_vehicle_dynamics.o` at 24 (SH-2, `-m2 -mb -O2`).
 
+## Search stop for a body far off the line (`vehicle-dynamics-6`, `SH2Z_VD_LOCATE_FAR`)
+
+The closest-point search (`sh2z_vd_locate`, 100 passes from `sh2z_vd_step` and `sh2z_vd_step2`) moves along the spline by the
+projection of its residual on the tangent. Next to the line that converges in a few passes (a mean of 2 to 3 on the tracks it
+was measured on, at most about 55 on the worst tick of any of them). A body hundreds of units off the line, such as one in the air
+over a gap, has no closest point to reach: the pass overshoots a span, crosses a node and settles into a circle of two to ten
+states with a residual of hundreds of units, and the search runs all 99 passes every tick (about 20 ms on an SH-2 at 28.6 MHz).
+
+`SH2Z_VD_LOCATE_FAR` (build time, whole units 0 to 32767, default 0 = off) with `SH2Z_VD_LOCATE_FAR_RUN` (default 8) stops a
+search whose residual (the distance between the target and its ground point, the value the tolerance tests) stays above FAR
+units for RUN passes in a row. It keeps the state it has; `sh2z_vd_locate` then ends as it does at the pass limit.
+
+- Off (0): the object code of every earlier tag is unchanged (51 of 51 SH-2 objects identical).
+- On: only a search that circles is stopped. A search that overshoots above FAR units and comes back within RUN passes is not
+  stopped, and its result is the same word for word. The host test builds the model twice (stop on, and the library as the
+  reference) and compares them over 120,000 randomised searches.
+- The stopped state is one point of the circle the search was running round, as the state after 99 passes is. It is not the
+  same point, so a body's path can differ from the 99-pass path from the tick of the stop on. The caller checks its outcome
+  (the evidence record gives the one made on a road with a jump).
+- A stop that is too eager changes searches that converge (FAR 3, RUN 1 is the control in the test).
+- Cost: 48 bytes of text in `sh2zam_vehicle_dynamics.o` at FAR 128 (the contact units, which compile the search again, 240).
+- Hooks for host builds, empty by default: `SH2Z_VD_LOCATE_FAR_HIT()` (a call that was stopped) and `SH2Z_VD_LOCATE_PASS(d)`
+  (every pass, with the residual).
+- Every translation unit of one image must use the same values.
+
 ## Formats
 
 | Quantity | Format |
