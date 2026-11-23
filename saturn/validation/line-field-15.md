@@ -26,7 +26,7 @@ owner drives itself (an external vehicle) was never touched by the strip at all.
 **No console run was done in this repository.** Evidence by tier:
 
 - **HOST:** `line_field_exact` passes 26,367,628 checks (main's line-field-14 tests included) under GCC and Clang (`-O2 -Wall -Wextra -Wconversion -Wshadow
-  -Werror -pedantic`) and under Clang with ASan and UBSan; the whole CTest set passes under all three (68 of 68
+  -Werror -pedantic`) and under Clang with ASan and UBSan; the whole CTest set passes under all three (69 of 69
   each). Every pin of the line-field-14 suite is unchanged (the existing tests are not edited). New checks
   (`test_recharge_identity`, `test_recharge_share`, `test_recharge_external`), each with its control:
   - (a) share 0 is the old step: 400 random scenes (a closed line of 96 nodes with five air runs and two tubes, 3 to 7
