@@ -449,8 +449,10 @@ Integer only, with no libc. Host-tested (no console run). See
   `line-field-10` shares one pair list and one line sample a vehicle across the contact passes;
   `line-field-12` adds finish targets that follow pace ranks, a coast and a floor on the target,
   and a wall impact charged once by the speed it is hit at, each inert at zero; and
-  `line-field-13` does less contact work a step. `line-field-8` and `line-field-9` change results;
-  `line-field-10`, `line-field-12` (new parameters at zero) and `line-field-13` match the step
+  `line-field-13` does less contact work a step; and `line-field-15` refills a vehicle on a recharge strip
+  by a share of its own energy capacity, not in the air, with a function for vehicles driven outside the field
+  (`recharge_share`, inert at zero). `line-field-8` and `line-field-9` change results;
+  `line-field-10`, `line-field-12` and `line-field-15` (new parameters at zero) and `line-field-13` match the step
   before them bit for bit. The untagged `line-field-quiet` release skips the contact passes when
   `contact_lat` is 0 or less, with results unchanged.
 - [`sh2zam/vehicle_dynamics_experimental.h`](saturn/include/sh2zam/vehicle_dynamics_experimental.h)

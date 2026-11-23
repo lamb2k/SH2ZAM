@@ -1,4 +1,4 @@
-/* Line field (contract tags line-field-1 to line-field-5, line-field-7 to line-field-10, line-field-12 and line-field-13) checks.
+/* Line field (contract tags line-field-1 to line-field-5, line-field-7 to line-field-10, line-field-12, line-field-13 and line-field-15) checks.
  * Invariants over long random races, an independent grid formula, exact
  * contact arithmetic on hand-placed pairs, determinism, level of detail, and
  * a control for every behavioural claim (the same scene with the feature off
@@ -1624,6 +1624,248 @@ static void test_wall_impact(void) {
     CHECK(rest_scene(0, &v) > U(100));                               /* control: the flat charge every tick */
 }
 
+
+/* ---- line-field-15: a recharge strip by each vehicle's own measure, not in the air ---------------------------------------
+ * The strip covers the whole line. Every scene has one oracle written apart from the step: the gain a tick is
+ * floor((max_energy * share + 32768) / 65536), applied for the ticks the step was due, clamped at max_energy. */
+static int32_t rc_gain(int32_t max_energy, int32_t share) { return (int32_t)(((int64_t)max_energy * share + 32768) / 65536); }
+static int32_t rc_clamp(int64_t e, int32_t max_energy) { return e > max_energy ? max_energy : (int32_t)e; }
+static void rc_strip(int32_t share) {
+    params(); surface_reset(); P.surface = &surf;
+    zone_buf[0] = (sh2z_field_zone_t){ 0, line.length, -U(1000), U(1000), SH2Z_FIELD_ZONE_RECHARGE };
+    surf.zone_count = 1; surf.recharge_share = share;
+}
+/* Two agents far apart on the strip, different capacities, both low on energy; the energy of each after `ticks` steps. */
+static void rc_two(int32_t share, int32_t max0, int32_t max1, uint32_t ticks, int32_t *e0, int32_t *e1) {
+    rc_strip(share);
+    rng = 5u;
+    vehicle(0, 0, 2000); vehicle(1, 1, 2000);
+    veh[0].t.dist = U(1000); veh[1].t.dist = U(9000);
+    for(uint32_t i = 0; i < 2u; ++i) {
+        veh[i].t.lap = 0; veh[i].t.lateral = 0; veh[i].t.speed = U(20); veh[i].t.node = sh2z_line_locate(&line, veh[i].t.dist, 0);
+        brain[i].lane = 0;
+    }
+    veh[0].max_energy = max0; veh[1].max_energy = max1; veh[0].energy = veh[1].energy = U(5);
+    field(2, 3u);
+    sh2z_field_start(&F);
+    for(uint32_t t = 0; t < ticks; ++t) sh2z_field_step(&F);
+    *e0 = veh[0].energy; *e1 = veh[1].energy;
+    params();
+}
+/* An agent flagged as in the air at the start of a step: the step does not look at the strip for it. */
+static int32_t rc_air_one(int32_t share, int air) {
+    rc_strip(share);
+    lone(U(1000), 0, 2000);
+    veh[0].energy = U(100);
+    if(air) veh[0].flags |= SH2Z_VEH_AIR;
+    sh2z_field_step(&F);
+    const int32_t e = veh[0].energy;
+    params();
+    return e;
+}
+/* An agent that flies over a run of air nodes on the strip, with the behaviour block: its energy by step. Counts the
+ * steps that started in the air, and those that started on the ground, and checks each against the oracle. */
+static void rc_flight(int32_t share, uint32_t *air_steps, uint32_t *ground_steps, int32_t *air_gain) {
+    rc_strip(share); surf.recharge = 4; behave_reset();   /* a small global rate, so no step clamps */
+    B.air_mask = 0x01c0u; B.air_value = 0x0180u; P.behave = &B; P.boost_from_lap = 4;
+    make_line(); mark(30, 40, 0x0180u, 200);
+    lone(U(200 * 25), 0, 3000);
+    veh[0].energy = U(1); brain[0].lane = 0;
+    *air_steps = *ground_steps = 0u; *air_gain = 0;
+    for(uint32_t t = 0; t < 300u; ++t) {
+        const uint16_t was = veh[0].flags; const int32_t e0 = veh[0].energy;
+        sh2z_field_step(&F);
+        const int32_t gain = share > 0 ? rc_gain(veh[0].max_energy, share) : surf.recharge;
+        if(share > 0 && (was & SH2Z_VEH_AIR)) { ++*air_steps; CHECK(veh[0].energy == e0); }
+        else { if(was & SH2Z_VEH_AIR) { ++*air_steps; *air_gain += veh[0].energy - e0; } else ++*ground_steps; CHECK(veh[0].energy == rc_clamp((int64_t)e0 + gain, veh[0].max_energy)); }
+    }
+    make_line(); params();
+}
+static void test_recharge_share(void) {
+    int32_t e0, e1;
+    /* (b) Share on: two capacities gain different amounts, each the formula. 328 / 65536 of 40960 is 204.99 -> 205, of 20480 is 102.5 -> 103. */
+    rc_two(328, U(160), U(80), 1, &e0, &e1);
+    CHECK(e0 == U(5) + 205 && e1 == U(5) + 103 && e0 - U(5) != e1 - U(5));
+    CHECK(e0 - U(5) == rc_gain(U(160), 328) && e1 - U(5) == rc_gain(U(80), 328));
+    rc_two(328, U(160), U(80), 50, &e0, &e1);
+    CHECK(e0 == U(5) + 50 * 205 && e1 == U(5) + 50 * 103);
+    rc_two(1000, U(150), U(37), 7, &e0, &e1);                       /* odd capacities: the rounding is to nearest */
+    CHECK(e0 == U(5) + 7 * rc_gain(U(150), 1000) && e1 == U(5) + 7 * rc_gain(U(37), 1000));
+    rc_two(0, U(160), U(80), 1, &e0, &e1);                          /* control: share 0, one global rate, whatever the capacity */
+    CHECK(e0 == U(5) + 512 && e1 == U(5) + 512);                    /* the claim above fails here: both gain alike */
+    CHECK(e0 - U(5) == e1 - U(5));
+    /* (c) In the air nothing is gained; on the ground the same scene gains. Control: share 0 gains in the air too. */
+    CHECK(rc_air_one(328, 1) == U(100));
+    CHECK(rc_air_one(328, 0) == U(100) + 205);
+    CHECK(rc_air_one(0, 1) == U(100) + 512);                        /* control: line-field-4's strip has no air test */
+    CHECK(rc_air_one(-5, 1) == U(100) + 512);                       /* a negative share is read as 0 */
+    uint32_t air, ground; int32_t air_gain;
+    rc_flight(20, &air, &ground, &air_gain);                        /* a real flight over 10 nodes: steps in both states */
+    CHECK(air >= 40u && ground >= 40u && air_gain == 0);
+    rc_flight(0, &air, &ground, &air_gain);                         /* control: share 0, the air steps gain as the ground ones do */
+    CHECK(air >= 40u && ground >= 40u && air_gain == (int32_t)air * 4);
+    /* (e) The clamp: close to full, at full, and a gain far over the room. */
+    rc_strip(328); lone(U(1000), 0, 2000); veh[0].energy = veh[0].max_energy - 3; sh2z_field_step(&F);
+    CHECK(veh[0].energy == veh[0].max_energy);
+    for(uint32_t t = 0; t < 5u; ++t) { sh2z_field_step(&F); CHECK(veh[0].energy == veh[0].max_energy); }
+    rc_strip(0); lone(U(1000), 0, 2000); veh[0].energy = veh[0].max_energy - 3; sh2z_field_step(&F);
+    CHECK(veh[0].energy == veh[0].max_energy);
+    rc_strip(65536); lone(U(1000), 0, 2000); veh[0].energy = 0; sh2z_field_step(&F);   /* share 1.0: full in one tick */
+    CHECK(veh[0].energy == veh[0].max_energy);
+    params();
+}
+
+/* (d) The function for a vehicle driven outside the field gives what the step applies. Over many random states (position,
+ * lateral, energy, capacity, air flag, share 0 and above) one field step on a lone agent is compared with the function applied to
+ * a copy of the vehicle as the step found it; and with a level-of-detail period above 1 the ticks are those the step was due. */
+static void rc_zones(void) {
+    zone_buf[0] = (sh2z_field_zone_t){ U(2000), U(5000), -U(100), U(100), SH2Z_FIELD_ZONE_RECHARGE };
+    zone_buf[1] = (sh2z_field_zone_t){ U(5000), U(6000), -U(300), U(300), SH2Z_FIELD_ZONE_BOOST };
+    zone_buf[2] = (sh2z_field_zone_t){ U(6000), U(9000), -U(50), U(250), SH2Z_FIELD_ZONE_RECHARGE };
+    surf.zone_count = 3;
+}
+static void test_recharge_external(void) {
+    uint32_t in_zone = 0, out_zone = 0, gained = 0;
+    for(uint32_t k = 0; k < 1500u; ++k) {
+        const int32_t share = (k % 3u == 0u) ? 0 : (int32_t)(1u + rnd() % 2000u);
+        params(); surface_reset(); P.surface = &surf; rc_zones(); surf.recharge_share = share;
+        rng = k + 1u;
+        const int32_t at = (int32_t)(rnd() % (uint32_t)(line.length - 1));     /* one draw a statement: argument order is the compiler's */
+        const int32_t lat = (int32_t)(rnd() % U(300)) - U(150);
+        lone(at, lat, 2000);
+        veh[0].max_energy = U(40) + (int32_t)(rnd() % (uint32_t)U(200));
+        veh[0].energy = (int32_t)(rnd() % (uint32_t)(veh[0].max_energy + 1));
+        if(rnd() % 3u == 0u) veh[0].flags |= SH2Z_VEH_AIR;
+        sh2z_vehicle_t copy = veh[0];
+        const int32_t before = veh[0].energy;
+        sh2z_field_step(&F);
+        sh2z_field_recharge(&F, &copy, 1u);
+        CHECK(copy.energy == veh[0].energy);
+        const int zoned = copy.t.dist >= U(2000) && copy.t.dist < U(5000) && abs(copy.t.lateral) <= U(100);
+        if(zoned || (copy.t.dist >= U(6000) && copy.t.dist < U(9000) && copy.t.lateral >= -U(50) && copy.t.lateral <= U(250))) ++in_zone; else ++out_zone;
+        if(veh[0].energy > before) ++gained;
+    }
+    CHECK(in_zone > 200u && out_zone > 200u && gained > 100u);
+    /* The function alone: a vehicle standing on the strip, then off it, then flagged. */
+    params(); surface_reset(); P.surface = &surf; rc_zones(); surf.recharge_share = 328;
+    lone(U(3000), 0, 2000);
+    sh2z_vehicle_t a = veh[0]; a.energy = U(10);
+    sh2z_field_recharge(&F, &a, 3u);
+    CHECK(a.energy == U(10) + 3 * 205);
+    a.energy = U(10); a.t.dist = U(5500);                           /* a boost plate, not a recharge strip */
+    sh2z_field_recharge(&F, &a, 3u); CHECK(a.energy == U(10));
+    a.t.dist = U(3000); a.t.lateral = U(101);                       /* beside the strip */
+    sh2z_field_recharge(&F, &a, 3u); CHECK(a.energy == U(10));
+    a.t.lateral = 0; sh2z_field_recharge(&F, &a, 0u); CHECK(a.energy == U(10));   /* no ticks, no gain */
+    static const uint16_t no[4] = { SH2Z_VEH_RETIRED, SH2Z_VEH_FINISHED, SH2Z_VEH_AIR, SH2Z_VEH_FALLING };
+    for(uint32_t k = 0; k < 4u; ++k) { a.flags = no[k]; a.energy = U(10); sh2z_field_recharge(&F, &a, 3u); CHECK(a.energy == U(10)); }
+    a.flags = SH2Z_VEH_EXTERNAL; a.energy = U(10); sh2z_field_recharge(&F, &a, 3u); CHECK(a.energy == U(10) + 3 * 205);   /* the owner's own vehicle */
+    a.energy = a.max_energy - 100; sh2z_field_recharge(&F, &a, 0x7fffffffu); CHECK(a.energy == a.max_energy);   /* the clamp, a huge tick count */
+    sh2z_vehicle_t b = a; b.energy = U(10); P.surface = 0;          /* no surface: nothing */
+    sh2z_field_recharge(&F, &b, 3u); CHECK(b.energy == U(10));
+    P.surface = &surf; surf.zone_count = 0; sh2z_field_recharge(&F, &b, 3u); CHECK(b.energy == U(10));   /* no zones */
+    /* Level of detail: a far agent is stepped every few ticks and is due that many ticks at once; the function takes the same count. */
+    params(); surface_reset(); P.surface = &surf; rc_zones(); surf.recharge_share = 700;
+    P.lod_near[0] = U(100); P.lod_near[1] = U(200); P.lod_near[2] = U(300);
+    rng = 3u; vehicle(0, 0, 2000); vehicle(1, 1, 2000);
+    veh[0].t.dist = U(3000); veh[1].t.dist = U(8000); veh[0].t.lateral = veh[1].t.lateral = 0; veh[0].t.speed = 0; veh[1].t.speed = 0;
+    veh[0].t.node = sh2z_line_locate(&line, veh[0].t.dist, 0); veh[1].t.node = sh2z_line_locate(&line, veh[1].t.dist, 0);
+    brain[0].pace = brain[1].pace = 0; brain[0].lane = brain[1].lane = 0; veh[0].accel = veh[1].accel = 0;
+    veh[0].energy = U(1); veh[0].max_energy = U(160);
+    field(2, 3u); F.focus = 1;
+    sh2z_field_start(&F);
+    uint32_t big = 0;
+    for(uint32_t t = 0; t < 60u; ++t) {
+        sh2z_vehicle_t c = veh[0]; const uint32_t last = brain[0].last_tick;
+        sh2z_field_step(&F);
+        if(brain[0].last_tick != last) {
+            const uint32_t due = brain[0].last_tick - last;
+            sh2z_field_recharge(&F, &c, due);
+            CHECK(c.energy == veh[0].energy);
+            if(due > 1u) ++big;
+            sh2z_vehicle_t w = c; w.energy = veh[0].energy; sh2z_field_recharge(&F, &w, due + 1u);   /* control: one tick more differs, unless full */
+            CHECK(w.energy != veh[0].energy || w.energy == w.max_energy);
+        }
+    }
+    CHECK(big >= 3u);
+    params();
+}
+
+/* (a) Share 0 is line-field-14's step: random races over strips, air runs and tubes, every agent's energy, flags and place hashed
+ * each tick. RC_PIN was recorded from main (0aba730), before the field existed, by this same generator; the share is the only
+ * thing the new code reads, and it is 0 here. With a share above 0 the same scenes must hash otherwise (control). `air_on_strip`
+ * counts the agent-steps that started in the air on a recharge zone, where the share, when set, changes the outcome. */
+static uint64_t rc_mix(uint64_t h, uint32_t w) { return (h ^ w) * 1099511628211ull; }
+static uint64_t rc_fuzz(uint32_t scenes, int32_t share, uint64_t *air_on_strip) {
+    uint64_t h = 1469598103934665603ull;
+    *air_on_strip = 0;
+    for(uint32_t sc = 0; sc < scenes; ++sc) {
+        rng = 0x1234567u + sc * UINT32_C(2654435761);
+        params(); surface_reset(); behave_reset(); make_line();
+        for(uint32_t r = 0; r < 5u; ++r) {                          /* air runs, ground between */
+            const uint32_t lo = rnd() % (NODES - 12u), len = 2u + rnd() % 9u;
+            mark(lo, lo + len, 0x0180u, 200);
+        }
+        for(uint32_t r = 0; r < 2u; ++r) { const uint32_t lo = rnd() % (NODES - 20u); mark(lo, lo + 8u + rnd() % 10u, 0x0080u, 100); }
+        surf.wrap_mask = 0x0180u; surf.wrap_value = 0x0080u; surf.recharge = (int32_t)(64u + rnd() % 900u);
+        const uint32_t zones = 3u + rnd() % 5u;
+        for(uint32_t k = 0; k < zones; ++k) {
+            const int32_t start = (int32_t)k * (line.length / (int32_t)zones) + (int32_t)(rnd() % (uint32_t)U(500));
+            const int32_t len = U(1500) + (int32_t)(rnd() % (uint32_t)U(3000));    /* one draw a statement, as above */
+            const int32_t lo = -U(150) - (int32_t)(rnd() % (uint32_t)U(100));
+            const int32_t hi = U(150) + (int32_t)(rnd() % (uint32_t)U(100));
+            zone_buf[k] = (sh2z_field_zone_t){ start, start + len, lo, hi,
+                                               (k % 4u == 1u) ? SH2Z_FIELD_ZONE_BOOST : (k % 4u == 3u) ? SH2Z_FIELD_ZONE_ROUGH : SH2Z_FIELD_ZONE_RECHARGE };
+        }
+        surf.zone_count = zones;
+        surf.recharge_share = share;                                /* RC-SHARE */
+        P.surface = &surf;
+        B.air_mask = 0x01c0u; B.air_value = 0x0180u; B.air_spread = 2600; B.lat_accel = 192;
+        B.open_mask = 0x01c0u; B.open_value = 0x0000u; B.fall_margin = U(30); B.fall_ticks = 95; B.ko_window = 120; B.ko_floor = 26;
+        B.roll_chance = 1024; B.roll_latch = 32768; B.roll_lead = 26214; B.hold_lead = 7864; B.roll_well = 52429;
+        B.hold_mask = 0x01c0u; B.hold_value = 0x00c0u; B.exit_mask = 0x01c0u; B.exit_value = 0x0080u; B.roll_exit_ahead = U(3000);
+        if(rnd() % 4u != 0u) P.behave = &B;
+        const uint32_t n = 2u + rnd() % 22u;
+        for(uint32_t i = 0; i < n; ++i) {
+            vehicle(i, i, 1200 + (int32_t)(rnd() % 1200u));
+            veh[i].max_energy = U(40) + (int32_t)(rnd() % (uint32_t)U(160));
+            veh[i].energy = (rnd() % 3u == 0u) ? veh[i].max_energy : (int32_t)(rnd() % (uint32_t)(veh[i].max_energy + 1));
+            veh[i].t.speed = U(10) + (int32_t)(rnd() % (uint32_t)U(40));
+        }
+        field(n, 1u + sc);
+        sh2z_field_start(&F);
+        for(uint32_t t = 0; t < 260u; ++t) {
+            for(uint32_t i = 0; i < n; ++i) {
+                const sh2z_vehicle_t *v = &veh[i];
+                if(!(v->flags & SH2Z_VEH_AIR)) continue;
+                for(uint32_t k = 0; k < zones; ++k)
+                    if(zone_buf[k].kind == SH2Z_FIELD_ZONE_RECHARGE && v->t.dist >= zone_buf[k].start && v->t.dist < zone_buf[k].end &&
+                       v->t.lateral >= zone_buf[k].lat_lo && v->t.lateral <= zone_buf[k].lat_hi) { ++*air_on_strip; break; }
+            }
+            sh2z_field_step(&F);
+            for(uint32_t i = 0; i < n; ++i) {
+                const sh2z_vehicle_t *v = &veh[i];
+                h = rc_mix(h, (uint32_t)v->t.dist); h = rc_mix(h, (uint32_t)v->t.lateral); h = rc_mix(h, (uint32_t)v->energy); h = rc_mix(h, v->flags);
+            }
+            h = rc_mix(h, F.contacts); h = rc_mix(h, F.retired); h = rc_mix(h, F.falls); h = rc_mix(h, sh2z_field_hash(&F));
+        }
+    }
+    make_line(); params();
+    return h;
+}
+#define RC_PIN UINT64_C(0x6f29a14e3fe9f895)
+static void test_recharge_identity(void) {
+    uint64_t air0, air1, air2;
+    const uint64_t h0 = rc_fuzz(400, 0, &air0);
+    CHECK(h0 == RC_PIN);                                            /* share 0: main's step, scene for scene */
+    CHECK(air0 > 2000u);                                            /* the scenes reach the case the share changes */
+    const uint64_t h1 = rc_fuzz(400, 328, &air1);
+    CHECK(h1 != RC_PIN);                                            /* control: the same scenes with a share are not main's */
+    const uint64_t h2 = rc_fuzz(400, 1200, &air2);
+    CHECK(h2 != h1 && h2 != RC_PIN);
+    CHECK(rc_fuzz(400, -7, &air2) == RC_PIN);                       /* a negative share is off */
+}
+
 int main(void) {
     make_line();
     params();
@@ -1667,6 +1909,9 @@ int main(void) {
     test_ranks_hash();
     test_ranks_slow();
     test_wall_impact();
+    test_recharge_identity();
+    test_recharge_share();
+    test_recharge_external();
     printf("line field: %" PRIu64 " checks passed\n", checks);
     return 0;
 }

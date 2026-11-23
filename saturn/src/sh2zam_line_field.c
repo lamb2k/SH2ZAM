@@ -1,5 +1,5 @@
 /* Experimental line field (contract tags line-field-1 to line-field-5,
- * line-field-7 to line-field-10, line-field-12 and line-field-13).
+ * line-field-7 to line-field-10, line-field-12, line-field-13 and line-field-15).
  *
  * Copyright (c) 2026 SH2ZAM Contributors. MIT License.
  * Inspired by SH4ZAM by Falco Girgis and SH4ZAM Contributors.
@@ -63,6 +63,22 @@ static uint32_t fld_zone(const sh2z_field_surface_t *s, const sh2z_track_state_t
         if(t->dist < z->end && t->lateral >= z->lat_lo && t->lateral <= z->lat_hi) return z->kind;
     }
     return 0u;
+}
+
+/* line-field-15: what a vehicle on a recharge strip gains in `ticks` ticks. With the surface's recharge_share at 0 this is the
+ * global rate of line-field-4, recharge a tick, with no air test. With it above 0 the rate is the vehicle's own: the share of its
+ * max_energy, rounded to the nearest unit, and nothing is gained while it is in the air. One function for the step and for
+ * sh2z_field_recharge, so the two cannot differ. */
+FLD_INLINE void fld_recharge(const sh2z_field_surface_t *sf, sh2z_vehicle_t *v, uint32_t ticks) {
+    if(sf->recharge_share > 0) {
+        if(v->flags & SH2Z_VEH_AIR) return;
+        const int32_t gain = (int32_t)(((int64_t)v->max_energy * sf->recharge_share + 0x8000) >> 16);
+        const int64_t e = (int64_t)v->energy + (int64_t)gain * (int32_t)ticks;
+        v->energy = e > v->max_energy ? v->max_energy : (int32_t)e;
+        return;
+    }
+    v->energy += sf->recharge * (int32_t)ticks;
+    if(v->energy > v->max_energy) v->energy = v->max_energy;
 }
 
 void sh2z_field_grid_slot(const sh2z_line_t *line, uint32_t p, int32_t first_back, int32_t row_step,
@@ -872,8 +888,7 @@ FLD_INLINE void fld_step(sh2z_field_t *f, const sh2z_field_behave_t *bh) {
                 v->flags |= SH2Z_VEH_BOOST;
                 if(v->boost_ticks < sf->plate_ticks) v->boost_ticks = (int16_t)fld_clamp(sf->plate_ticks, 0, INT16_MAX);
             } else if(zone == SH2Z_FIELD_ZONE_RECHARGE) {
-                v->energy += sf->recharge * (int32_t)due;
-                if(v->energy > v->max_energy) v->energy = v->max_energy;
+                fld_recharge(sf, v, due);
             }
         }
         /* Decisions every 4th tick per vehicle (staggered), and on every level-of-detail step. */
@@ -1008,6 +1023,12 @@ void sh2z_field_step_behave(sh2z_field_t *f) {
 void sh2z_field_step(sh2z_field_t *f) {
     if(f->params->behave) sh2z_field_step_behave(f);
     else sh2z_field_step_plain(f);
+}
+
+void sh2z_field_recharge(const sh2z_field_t *f, sh2z_vehicle_t *v, uint32_t ticks) {
+    const sh2z_field_surface_t *sf = f->params->surface;
+    if(!sf || !sf->zone_count || (v->flags & (SH2Z_VEH_RETIRED | SH2Z_VEH_FINISHED | SH2Z_VEH_FALLING))) return;
+    if(fld_zone(sf, &v->t) == SH2Z_FIELD_ZONE_RECHARGE) fld_recharge(sf, v, ticks);
 }
 
 FLD_INLINE uint32_t fld_mix(uint32_t h, uint32_t x) { return (h ^ x) * UINT32_C(16777619); }
