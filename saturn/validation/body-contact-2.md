@@ -1,4 +1,4 @@
-# Validation record - body contact, body-contact-2
+# Validation record — 2026-11-23 (body contact, the sorted sweep, the range filter and the list resolve, body-contact-2)
 
 `sh2zam/body_contact_experimental.h` ([guide](../BODY_CONTACT.md)) gains `sh2z_bc_sweep`, `sh2z_bc_range` and `sh2z_bc_field_resolve_list`,
 the field walk split into a pair list, an exact range filter and the pair calls, and `sh2z_bc_field_resolve` tests the position box in 32
