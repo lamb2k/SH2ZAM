@@ -82,6 +82,32 @@
 #error "SH2Z_VD_LOCATE_FAR must be 0..32767 and SH2Z_VD_LOCATE_FAR_RUN at least 1"
 #endif
 
+/* Contract tag vehicle-dynamics-7. The other two ways the closest-point search runs all 99 passes of a body hundreds
+ * of units off the line, both with a residual under the vehicle-dynamics-6 line:
+ * - the step of a pass ignores the curvature of the line, so where the body sits near the centre of curvature it is
+ *   about twice the Newton step and the residual swings from side to side, closing by 0.94 a pass.
+ *   SH2Z_VD_LOCATE_DAMP (build time, passes 0..99, default 0 = off) replaces the step, after that many passes of
+ *   the call, by the secant step through the last two passes when that step is not longer. It has the step's
+ *   sign. Searches of DAMP passes or fewer are unchanged.
+ * - the closest point is the join of two nodes, and the search flips between them with a residual that does not
+ *   fall. SH2Z_VD_LOCATE_FLIP (build time, flips >= 1, default 0 = off) ends the search once it has flipped that many
+ *   times in a row, each time returning to the parameter it had two passes before to within 2^-10 of a node, and
+ *   on a pass of the parity the 99th pass has: the state is the one the 99-pass search would end on, to the drift
+ *   of the cycle.
+ * Over 120,000 randomised searches (a stadium and rough roads, targets up to 4,000 units off the line) a search
+ * that neither change acted on is the earlier search word for word (107,587 of them); where the earlier search
+ * converged within 700 units of the line the changed search converged too, within 1 unit of its end state
+ * (the host test states the bound it measured). Where the earlier search did not converge there is no
+ * right end state to compare with, and a changed search can end elsewhere. Off, the object code of every
+ * earlier tag is unchanged. Every translation unit of one image must use the same values.
+ * SH2Z_VD_LOCATE_DAMP_HIT(old, new) and SH2Z_VD_LOCATE_FLIP_HIT() are empty statements unless a build defines them. */
+#ifndef SH2Z_VD_LOCATE_DAMP
+#define SH2Z_VD_LOCATE_DAMP 0
+#endif
+#ifndef SH2Z_VD_LOCATE_FLIP
+#define SH2Z_VD_LOCATE_FLIP 0
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

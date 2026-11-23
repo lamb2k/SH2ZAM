@@ -48,6 +48,7 @@ and scope.
 - [vehicle-dynamics-4](validation/vehicle-dynamics-4.md): 2026-11-22 (engine force carried in Q(16+n), vehicle-dynamics-4)
 - [vehicle-dynamics-5](validation/vehicle-dynamics-5.md): 2026-11-22 (half-pipe road shape, vehicle-dynamics-5)
 - [vehicle-dynamics-6](validation/vehicle-dynamics-6.md): 2026-11-22 (search stop for a body far off the line, vehicle-dynamics-6)
+- [vehicle-dynamics-7](validation/vehicle-dynamics-7.md): 2026-11-23 (search damping and flip stop, vehicle-dynamics-7)
 - [vehicle-kernels-1](validation/vehicle-kernels-1.md): 2026-11-17 (vehicle kernels, vehicle-kernels-1)
 - [view-camera-1](validation/view-camera-1.md): 2026-11-17 (view from a camera, view-camera-1)
 - [view-merge-2](validation/view-merge-2.md): 2026-11-17 (tier texture-merge planner, view-merge-2)

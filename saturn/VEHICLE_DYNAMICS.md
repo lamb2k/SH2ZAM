@@ -114,6 +114,41 @@ units for RUN passes in a row. It keeps the state it has; `sh2z_vd_locate` then 
   (every pass, with the residual).
 - Every translation unit of one image must use the same values.
 
+## Search damping and flip stop (`vehicle-dynamics-7`, `SH2Z_VD_LOCATE_DAMP`, `SH2Z_VD_LOCATE_FLIP`)
+
+The search steps the spline parameter by the projection of the residual on the tangent, `t += d.f / |f|^2`, and leaves out
+the curvature term of the Newton step, `|f|^2 + (p - x).p''`. A body hundreds of units off the line, such as one over a gap,
+runs the whole 99 passes in three ways, two of them under the `vehicle-dynamics-6` line (128 units) and so not stopped by it:
+
+1. **Swing.** Near the centre of curvature (`-disp.p'' / |f|^2` near 1) the step is about twice the Newton step: the residual
+   alternates in sign and closes by about 0.94 a pass (36 units to 1 in 54 passes, 883 units off the line).
+2. **Join flip.** The closest point is the join of two nodes, with a different tangent length either side; the search flips
+   between them, back to the same parameter every second pass, with a residual that does not fall (47 units, drifting by
+   0.01 a pass). There is no exact repeat, so the cycle cannot be skipped exactly.
+3. **Past the centre of curvature.** The curvature term passes -1, the minimum is gone, and the residual falls and rises
+   again. Not changed by this tag.
+
+`SH2Z_VD_LOCATE_DAMP` (build time, passes 0 to 99, default 0 = off): after that many passes of the call, the secant step
+through the last two passes, `-along * prev_dt / (along - prev_along)`, replaces the pass's step when it is not longer. It has
+the step's sign (the slope is negative), so the search is only ever damped, never pushed further than before. A residual that
+falls one way takes the longer step. A node change forgets the last pass. A search of DAMP passes or fewer is unchanged.
+
+`SH2Z_VD_LOCATE_FLIP` (build time, flips 1 or more, default 0 = off): the search ends once it has flipped between two nodes
+that many times in a row, each time back to the parameter it had two passes before (within 2^-10 of a node), and on a pass
+of the parity the 99th pass has. The state is then the one the 99-pass search would end on, to the drift of the cycle: the
+join is on one side or the other of the closest point, and which side is the parity of the pass.
+
+- Off: the object code of every earlier tag is unchanged (the three vehicle units compared with `cmp`, CI flags).
+- Both on (DAMP 8, FLIP 3): +504 bytes of text in `sh2zam_vehicle_dynamics.o`. A secant step costs one division
+  (`sh2z_divu_div64`) on a pass; the flip test, three compares.
+- A search neither change acted on is the earlier search word for word. Where the earlier search converged within 700 units
+  of the line and a change acted on it, the changed search converged too, within 1 unit of its end state, in 339 of 340
+  cases in the host test; the exception ended 12.5 units off it (a flip stop at 40 passes; the earlier search closed in 59 more).
+  Where the earlier search did not converge there is no right end state: the changed one may end elsewhere. The caller
+  checks its outcome (the validation record gives the one made on a road with a jump).
+- Hooks for host builds, empty by default: `SH2Z_VD_LOCATE_DAMP_HIT(old_dt, new_dt)` and `SH2Z_VD_LOCATE_FLIP_HIT()`.
+- Every translation unit of one image must use the same values.
+
 ## Formats
 
 | Quantity | Format |
