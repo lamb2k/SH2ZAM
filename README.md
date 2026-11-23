@@ -464,6 +464,8 @@ Integer only, with no libc. Host-tested (no console run). See
   scale (`SH2Z_VD_FORCE_FRAC`) that carries the engine force with more fraction bits (default 16: unchanged code).
   `vehicle-dynamics-6` is a build-time stop (`SH2Z_VD_LOCATE_FAR`) for a closest-point search that circles when the
   body is far off the line, as over a gap (default 0: unchanged code).
+  `vehicle-dynamics-7` adds two build-time changes (`SH2Z_VD_LOCATE_DAMP`, `SH2Z_VD_LOCATE_FLIP`) for the two other ways that
+  search runs all its passes, a swing and a flip between two nodes (default 0: unchanged code).
 - [`sh2zam/body_contact_experimental.h`](saturn/include/sh2zam/body_contact_experimental.h)
   (`body-contact-1`) resolves contact between vehicles that touch as spheres: shared impact damage,
   a push while they close, attackers and contact credit. `vehicle-dynamics-3` feeds it into the

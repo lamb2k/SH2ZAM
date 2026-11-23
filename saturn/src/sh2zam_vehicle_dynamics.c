@@ -36,6 +36,16 @@
 #ifndef SH2Z_VD_LOCATE_PASS
 #define SH2Z_VD_LOCATE_PASS(d)
 #endif
+/* vehicle-dynamics-7: host-test hooks, empty statements unless a build defines them. DAMP_HIT(old, new) is invoked
+ * with the step of the pass (Q30 of t) and the secant step that replaces it; FLIP_HIT() when the flip stop ends a search. */
+#ifndef SH2Z_VD_LOCATE_DAMP_HIT
+#define SH2Z_VD_LOCATE_DAMP_HIT(old_dt, new_dt)
+#endif
+#ifndef SH2Z_VD_LOCATE_FLIP_HIT
+#define SH2Z_VD_LOCATE_FLIP_HIT()
+#endif
+/* The parameter distance (Q30) under which a flip-flop returns to the same point (vehicle-dynamics-7). */
+#define VD_FLIP_T (ONE30 >> 10)
 /* The squared residual (Q32) that SH2Z_VD_LOCATE_FAR units make. */
 #define VD_FAR_SQ (((int64_t)SH2Z_VD_LOCATE_FAR * SH2Z_VD_LOCATE_FAR) << 32)
 
@@ -159,6 +169,7 @@ int sh2z_vd_locate(sh2z_vd_body_t *b, const sh2z_vd_track_t *k, const int32_t ta
 #endif
 #if SH2Z_VD_LOCATE_FLIP
     int flips = 0;
+    int32_t t1 = b->t, t2 = b->t;
     uint32_t node1 = b->node, node2 = b->node;
 #endif
     for(i = 0; i < 3; i++) d[i] = target[i] - b->ground[i];
@@ -177,24 +188,34 @@ int sh2z_vd_locate(sh2z_vd_body_t *b, const sh2z_vd_track_t *k, const int32_t ta
         }
 #endif
 #if SH2Z_VD_LOCATE_FLIP
-        flips = (b->node == node2 && b->node != node1) ? flips + 1 : 0;
+        /* vehicle-dynamics-7: the join of two nodes holds the closest point when the search keeps flipping between
+         * them and returns to the same parameter, to 2^-10 of a node, every second pass. */
+        flips = (b->node == node2 && b->node != node1 && b->t - t2 < VD_FLIP_T && t2 - b->t < VD_FLIP_T) ? flips + 1 : 0;
         node2 = node1;
         node1 = b->node;
-        if(flips >= SH2Z_VD_LOCATE_FLIP && (iterations & 1) == 0) break;
+        t2 = t1;
+        t1 = b->t;
+        if(flips >= SH2Z_VD_LOCATE_FLIP && (iterations & 1) == 0) {
+            SH2Z_VD_LOCATE_FLIP_HIT();
+            break;
+        }
 #endif
         const int64_t dot = (int64_t)d[0] * b->fwd[0] + (int64_t)d[1] * b->fwd[1] + (int64_t)d[2] * b->fwd[2];
         const int32_t along = vd_div(dot, b->fwd_mag);              /* Q16 */
 #if SH2Z_VD_LOCATE_DAMP
         int32_t dt = vd_divq(along, b->fwd_mag, 30);
         /* vehicle-dynamics-7: after SH2Z_VD_LOCATE_DAMP passes, the secant step through the last two passes
-         * replaces the step when it points the same way and is not longer. A residual that swings from side
+         * replaces the step when it is not longer (it then has the step's sign: the slope is negative). A residual that swings from side
          * to side (the step is then about twice the Newton step) closes in two or three passes; a residual
          * that falls one way keeps the step. */
         if(++pass > SH2Z_VD_LOCATE_DAMP && prev_dt != 0) {
             const int32_t da = along - prev_along;
             if(da != 0 && (da < 0) != (prev_dt < 0)) {
                 const int32_t s = vd_div(-(int64_t)along * prev_dt, da);
-                if((s < 0) == (dt < 0) && (s < 0 ? -(int64_t)s : (int64_t)s) <= (dt < 0 ? -(int64_t)dt : (int64_t)dt)) dt = s;
+                if((s < 0 ? -(int64_t)s : (int64_t)s) <= (dt < 0 ? -(int64_t)dt : (int64_t)dt)) {
+                    SH2Z_VD_LOCATE_DAMP_HIT(dt, s);
+                    dt = s;
+                }
             }
         }
         prev_along = along;
