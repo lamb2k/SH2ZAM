@@ -14,8 +14,9 @@
  * no post-contact room hold, no hold against cutting across a vehicle
  * alongside, no blocking hold), line-field-10 (the contact passes share
  * one scan's pair list and one line sample a vehicle; results unchanged),
- * line-field-12 (pace ranks that move, the driver's slowing, wall impacts)
- * line-field-13 (the contact passes do less work, results unchanged)
+ * line-field-12 (pace ranks that move, the driver's slowing, wall impacts),
+ * line-field-13 (the contact passes do less work, results unchanged),
+ * line-field-14 (a gap too long to clear drops an agent in the air)
  * and line-field-15 (a recharge strip refills a vehicle by a share of its own
  * energy, not while it is in the air).
  *
@@ -340,6 +341,7 @@ typedef struct sh2z_field_behave {
     int32_t launch_chance;     /**< Q16 chance that an agent out of a tube beyond the open edge of a drop node is launched off (65536 = always). */
     int32_t contact_norm;      /**< Q16: > 0 charges a contact incident by its closing speed along the line between the two, contact_norm each (twice to an attacker's victim, nothing to the attacker), instead of side_energy, hit_energy and attack_energy. */
     int32_t wall_impact;       /**< line-field-12, Q16: > 0 charges a wall impact by the speed it hits the edge at (how far a push or a step took it past the edge), wall_impact of it, once per impact, and scrubs speed only then; an agent that rests on the edge pays nothing. 0 = wall_energy a call, line-field-5's. */
+    int32_t gap_reach_ticks;   /**< line-field-14: ticks an agent in the air flies at its speed; an air run longer than that reach drops it once it has covered the reach (see "Contract tag line-field-14"). 0 = off, line-field-13's step. */
 } sh2z_field_behave_t;
 
 /* ---- Contract tag line-field-7 ------------------------------------------ */
@@ -403,6 +405,23 @@ uint32_t sh2z_line_locate_far(const sh2z_line_t *line, int32_t dist);
  * changes which vehicles a scan meets, so the pass resumes as a full scan
  * from the position it reached and the next pass scans in full again. A pile
  * of more than 192 pairs in reach is not listed and its passes scan in full. */
+
+/* ---- Contract tag line-field-14 ----------------------------------------- */
+
+/* behave->gap_reach_ticks: a gap that is too long to clear. Appended to the behaviour block; 0 (and every block built before
+ * the field existed, once zeroed) is line-field-13's step, bit for bit, and the step carries no state for it. With
+ * gap_reach_ticks > 0, an agent in the air (as above: on a node matching the air mask, not in a tube) looks at the air run it is
+ * in: the nodes that match the air mask, contiguous from its own back to the run's start (at most 64 nodes back, and not
+ * across the line's start, node count - 1 to node 0). Its reach is the distance it flies at its speed now:
+ *     reach = speed * gap_reach_ticks                       (speed and distance are both Q8: speed is a distance a tick)
+ * and it is dropped on the step in which it has covered the reach from the run's start, dist - from >= reach, while still in
+ * the run. So a run longer than the reach drops the agent, and a run exactly as long as the reach, or shorter, is cleared (the
+ * agent is past its end by the time it has covered the reach). The agent that is dropped
+ * leaves the line as on an open edge: SH2Z_VEH_FALLING, one fall counted, out of contact, no laps, retiring fall_ticks later
+ * through the same path as every other fall (energy 0, retire_tick that tick). The rule is stateless: nothing is kept
+ * between steps, and an agent whose speed is not above 0 does not fly, so is never dropped by it. The knock-out credit of a
+ * fall is the open-edge fall's. The cost is one scan back along the run (at most 64 node flags) a step for an agent in the air with
+ * the field set, none otherwise. */
 
 /* ---- Contract tag line-field-13 ----------------------------------------- */
 

@@ -448,19 +448,22 @@ Integer only, with no libc. Host-tested (no console run). See
   (after a contact, behind a vehicle in the way, and for a faster vehicle close behind);
   `line-field-10` shares one pair list and one line sample a vehicle across the contact passes;
   `line-field-12` adds finish targets that follow pace ranks, a coast and a floor on the target,
-  and a wall impact charged once by the speed it is hit at, each inert at zero; and
-  `line-field-13` does less contact work a step; and `line-field-15` refills a vehicle on a recharge strip
-  by a share of its own energy capacity, not in the air, with a function for vehicles driven outside the field
-  (`recharge_share`, inert at zero). `line-field-8` and `line-field-9` change results;
-  `line-field-10`, `line-field-12` and `line-field-15` (new parameters at zero) and `line-field-13` match the step
-  before them bit for bit. The untagged `line-field-quiet` release skips the contact passes when
-  `contact_lat` is 0 or less, with results unchanged.
+  and a wall impact charged once by the speed it is hit at, each inert at zero;
+  `line-field-13` does less contact work a step; `line-field-14` drops an agent in the air that
+  has covered its reach without landing (`gap_reach_ticks`, inert at zero); and `line-field-15`
+  refills a vehicle on a recharge strip by a share of its own energy capacity, not in the air, with a
+  function for vehicles driven outside the field (`recharge_share`, inert at zero). `line-field-8` and
+  `line-field-9` change results; `line-field-10`, `line-field-12`, `line-field-14` and `line-field-15`
+  (new parameters at zero) and `line-field-13` match the step before them bit for bit. The untagged `line-field-quiet`
+  release skips the contact passes when `contact_lat` is 0 or less, with results unchanged.
 - [`sh2zam/vehicle_dynamics_experimental.h`](saturn/include/sh2zam/vehicle_dynamics_experimental.h)
   (`vehicle-dynamics-1`) steps one hovering vehicle on a spline road, one fixed tick at a time.
   A host build and an SH-2 build give the same bits. `vehicle-dynamics-2` adds pipes (inside a
   tube) and cylinders (outside one), with joins into open road; `vehicle-dynamics-5` adds the half-pipe
   (a pipe's ground, open above). `vehicle-dynamics-4` is a build-time
   scale (`SH2Z_VD_FORCE_FRAC`) that carries the engine force with more fraction bits (default 16: unchanged code).
+  `vehicle-dynamics-6` is a build-time stop (`SH2Z_VD_LOCATE_FAR`) for a closest-point search that circles when the
+  body is far off the line, as over a gap (default 0: unchanged code).
 - [`sh2zam/body_contact_experimental.h`](saturn/include/sh2zam/body_contact_experimental.h)
   (`body-contact-1`) resolves contact between vehicles that touch as spheres: shared impact damage,
   a push while they close, attackers and contact credit. `vehicle-dynamics-3` feeds it into the

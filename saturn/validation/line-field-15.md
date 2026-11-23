@@ -25,15 +25,17 @@ owner drives itself (an external vehicle) was never touched by the strip at all.
 
 **No console run was done in this repository.** Evidence by tier:
 
-- **HOST:** `line_field_exact` passes 26,145,535 checks under GCC and Clang (`-O2 -Wall -Wextra -Wconversion -Wshadow
+- **HOST:** `line_field_exact` passes 26,367,628 checks (main's line-field-14 tests included) under GCC and Clang (`-O2 -Wall -Wextra -Wconversion -Wshadow
   -Werror -pedantic`) and under Clang with ASan and UBSan; the whole CTest set passes under all three (68 of 68
   each). Every pin of the line-field-14 suite is unchanged (the existing tests are not edited). New checks
   (`test_recharge_identity`, `test_recharge_share`, `test_recharge_external`), each with its control:
   - (a) share 0 is the old step: 400 random scenes (a closed line of 96 nodes with five air runs and two tubes, 3 to 7
     zones of which most are recharge strips, 2 to 23 agents with random capacities and energies, behaviour block on
     in three scenes of four, 260 ticks, every agent's place, energy and flags and the field hash mixed in each
-    tick) hash to `0x6f29a14e3fe9f895`, the value main (`0aba730`, which has no share field) gives for the same
-    generator (compiled against main's library with GCC -O2, GCC -O0 and Clang -O2: three equal values). 80,548
+    tick) hash to `0x6f29a14e3fe9f895`, the value main at `0aba730`
+    (no share field, before line-field-14) gives for the same generator, compiled against its library with GCC -O2,
+    GCC -O0 and Clang -O2 (three equal values); the test still passes on main with line-field-14 merged, whose step is
+    the same at its zero parameter. 80,548
     agent-steps in the air on a recharge strip are in the scenes, the case the share changes. Controls: the same
     scenes with a share of 328 and of 1200 hash to two other values; a negative share hashes as 0;
   - (b) share on: two agents far apart on the strip, capacities 160 and 80 (Q8 units of 256), start energy 5, share

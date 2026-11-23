@@ -1,17 +1,18 @@
-# Racing-line follower and line field (`line-follower-1`, `line-field-1` to `line-field-5`, `line-field-7` to `line-field-10`, `line-field-12`, `line-field-13`, `line-field-15`, experimental)
+# Racing-line follower and line field (`line-follower-1`, `line-field-1` to `line-field-5`, `line-field-7` to `line-field-10`, `line-field-12` to `line-field-15`, experimental)
 
 Contracts: [`line_follower_experimental.h`](include/sh2zam/line_follower_experimental.h),
 section "Contract tag line-follower-1", and
 [`line_field_experimental.h`](include/sh2zam/line_field_experimental.h), sections
-"Contract tags line-field-1 to line-field-5", "Contract tag line-field-7", "Contract tag line-field-8", "Contract tag line-field-9", "Contract tag line-field-10", "Contract tag line-field-12", "Contract tag line-field-13" and "Contract tag line-field-15". Tests:
+"Contract tags line-field-1 to line-field-5", "Contract tag line-field-7", "Contract tag line-field-8", "Contract tag line-field-9", "Contract tag line-field-10", "Contract tag line-field-12", "Contract tag line-field-13", "Contract tag line-field-14" and "Contract tag line-field-15". Tests:
 `tests/test_line_follower.c` and `tests/test_line_field.c`. Validation records:
 [line-follower-1](validation/line-follower-1.md) and
 [line-field-1](validation/line-field-1.md), [line-field-2](validation/line-field-2.md),
 [line-field-3](validation/line-field-3.md), [line-field-4](validation/line-field-4.md),
 [line-field-5](validation/line-field-5.md), [line-field-7](validation/line-field-7.md),
 [line-field-8](validation/line-field-8.md), [line-field-9](validation/line-field-9.md),
-[line-field-10](validation/line-field-10.md), [line-field-12](validation/line-field-12.md) and
-[line-field-13](validation/line-field-13.md) and [line-field-15](validation/line-field-15.md). No
+[line-field-10](validation/line-field-10.md), [line-field-12](validation/line-field-12.md),
+[line-field-13](validation/line-field-13.md), [line-field-14](validation/line-field-14.md) and
+[line-field-15](validation/line-field-15.md). No
 instruction model yet: both are compiled C and have only been measured as part of a larger
 program.
 
@@ -105,11 +106,15 @@ it arrives as `kick_lat` and `kick_speed`.
 - **Contact passes again (`line-field-13`):** a step with no two neighbouring vehicles in reach does no contact work; otherwise the
   pairs are listed from a packed array of the order's distances, a pair that did not overlap is skipped by the later passes until
   a push moves one of its vehicles, and a pair that does not overlap is rejected before the push code; results unchanged.
+- **A gap too long to clear (`line-field-14`, `behave->gap_reach_ticks`):** an agent in the air flies `speed * gap_reach_ticks`;
+  once it has covered that from the start of its air run (the contiguous nodes matching the air mask) and is still in the
+  run, it leaves the line as on an open edge (falling, then retiring `fall_ticks` later). A run exactly the reach long is
+  cleared. Stateless, no new brain field, inert at 0 (the `line-field-13` step, bit for bit).
 - **Recharge by each vehicle's own measure (`line-field-15`, `surface->recharge_share`, `sh2z_field_recharge`):** a recharge strip
   refills a vehicle by a Q16 share of its own `max_energy` a tick (rounded to nearest, clamped at `max_energy`) in place of the one
   global `recharge`, and nothing while the vehicle is in the air (`SH2Z_VEH_AIR`, as the previous step left it). `sh2z_field_recharge`
   applies the same arithmetic to a vehicle the owner drives itself, from one static inline shared with the step. Inert at 0 (the
-  `line-field-13` step, bit for bit, the global rate and no air test).
+  `line-field-14` step, bit for bit, the global rate and no air test).
 - **Pace ranks and the driver's slowing (`line-field-12`, `params->ranks`, `behave->wall_impact`):** a finish
   target that follows a pace rank and moves when a chaser is released into the ranking; a target below the
   speed only coasts, no target is below a floor, and every agent drives on at full throttle once the focus has

@@ -27,6 +27,17 @@
 #ifndef VD_CONTACT
 #define VD_CONTACT(b, v, r)
 #endif
+/* vehicle-dynamics-6: hooks for the host tests, empty statements unless a build defines them.
+ * FAR_HIT is invoked once per sh2z_vd_locate call that stops on the SH2Z_VD_LOCATE_FAR test. */
+#ifndef SH2Z_VD_LOCATE_FAR_HIT
+#define SH2Z_VD_LOCATE_FAR_HIT()
+#endif
+/* Invoked at the top of every pass with the residual (int32_t[3], Q16); empty unless defined. */
+#ifndef SH2Z_VD_LOCATE_PASS
+#define SH2Z_VD_LOCATE_PASS(d)
+#endif
+/* The squared residual (Q32) that SH2Z_VD_LOCATE_FAR units make. */
+#define VD_FAR_SQ (((int64_t)SH2Z_VD_LOCATE_FAR * SH2Z_VD_LOCATE_FAR) << 32)
 
 /* ---- Arithmetic --------------------------------------------------------- */
 
@@ -139,8 +150,24 @@ int sh2z_vd_locate(sh2z_vd_body_t *b, const sh2z_vd_track_t *k, const int32_t ta
                    int64_t tolerance) {
     int32_t d[3];
     int i;
+#if SH2Z_VD_LOCATE_FAR
+    int far_run = 0;
+#endif
     for(i = 0; i < 3; i++) d[i] = target[i] - b->ground[i];
     while(sumsq(d) > tolerance && --iterations != 0) {
+        SH2Z_VD_LOCATE_PASS(d);
+#if SH2Z_VD_LOCATE_FAR
+        /* vehicle-dynamics-6: a residual that stays above SH2Z_VD_LOCATE_FAR units for
+         * SH2Z_VD_LOCATE_FAR_RUN passes in a row belongs to a search that circles (a body far
+         * above a gap has no closest point to reach); it keeps the state it has. A search that
+         * overshoots and then recovers, as on a jump, comes back under the line and is not
+         * stopped. */
+        far_run = sumsq(d) > VD_FAR_SQ ? far_run + 1 : 0;
+        if(far_run >= SH2Z_VD_LOCATE_FAR_RUN) {
+            SH2Z_VD_LOCATE_FAR_HIT();
+            break;
+        }
+#endif
         const int64_t dot = (int64_t)d[0] * b->fwd[0] + (int64_t)d[1] * b->fwd[1] + (int64_t)d[2] * b->fwd[2];
         const int32_t along = vd_div(dot, b->fwd_mag);              /* Q16 */
         int64_t t = (int64_t)b->t + vd_divq(along, b->fwd_mag, 30);

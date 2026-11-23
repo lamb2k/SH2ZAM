@@ -12,6 +12,8 @@
  * SH2Z_VD_FORCE_FRAC (see below): the engine force carried with more fraction
  * bits, so a constant such as 0.10027 is not rounded to a multiple of 2^-16.
  * Contract tag vehicle-dynamics-5 models the half-pipe shape in sh2z_vd_step2.
+ * Contract tag vehicle-dynamics-6 adds the build-time search stop SH2Z_VD_LOCATE_FAR (see below),
+ * for a body that is hundreds of units off the line (airborne over a gap).
  *
  * Model. Each tick (sh2z_vd_step) runs, in order: the pad, the surface zone
  * under the vehicle, steering, body-frame damping, boost, mines and launch
@@ -54,6 +56,30 @@
 #endif
 #if SH2Z_VD_FORCE_FRAC < 16 || SH2Z_VD_FORCE_FRAC > 28
 #error "SH2Z_VD_FORCE_FRAC must be 16..28"
+#endif
+
+/* Contract tag vehicle-dynamics-6. The closest-point search (sh2z_vd_locate, called by
+ * sh2z_vd_step and sh2z_vd_step2 with 100 passes) of a body hundreds of units off the line,
+ * as over a gap, has no point to reach: it runs through a few states and all 99 passes, every
+ * tick. SH2Z_VD_LOCATE_FAR (build time, whole units 0..32767, default 0 = off) stops a search
+ * whose residual (the distance from the target to its ground point, the value the tolerance
+ * tests) stays above FAR units for SH2Z_VD_LOCATE_FAR_RUN (default 8) passes in a row; it
+ * keeps the state it has, which sh2z_vd_locate then returns as for any other end of the loop.
+ * A search that converges, or that overshoots and comes back, is never stopped: the call is
+ * bit for bit the earlier one. A stopped search can differ from the 99-pass result (that
+ * result is one point of the circle it ran round, so it is no more right than the stopped
+ * state is); the caller's outcome is what to check. Off (0), the object code of every earlier
+ * tag is unchanged. Every translation unit of one image must use the same values.
+ * SH2Z_VD_LOCATE_FAR_HIT() is an empty statement unless the build defines it (a host build
+ * counts the stopped searches). */
+#ifndef SH2Z_VD_LOCATE_FAR
+#define SH2Z_VD_LOCATE_FAR 0
+#endif
+#ifndef SH2Z_VD_LOCATE_FAR_RUN
+#define SH2Z_VD_LOCATE_FAR_RUN 8
+#endif
+#if SH2Z_VD_LOCATE_FAR < 0 || SH2Z_VD_LOCATE_FAR > 32767 || SH2Z_VD_LOCATE_FAR_RUN < 1
+#error "SH2Z_VD_LOCATE_FAR must be 0..32767 and SH2Z_VD_LOCATE_FAR_RUN at least 1"
 #endif
 
 #ifdef __cplusplus
