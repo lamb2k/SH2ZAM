@@ -82,6 +82,25 @@
 #error "SH2Z_VD_LOCATE_FAR must be 0..32767 and SH2Z_VD_LOCATE_FAR_RUN at least 1"
 #endif
 
+/* Contract tag vehicle-dynamics-7 (proposal, not merged). The other two ways the closest-point search runs all
+ * 99 passes of a body hundreds of units off the line, both with a residual under the vehicle-dynamics-6 line:
+ * - the step of a pass ignores the curvature of the line, so where the body sits near the centre of curvature it is
+ *   about twice the Newton step and the residual swings from side to side, closing by 0.94 a pass. SH2Z_VD_LOCATE_DAMP
+ *   (build time, passes, default 0 = off) replaces the step, after that many passes, by the secant step through the
+ *   last two passes when it points the same way and is not longer. Searches of DAMP passes or fewer are unchanged.
+ * - the closest point is the join of two nodes, and the search flips between them with a residual that does not
+ *   fall. SH2Z_VD_LOCATE_FLIP (build time, flips, default 0 = off) ends the search after that many flips in a
+ *   row, on a pass of the parity the 99th pass has, so it keeps the side the 99-pass search would have ended on.
+ * Both keep the state of a converged search; a search they end differs from the 99-pass state by under a few
+ * units (the tolerance is one unit). Off, the object code of every earlier tag is unchanged. Every translation unit
+ * of one image must use the same values. */
+#ifndef SH2Z_VD_LOCATE_DAMP
+#define SH2Z_VD_LOCATE_DAMP 0
+#endif
+#ifndef SH2Z_VD_LOCATE_FLIP
+#define SH2Z_VD_LOCATE_FLIP 0
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -153,6 +153,14 @@ int sh2z_vd_locate(sh2z_vd_body_t *b, const sh2z_vd_track_t *k, const int32_t ta
 #if SH2Z_VD_LOCATE_FAR
     int far_run = 0;
 #endif
+#if SH2Z_VD_LOCATE_DAMP
+    int pass = 0;
+    int32_t prev_along = 0, prev_dt = 0;
+#endif
+#if SH2Z_VD_LOCATE_FLIP
+    int flips = 0;
+    uint32_t node1 = b->node, node2 = b->node;
+#endif
     for(i = 0; i < 3; i++) d[i] = target[i] - b->ground[i];
     while(sumsq(d) > tolerance && --iterations != 0) {
         SH2Z_VD_LOCATE_PASS(d);
@@ -168,16 +176,46 @@ int sh2z_vd_locate(sh2z_vd_body_t *b, const sh2z_vd_track_t *k, const int32_t ta
             break;
         }
 #endif
+#if SH2Z_VD_LOCATE_FLIP
+        flips = (b->node == node2 && b->node != node1) ? flips + 1 : 0;
+        node2 = node1;
+        node1 = b->node;
+        if(flips >= SH2Z_VD_LOCATE_FLIP && (iterations & 1) == 0) break;
+#endif
         const int64_t dot = (int64_t)d[0] * b->fwd[0] + (int64_t)d[1] * b->fwd[1] + (int64_t)d[2] * b->fwd[2];
         const int32_t along = vd_div(dot, b->fwd_mag);              /* Q16 */
+#if SH2Z_VD_LOCATE_DAMP
+        int32_t dt = vd_divq(along, b->fwd_mag, 30);
+        /* vehicle-dynamics-7: after SH2Z_VD_LOCATE_DAMP passes, the secant step through the last two passes
+         * replaces the step when it points the same way and is not longer. A residual that swings from side
+         * to side (the step is then about twice the Newton step) closes in two or three passes; a residual
+         * that falls one way keeps the step. */
+        if(++pass > SH2Z_VD_LOCATE_DAMP && prev_dt != 0) {
+            const int32_t da = along - prev_along;
+            if(da != 0 && (da < 0) != (prev_dt < 0)) {
+                const int32_t s = vd_div(-(int64_t)along * prev_dt, da);
+                if((s < 0) == (dt < 0) && (s < 0 ? -(int64_t)s : (int64_t)s) <= (dt < 0 ? -(int64_t)dt : (int64_t)dt)) dt = s;
+            }
+        }
+        prev_along = along;
+        prev_dt = dt;
+        int64_t t = (int64_t)b->t + dt;
+#else
         int64_t t = (int64_t)b->t + vd_divq(along, b->fwd_mag, 30);
+#endif
         int32_t dist, fhat[3], perp[3], n[3];
         if(t >= ONE30) {
             if(t > (int64_t)ONE30 * 19 / 10) return -1;
+#if SH2Z_VD_LOCATE_DAMP
+            prev_dt = 0;
+#endif
             b->node = wrap(k, b->node + 1u);
             t = (int64_t)mu(vd_sat(t - ONE30), vd_divq(b->fwd_mag, tangent_mag(k, b->node, 0), 30));
         } else if(t < 0) {
             if(t < -(int64_t)ONE30 * 9 / 10) return -1;
+#if SH2Z_VD_LOCATE_DAMP
+            prev_dt = 0;
+#endif
             b->node = wrap(k, b->node + k->count - 1u);
             t = (int64_t)mu(vd_sat(t), vd_divq(b->fwd_mag, tangent_mag(k, b->node, ONE30), 30)) + ONE30;
         }
