@@ -468,6 +468,9 @@ Integer only, with no libc. Host-tested (no console run). See
   (`body-contact-1`) resolves contact between vehicles that touch as spheres: shared impact damage,
   a push while they close, attackers and contact credit. `vehicle-dynamics-3` feeds it into the
   vehicle step (`sh2z_vd_step_contact`).
+  `body-contact-2` adds `sh2z_bc_sweep`, `sh2z_bc_range` and `sh2z_bc_field_resolve_list`, which split the field walk into a
+  pair list, an exact range filter and the pair calls so a caller computes a body's position or velocity only where a pair
+  needs it, and makes the field walk test the position box in 32 bits before the pair function (same results, bit for bit).
 
 All four are integer only and deterministic. The line field is host-tested, and `line-field-13`'s contact phase is also modelled in an instruction model; there is no console run. See [the line guide](saturn/LINE_FOLLOWER.md),
 [the vehicle dynamics guide](saturn/VEHICLE_DYNAMICS.md) and [the body contact guide](saturn/BODY_CONTACT.md).

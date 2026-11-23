@@ -1,4 +1,4 @@
-/* Body contact (contract tag body-contact-1) checks.
+/* Body contact (contract tags body-contact-1 and body-contact-2) checks.
  * An independent double-precision transcription of the rule judges every
  * output of sh2z_bc_pair on random and edge-case pairs within the stated
  * bound; the field walk is judged against a brute-force walk over every pair
@@ -346,6 +346,125 @@ static void test_field(void) {
     CHECK(total_tested < (uint64_t)40 * 300 * NPAIR / 2);
 }
 
+/* ---- body-contact-2: the sweep, the range filter and the list resolve against the field walk --------------------------- */
+
+/* One scene stream, two fields: A resolved by sh2z_bc_field_resolve, B by sh2z_bc_sweep, sh2z_bc_range and
+ * sh2z_bc_field_resolve_list. The line is straight, so two bodies in reach (46 units) are within 46 units across: the sweep's
+ * across window (92 units) leaves out no pair that reaches. Every output, the history and the counters must agree each tick.
+ * mode 1: a control with a window too narrow (4 units across), which must disagree; mode 2: a range filter with half the reach. */
+static int test_list_run(int mode, uint64_t *touch_out, uint64_t *pairs_out) {
+    static sh2z_bc_body_t fa[NB], fl[NB];
+    static uint32_t lasta[NPAIR], lastl[NPAIR];
+    static int32_t along[NB], across[NB];
+    static uint8_t pa[NPAIR], pb[NPAIR], qa[NPAIR], qb[NPAIR], marked[NB], live[NB];
+    uint8_t order[NB];
+    sh2z_bc_field_t a, l;
+    const int32_t length = 4000 * 256;
+    sh2z_bc_rules_t rr = R;
+    int differs = 0;
+    uint64_t touch = 0, listed = 0;
+    if(mode == 2) rr.reach = R.reach / 2;
+    for(int race = 0; race < 20; race++) {
+        for(uint32_t i = 0; i < NB; i++) {
+            random_body(&fa[i]);
+            fa[i].flags &= ~SH2Z_BC_ATTACK;
+            if((rnd() & 15u) == 0) fa[i].flags &= ~SH2Z_BC_ACTIVE;
+            fa[i].pos[0] = (int32_t)(((int64_t)(rnd_range(0, length / 256 - 1) * 65536)) % Q16(400.0));
+            fa[i].pos[1] = 0;
+            fa[i].pos[2] = rnd_range(-Q16(40.0), Q16(40.0));
+            fa[i].vel[0] = rnd_range(Q16(20.0), Q16(40.0));
+            fa[i].vel[1] = 0;
+            fa[i].vel[2] = rnd_range(-Q16(2.0), Q16(2.0));
+        }
+        memcpy(fl, fa, sizeof fl);
+        sh2z_bc_field_init(&a, fa, lasta, NB);
+        sh2z_bc_field_init(&l, fl, lastl, NB);
+        for(int tick = 0; tick < 300; tick++) {
+            sh2z_bc_field_begin(&a);
+            sh2z_bc_field_begin(&l);
+            for(uint32_t i = 0; i < NB; i++) {
+                along[i] = (int32_t)((((int64_t)fa[i].pos[0] >> 8) % length + length) % length);
+                across[i] = fa[i].pos[2] >> 8;
+                fa[i].flags = (fa[i].flags & ~SH2Z_BC_ATTACK) | ((rnd() % 7u) == 0 ? SH2Z_BC_ATTACK : 0u);
+                fl[i].flags = fa[i].flags;
+                live[i] = (fa[i].flags & SH2Z_BC_ACTIVE) ? 1u : 0u;
+            }
+            sort_order(order, along, NB);
+            const uint32_t ta = sh2z_bc_field_resolve(&a, order, along, length, &R);
+            const uint32_t np = sh2z_bc_sweep(order, along, across, live, NB, length, R.reach_long, mode == 1 ? 4 * 256 : 92 * 256, pa, pb, marked);
+            for(uint32_t i = 0; i < NB; i++) CHECK(marked[i] <= 1u);
+            const uint32_t nq = sh2z_bc_range(&l, pa, pb, np, &rr, qa, qb);
+            CHECK(nq <= np && l.tested <= a.tested);
+            const uint32_t tl = sh2z_bc_field_resolve_list(&l, qa, qb, nq, &R);
+            touch += ta; listed += np;
+            if(ta != tl || a.contacts != l.contacts) differs = 1;
+            for(uint32_t i = 0; i < NB; i++) {
+                if(fa[i].damage != fl[i].damage || fa[i].hit != fl[i].hit || fa[i].first != fl[i].first || fa[i].toucher != fl[i].toucher ||
+                   fa[i].since != fl[i].since || memcmp(fa[i].push, fl[i].push, sizeof fa[i].push) != 0) differs = 1;
+            }
+            if(mode == 0) {
+                CHECK(ta == tl && a.contacts == l.contacts);
+                CHECK(l.tested <= np);
+                for(uint32_t i = 0; i < NB; i++) {
+                    CHECK(fa[i].damage == fl[i].damage && fa[i].hit == fl[i].hit && fa[i].first == fl[i].first);
+                    CHECK(fa[i].toucher == fl[i].toucher && fa[i].since == fl[i].since);
+                    CHECK(memcmp(fa[i].push, fl[i].push, sizeof fa[i].push) == 0);
+                }
+                for(uint32_t p = 0; p < NPAIR; p++) CHECK(lasta[p] == lastl[p]);
+            }
+            if(mode != 0 && differs) { *touch_out = touch; *pairs_out = listed; return 1; }
+            for(uint32_t i = 0; i < NB; i++) {
+                for(int c = 0; c < 3; c++) {
+                    int64_t v = (int64_t)fa[i].vel[c] + fa[i].push[c] / 4;
+                    if(v > Q16(60.0)) v = Q16(60.0);
+                    if(v < -Q16(60.0)) v = -Q16(60.0);
+                    fa[i].vel[c] = c == 1 ? 0 : (int32_t)v;
+                    fa[i].pos[c] = c == 1 ? 0 : (int32_t)(((int64_t)fa[i].pos[c] + fa[i].vel[c]) % ((int64_t)1 << 30));
+                }
+                if(fa[i].pos[2] > Q16(60.0)) { fa[i].pos[2] = Q16(60.0); fa[i].vel[2] = -fa[i].vel[2] / 2; }
+                if(fa[i].pos[2] < -Q16(60.0)) { fa[i].pos[2] = -Q16(60.0); fa[i].vel[2] = -fa[i].vel[2] / 2; }
+                for(int c = 0; c < 3; c++) { fl[i].pos[c] = fa[i].pos[c]; fl[i].vel[c] = fa[i].vel[c]; }
+            }
+        }
+    }
+    *touch_out = touch; *pairs_out = listed;
+    return differs;
+}
+
+/* The 32-bit box test against positions at the ends of the int32 range: two bodies 2^32 - 10 apart in a coordinate pass it (their
+ * wrapped difference is -10) and sh2z_bc_pair's own test then rejects them with no effect; a pair truly 10 apart is resolved. */
+static void test_list_extremes(void) {
+    static sh2z_bc_body_t b[3];
+    static uint32_t last[3];
+    sh2z_bc_field_t f;
+    uint8_t pa[3] = {0, 0, 1}, pb[3] = {1, 2, 2}, qa[3], qb[3];
+    memset(b, 0, sizeof b);
+    for(int i = 0; i < 3; i++) { b[i].strength = 1u; b[i].flags = SH2Z_BC_ACTIVE; b[i].vel[0] = Q16(1.0); }
+    b[0].pos[0] = INT32_MIN + 5;      /* bodies 0 and 1 are 2^32 - 10 apart, 0 and 2 are 2^32 - 20: wrapped differences -10 and -20 */
+    b[1].pos[0] = INT32_MAX - 4;
+    b[2].pos[0] = INT32_MAX - 14;     /* 1 and 2 are 10 apart */
+    b[2].vel[0] = -Q16(1.0);
+    sh2z_bc_field_init(&f, b, last, 3);
+    sh2z_bc_field_begin(&f);
+    const uint32_t nq = sh2z_bc_range(&f, pa, pb, 3, &R, qa, qb);
+    CHECK(nq == 3u && f.tested == 3u);                 /* all three pass the 32-bit test */
+    const uint32_t touching = sh2z_bc_field_resolve_list(&f, qa, qb, nq, &R);
+    CHECK(touching == 1u && f.contacts == 1u);         /* sh2z_bc_pair rejects the two far pairs with no effect */
+    CHECK(b[0].damage == 0 && b[0].push[0] == 0 && b[0].first == 0u && b[0].toucher == -1);
+    CHECK(b[1].damage > 0 && b[2].damage > 0);
+    /* the same bodies through the library's own walk give the same answer */
+    static sh2z_bc_body_t c[3];
+    static uint32_t last2[3];
+    memcpy(c, b, sizeof c);
+    sh2z_bc_field_init(&f, c, last2, 3);
+    for(int i = 0; i < 3; i++) { c[i].damage = 0; c[i].first = 0u; c[i].push[0] = c[i].push[1] = c[i].push[2] = 0; c[i].toucher = -1; c[i].since = UINT32_MAX; }
+    sh2z_bc_field_begin(&f);
+    const int32_t along[3] = {0, 3, 2};
+    const uint8_t order[3] = {1, 2, 0};
+    CHECK(sh2z_bc_field_resolve(&f, order, along, 4000 * 256, &R) == 1u);
+    CHECK(c[1].damage == b[1].damage && c[2].damage == b[2].damage && c[0].damage == 0);
+}
+
 /* History and credit on a scripted approach, stay, separation and return. */
 static void test_history(void) {
     sh2z_bc_body_t b[3];
@@ -436,13 +555,27 @@ static void test_controls(void) {
     printf("control credit window 61   caught\n");
 }
 
+static void test_list(void) {
+    uint64_t touch, listed, t2, l2;
+    CHECK(test_list_run(0, &touch, &listed) == 0);
+    CHECK(touch > 500 && listed > touch);
+    printf("list: 20 races x 300 ticks x %u bodies equal to the field walk; %" PRIu64 " pairs in reach of %" PRIu64 " listed\n", NB, touch, listed);
+    CHECK(test_list_run(1, &t2, &l2) == 1);
+    printf("control sweep window 4 across caught\n");
+    CHECK(test_list_run(2, &t2, &l2) == 1);
+    printf("control range reach halved caught\n");
+    test_list_extremes();
+    printf("list: 32-bit box test at the ends of the int32 range\n");
+}
+
 int main(void) {
     rules();
     test_edges();
     test_pairs();
     test_field();
+    test_list();
     test_history();
     test_controls();
-    printf("body-contact-1: %" PRIu64 " checks passed\n", checks);
+    printf("body-contact-2: %" PRIu64 " checks passed\n", checks);
     return 0;
 }

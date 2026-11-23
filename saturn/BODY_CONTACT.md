@@ -1,4 +1,4 @@
-# Body contact (experimental, contract tags `body-contact-1` and `vehicle-dynamics-3`)
+# Body contact (experimental, contract tags `body-contact-1`, `body-contact-2` and `vehicle-dynamics-3`)
 
 [`body_contact_experimental.h`](include/sh2zam/body_contact_experimental.h) resolves contact
 between bodies that touch as spheres of one reach. It is meant for racing games where vehicles
@@ -62,6 +62,29 @@ The contact lands after the tick's resets and before the pad is read: the push i
 acceleration (integrated with the vehicle's own forces), damage marks the tick (no grip) and, past
 zero energy, starts the spin-out before the pad is read; `hit` takes grip away for
 `rules.contact_grip` ticks; `regain` comes first, up to the maximum, and not while spinning out.
+
+## The sweep and the pair list (`body-contact-2`)
+
+A caller that wants less than the full walk each tick, because most bodies are far from any other or because a body's velocity costs
+something to compute, builds the pair list itself in three steps. Nothing in `body-contact-1` changes; `sh2z_bc_field_resolve` also tests
+the position box in 32 bits before calling the pair function, with the same results.
+
+```c
+uint32_t np = sh2z_bc_sweep(order, along, across, live, N, length, rules.reach_long, window_across, pa, pb, marked);
+/* marked[i]: body i is in a listed pair, so it needs a position; fill pos for those, flags ACTIVE */
+uint32_t nq = sh2z_bc_range(&field, pa, pb, np, &rules, qa, qb);   /* pairs of ACTIVE bodies within the reach on every axis */
+/* bodies in qa/qb need their velocity now; nobody else does */
+uint32_t touching = sh2z_bc_field_resolve_list(&field, qa, qb, nq, &rules);
+```
+
+- `sh2z_bc_sweep` visits pairs in the order `sh2z_bc_field_resolve` does (each pair once, from the body ahead, ties before the wrap) and
+  lists those whose bodies are both `live` and whose `across` difference is at most `window_across`. Choosing the window is the caller's
+  claim: it must cover every pair that can be in reach.
+- `sh2z_bc_range` drops pairs without two ACTIVE bodies, counts the rest in `field->tested`, and keeps those whose positions are within the
+  reach on every axis. The 32-bit test never rejects a pair that `sh2z_bc_pair` accepts; positions 2^32 apart in a coordinate pass it and
+  `sh2z_bc_pair` rejects them with no effect.
+- `sh2z_bc_field_resolve_list` calls the pair function for each listed pair with the field's history, as `sh2z_bc_field_resolve` does. With
+  a window that covers every pair in reach, sweep, range and list give the field walk's outputs, history and counters bit for bit.
 
 ## Status
 

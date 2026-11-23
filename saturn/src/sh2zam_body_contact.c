@@ -47,6 +47,16 @@ static void bc_add(int32_t o[3], int32_t k, const int32_t u[3]) {
     for(i = 0; i < 3; i++) o[i] = bc_sat((int64_t)o[i] + bc_mu(k, u[i]));
 }
 
+/* Every axis of the two positions within the reach, tested in 32 bits. A difference within the reach comes out of the wrapped subtraction
+ * within it, so this never rejects a pair that sh2z_bc_pair's own 64-bit test accepts; it may pass a pair that test rejects (positions
+ * 2^32 apart in a coordinate), and sh2z_bc_pair then rejects it with no effect. */
+static bool bc_in_box(const sh2z_bc_body_t *a, const sh2z_bc_body_t *b, int32_t reach) {
+    const uint32_t r = (uint32_t)reach, span = 2u * r;
+    return (uint32_t)((uint32_t)b->pos[0] - (uint32_t)a->pos[0] + r) <= span &&
+           (uint32_t)((uint32_t)b->pos[1] - (uint32_t)a->pos[1] + r) <= span &&
+           (uint32_t)((uint32_t)b->pos[2] - (uint32_t)a->pos[2] + r) <= span;
+}
+
 uint32_t sh2z_bc_pair(sh2z_bc_body_t *a, sh2z_bc_body_t *b, uint32_t ia, uint32_t ib, bool touching_before,
                       const sh2z_bc_rules_t *r) {
     int64_t dx[3], d2 = 0, closing = 0;
@@ -175,10 +185,11 @@ uint32_t sh2z_bc_field_resolve(sh2z_bc_field_t *f, const uint8_t *order, const i
             /* Each pair once: from the body ahead (ties: before the wrap). */
             if(gap < 0 || (gap == 0 && s + k >= n)) continue;
             if(!(f->body[j].flags & SH2Z_BC_ACTIVE)) continue;
+            tested++;
+            if(!bc_in_box(&f->body[i], &f->body[j], r->reach)) continue;
             lo = i < j ? i : j;
             hi = i < j ? j : i;
             idx = hi * (hi - 1u) / 2u + lo;
-            tested++;
             ev = sh2z_bc_pair(&f->body[lo], &f->body[hi], lo, hi, f->last[idx] != 0u && f->last[idx] + 1u == f->tick, r);
             if(ev & SH2Z_BC_EV_TOUCH) {
                 f->last[idx] = f->tick;
@@ -188,6 +199,64 @@ uint32_t sh2z_bc_field_resolve(sh2z_bc_field_t *f, const uint8_t *order, const i
         }
     }
     f->tested = tested;
+    return touching;
+}
+
+uint32_t sh2z_bc_sweep(const uint8_t *order, const int32_t *along, const int32_t *across, const uint8_t *live, uint32_t count,
+                       int32_t length, int32_t reach_long, int32_t reach_across, uint8_t *pa, uint8_t *pb, uint8_t *marked) {
+    const int32_t half = length / 2;
+    uint32_t s, k, pairs = 0u;
+    for(s = 0u; s < count; s++) marked[s] = 0u;
+    for(s = 0u; s < count; s++) {
+        const uint32_t i = order[s];
+        if(!live[i]) continue;
+        for(k = 1u; k < count; k++) {
+            const uint32_t j = order[s + k < count ? s + k : s + k - count];
+            int32_t gap = along[i] - along[j], side;
+            if(gap > half) gap -= length;
+            else if(gap <= -half) gap += length;
+            if(gap > reach_long) break;
+            if(gap < 0 || (gap == 0 && s + k >= count) || !live[j]) continue;
+            side = across[i] - across[j];
+            if(side > reach_across || side < -reach_across) continue;
+            marked[i] = marked[j] = 1u;
+            pa[pairs] = (uint8_t)i;
+            pb[pairs] = (uint8_t)j;
+            pairs++;
+        }
+    }
+    return pairs;
+}
+
+uint32_t sh2z_bc_range(sh2z_bc_field_t *f, const uint8_t *pa, const uint8_t *pb, uint32_t pairs, const sh2z_bc_rules_t *r,
+                       uint8_t *qa, uint8_t *qb) {
+    uint32_t p, tested = 0u, in_range = 0u;
+    for(p = 0u; p < pairs; p++) {
+        const sh2z_bc_body_t *a = &f->body[pa[p]], *b = &f->body[pb[p]];
+        if(!(a->flags & SH2Z_BC_ACTIVE) || !(b->flags & SH2Z_BC_ACTIVE)) continue;
+        tested++;
+        if(!bc_in_box(a, b, r->reach)) continue;
+        qa[in_range] = pa[p];
+        qb[in_range] = pb[p];
+        in_range++;
+    }
+    f->tested = tested;
+    return in_range;
+}
+
+uint32_t sh2z_bc_field_resolve_list(sh2z_bc_field_t *f, const uint8_t *pa, const uint8_t *pb, uint32_t pairs, const sh2z_bc_rules_t *r) {
+    uint32_t p, touching = 0u;
+    for(p = 0u; p < pairs; p++) {
+        const uint32_t i = pa[p], j = pb[p];
+        const uint32_t lo = i < j ? i : j, hi = i < j ? j : i;
+        const uint32_t idx = hi * (hi - 1u) / 2u + lo;
+        const uint32_t ev = sh2z_bc_pair(&f->body[lo], &f->body[hi], lo, hi, f->last[idx] != 0u && f->last[idx] + 1u == f->tick, r);
+        if(ev & SH2Z_BC_EV_TOUCH) {
+            f->last[idx] = f->tick;
+            touching++;
+            if(ev & SH2Z_BC_EV_FIRST) f->contacts++;
+        }
+    }
     return touching;
 }
 
