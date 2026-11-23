@@ -15,8 +15,10 @@
  * alongside, no blocking hold), line-field-10 (the contact passes share
  * one scan's pair list and one line sample a vehicle; results unchanged),
  * line-field-12 (pace ranks that move, the driver's slowing, wall impacts),
- * line-field-13 (the contact passes do less work, results unchanged)
- * and line-field-14 (a gap too long to clear drops an agent in the air).
+ * line-field-13 (the contact passes do less work, results unchanged),
+ * line-field-14 (a gap too long to clear drops an agent in the air)
+ * and line-field-15 (a recharge strip refills a vehicle by a share of its own
+ * energy, not while it is in the air).
  *
  * Shared vehicle state. sh2z_vehicle_t is the line-space state of ANY vehicle
  * on the line: agents the field drives, and vehicles driven elsewhere (a
@@ -306,6 +308,7 @@ typedef struct sh2z_field_surface {
     int32_t recharge;          /**< Q8 energy per tick on a recharge strip. */
     uint16_t wrap_mask;        /**< A node is a tube when wrap_mask != 0 and (flags & wrap_mask) == wrap_value. */
     uint16_t wrap_value;
+    int32_t recharge_share;    /**< line-field-15: Q16 share of the vehicle's own max_energy refilled per tick on a recharge strip, none while it is in the air; 0 = off, the global recharge (see "Contract tag line-field-15"). */
 } sh2z_field_surface_t;
 
 /* ---- Contract tag line-field-5 ------------------------------------------ */
@@ -482,6 +485,27 @@ typedef struct sh2z_field_ranks {
     int32_t floor;             /**< Q8 least target speed (applies after the road's cap); 0 = none. */
     int32_t after_speed;       /**< Q8 target speed of every agent once the focus vehicle has finished; 0 = it races on to its own target. */
 } sh2z_field_ranks_t;
+
+/* ---- Contract tag line-field-15 ----------------------------------------- */
+
+/* surface->recharge_share: a recharge strip that refills each vehicle by its own measure. Appended to the surface block; 0 (and
+ * every block built before the field existed, once zeroed) is line-field-4's strip, bit for bit: every vehicle gains the one
+ * global rate, recharge, a tick, in the air or not. With recharge_share > 0 (a negative value is read as 0) a vehicle on a
+ * recharge zone gains, for the ticks the step is due,
+ *     gain a tick = (max_energy * recharge_share + 0x8000) >> 16         (Q8 energy; a 64-bit product, rounded to nearest)
+ *     energy      = min(max_energy, energy + gain a tick * ticks)
+ * so a vehicle with twice the energy capacity refills twice as fast, and `recharge` is not used. A vehicle with SH2Z_VEH_AIR
+ * set gains nothing: the flag is the one the previous step left (a step sets it after it has looked at the strip). Vehicles
+ * that are RETIRED or FINISHED gain nothing, as before, and a FALLING one is not stepped at all. The zone is the one under the
+ * vehicle as its step starts, exactly as for the boost plate and the other strips. The arithmetic is one static inline shared
+ * by the step and the function below, so the two cannot differ. */
+
+/** For a vehicle driven outside the field (SH2Z_VEH_EXTERNAL, or any vehicle the owner steps itself): finds the zone under v->t
+ *  as the step does and, when it is a recharge zone and the vehicle is not RETIRED, FINISHED or FALLING, applies `ticks` ticks of
+ *  the strip's refill. With surface->recharge_share > 0 the vehicle in the air (SH2Z_VEH_AIR) gains nothing; with the share 0 the
+ *  global rate applies in the air as in the step (so a field vehicle and an external one with the same state end with the same
+ *  energy after the same ticks). Does nothing when params->surface is NULL or has no zones. Only v->energy changes. */
+void sh2z_field_recharge(const sh2z_field_t *f, sh2z_vehicle_t *v, uint32_t ticks);
 
 #ifdef __cplusplus
 }
