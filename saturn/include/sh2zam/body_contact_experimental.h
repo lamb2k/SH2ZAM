@@ -6,7 +6,10 @@
  * body is, what damage does and who is credited are the caller's.
  *
  * Contract tag body-contact-1 (experimental: the numeric definitions may
- * still change until the tag is published).
+ * still change until the tag is published). body-contact-2 adds the sorted
+ * sweep and the pair-list entry points below, and makes the field walk test
+ * the pair's position box in 32 bits first; no result of body-contact-1
+ * changes.
  *
  * The rule for one pair at separation d = |pB - pA| <= reach, relative
  * velocity dv = vB - vA, unit separation n = (pB - pA) / d, weights wA, wB
@@ -126,6 +129,29 @@ void sh2z_bc_field_begin(sh2z_bc_field_t *f);
  *  the pairs in reach. */
 uint32_t sh2z_bc_field_resolve(sh2z_bc_field_t *f, const uint8_t *order, const int32_t *along, int32_t length,
                                const sh2z_bc_rules_t *r);
+
+/* ---- Contract tag body-contact-2 ---------------------------------------- */
+
+/** The pairs of a sorted sweep within a window, in the order sh2z_bc_field_resolve visits them. order lists the bodies by along[]
+ *  descending on a closed line of the given length (as sh2z_bc_field_resolve takes it); live[i] is nonzero for a body that takes
+ *  part; across[i] is a second coordinate in the along units. A pair is listed when both bodies are live, their along gap is at most
+ *  reach_long (each pair once, from the body ahead, ties before the wrap) and their across difference is at most reach_across.
+ *  pa[] and pb[] receive the bodies of each pair (room for count * (count - 1) / 2 each), marked[i] (count bytes) is 1 for a body
+ *  in a listed pair, else 0. Returns the number of pairs. Pairs left out because of reach_across are the caller's claim: bodies in
+ *  reach are within reach_across across. */
+uint32_t sh2z_bc_sweep(const uint8_t *order, const int32_t *along, const int32_t *across, const uint8_t *live, uint32_t count,
+                       int32_t length, int32_t reach_long, int32_t reach_across, uint8_t *pa, uint8_t *pb, uint8_t *marked);
+
+/** The pairs of a list whose two bodies are ACTIVE and within the reach on every axis (the first test of sh2z_bc_pair, done in
+ *  32 bits), in list order, into qa[] and qb[] (room for as many as the list). Sets field->tested to the pairs with both bodies
+ *  ACTIVE. Returns the number in range. A caller that computes a body's velocity lazily does it for the bodies of this list. */
+uint32_t sh2z_bc_range(sh2z_bc_field_t *f, const uint8_t *pa, const uint8_t *pb, uint32_t pairs, const sh2z_bc_rules_t *r,
+                       uint8_t *qa, uint8_t *qb);
+
+/** sh2z_bc_pair for each pair of a list, with the field's history as sh2z_bc_field_resolve keeps it (a pair in reach this tick is
+ *  recorded, a first contact counts). For a list from sh2z_bc_range the result equals sh2z_bc_field_resolve's on the same bodies.
+ *  Returns the pairs in reach. */
+uint32_t sh2z_bc_field_resolve_list(sh2z_bc_field_t *f, const uint8_t *pa, const uint8_t *pb, uint32_t pairs, const sh2z_bc_rules_t *r);
 
 /** The credited body for a victim that has just been put out by damage: its
  *  toucher when the contact is at most credit_window ticks old, else -1. */
